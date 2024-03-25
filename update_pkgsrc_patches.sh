@@ -53,6 +53,7 @@ patch -Np1 -i "$_kaiju_repo"/patches/chromium/nb.patch || exit 1
 cd "$_path" || exit 1
 mkpatches || exit 1
 rm patches/*.orig
+rm patches/*Cargo.toml
 for _patch in patches/patch-*; do
     # shellcheck disable=SC3003
     sed -i'' \
