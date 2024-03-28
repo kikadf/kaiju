@@ -19,7 +19,7 @@ finally apply the NetBSD delta patch from kaiju/patches/chromium:
 
 `cd kaiju`
 
-`./update_vanilla.sh`
+`./update_vanilla.sh <chromium version>`
 
 Finally fix the rejected parts of nb-delta.patch in chromium repo,
 what is created by update_vanilla.sh, and commit:
