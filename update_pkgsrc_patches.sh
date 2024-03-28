@@ -58,6 +58,7 @@ for _patch in patches/patch-*; do
     # shellcheck disable=SC3003
     sed -i'' \
         -e $'3i\\\n* Part of patchset to build on NetBSD\n' \
+        -e $'3i\\\n* Based on OpenBSD\'s chromium patches\n' \
         -e $'3i\\\n\n' \
         "$_patch" || exit 1
 done
