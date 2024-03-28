@@ -2975,7 +2975,7 @@ index ad6700bbe9..820c8598d7 100644
          exe_suffix = ""
      elif sys.platform.startswith("darwin"):
 diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
-index d64382e212..8b941c08bf 100644
+index 9c2e028333..55a1aa3f63 100644
 --- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
 +++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
 @@ -309,7 +309,7 @@

@@ -5555,7 +5555,7 @@ index e9c28ab05b..64e408c2e9 100644
      sources += [
        "dbus_memory_pressure_evaluator_linux.cc",
 diff --git a/chrome/browser/about_flags.cc b/chrome/browser/about_flags.cc
-index 9e12cf20d5..c458756abc 100644
+index 7b6154b7c3..02f5946307 100644
 --- a/chrome/browser/about_flags.cc
 +++ b/chrome/browser/about_flags.cc
 @@ -234,7 +234,7 @@
@@ -5675,7 +5675,7 @@ index 9e12cf20d5..c458756abc 100644
      {"enable-async-dns", flag_descriptions::kAsyncDnsName,
       flag_descriptions::kAsyncDnsDescription, kOsWin | kOsLinux,
       FEATURE_VALUE_TYPE(net::features::kAsyncDns)},
-@@ -7778,7 +7778,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -7785,7 +7785,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(ash::features::kPrivacyIndicators)},
  #endif  // BUILDFLAG(IS_CHROMEOS_ASH)
  
@@ -5684,7 +5684,7 @@ index 9e12cf20d5..c458756abc 100644
      {"enable-network-service-sandbox",
       flag_descriptions::kEnableNetworkServiceSandboxName,
       flag_descriptions::kEnableNetworkServiceSandboxDescription,
-@@ -7811,7 +7811,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -7818,7 +7818,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(
           supervised_user::kFilterWebsitesForSupervisedUsersOnDesktopAndIOS)},
  
@@ -5693,7 +5693,7 @@ index 9e12cf20d5..c458756abc 100644
      {"enable-family-link-extensions-permissions",
       flag_descriptions::
           kEnableExtensionsPermissionsForSupervisedUsersOnDesktopName,
-@@ -8709,7 +8709,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -8716,7 +8716,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(ash::features::kWallpaperPerDesk)},
  #endif  // BUILDFLAG(IS_CHROMEOS_ASH)
  
@@ -5702,7 +5702,7 @@ index 9e12cf20d5..c458756abc 100644
      {"enable-get-all-screens-media", flag_descriptions::kGetAllScreensMediaName,
       flag_descriptions::kGetAllScreensMediaDescription,
       kOsCrOS | kOsLacros | kOsLinux,
-@@ -8751,7 +8751,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -8758,7 +8758,7 @@ const FeatureEntry kFeatureEntries[] = {
  
  #if BUILDFLAG(IS_WIN) ||                                      \
      (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS_LACROS)) || \
@@ -5711,7 +5711,7 @@ index 9e12cf20d5..c458756abc 100644
      {
          "ui-debug-tools",
          flag_descriptions::kUIDebugToolsName,
-@@ -9040,7 +9040,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -9047,7 +9047,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -5720,7 +5720,7 @@ index 9e12cf20d5..c458756abc 100644
      {"policy-indication-for-managed-default-search",
       flag_descriptions::kPolicyIndicationForManagedDefaultSearchName,
       flag_descriptions::kPolicyIndicationForManagedDefaultSearchDescription,
-@@ -9344,7 +9344,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -9351,7 +9351,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || \
@@ -5729,7 +5729,7 @@ index 9e12cf20d5..c458756abc 100644
      {"media-session-enter-picture-in-picture",
       flag_descriptions::kMediaSessionEnterPictureInPictureName,
       flag_descriptions::kMediaSessionEnterPictureInPictureDescription,
-@@ -10334,7 +10334,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -10341,7 +10341,7 @@ const FeatureEntry kFeatureEntries[] = {
       kOsDesktop | kOsAndroid,
       FEATURE_VALUE_TYPE(features::kProcessPerSiteUpToMainFrameThreshold)},
  
@@ -5738,7 +5738,7 @@ index 9e12cf20d5..c458756abc 100644
      {"camera-mic-effects", flag_descriptions::kCameraMicEffectsName,
       flag_descriptions::kCameraMicEffectsDescription,
       static_cast<unsigned short>(kOsMac | kOsWin | kOsLinux),
-@@ -10365,7 +10365,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -10372,7 +10372,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(features::kSiteInstanceGroupsForDataUrls)},
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -5747,7 +5747,7 @@ index 9e12cf20d5..c458756abc 100644
      {"site-search-settings-policy",
       flag_descriptions::kSiteSearchSettingsPolicyName,
       flag_descriptions::kSiteSearchSettingsPolicyDescription, kOsAll,
-@@ -10495,7 +10495,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -10502,7 +10502,7 @@ const FeatureEntry kFeatureEntries[] = {
           password_manager::features::kFillingAcrossAffiliatedWebsitesAndroid)},
  #endif
  
@@ -5756,7 +5756,7 @@ index 9e12cf20d5..c458756abc 100644
      {"third-party-profile-management",
       flag_descriptions::kThirdPartyProfileManagementName,
       flag_descriptions::kThirdPartyProfileManagementDescription,
-@@ -10838,7 +10838,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -10845,7 +10845,7 @@ const FeatureEntry kFeatureEntries[] = {
           trusted_vault::kTrustedVaultFrequentDegradedRecoverabilityPolling)},
  #endif
  
@@ -5765,7 +5765,7 @@ index 9e12cf20d5..c458756abc 100644
      {"restart-to-gain-access-to-keychain",
       flag_descriptions::kRestartToGainAccessToKeychainName,
       flag_descriptions::kRestartToGainAccessToKeychainDescription,
-@@ -11092,7 +11092,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -11099,7 +11099,7 @@ const FeatureEntry kFeatureEntries[] = {
  
  // Controls the view mode for (history) sync screen.
  #if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_WIN) || \
@@ -6411,19 +6411,19 @@ index 19679fa14e..4a2e4d7f28 100644
        const base::CommandLine& command_line,
        int child_process_id,
 diff --git a/chrome/browser/component_updater/widevine_cdm_component_installer.cc b/chrome/browser/component_updater/widevine_cdm_component_installer.cc
-index 7a3c4fb565..28b129fccd 100644
+index 2384ae684a..5ba7b1113b 100644
 --- a/chrome/browser/component_updater/widevine_cdm_component_installer.cc
 +++ b/chrome/browser/component_updater/widevine_cdm_component_installer.cc
-@@ -41,7 +41,7 @@
+@@ -40,7 +40,7 @@
  #include "third_party/widevine/cdm/buildflags.h"
  #include "third_party/widevine/cdm/widevine_cdm_common.h"
  
 -#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
 +#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
- #include "base/path_service.h"
- #include "chrome/common/chrome_paths.h"
  #include "chrome/common/media/component_widevine_cdm_hint_file_linux.h"
-@@ -74,7 +74,7 @@ static_assert(std::size(kWidevineSha2Hash) == crypto::kSHA256Length,
+ #endif
+ 
+@@ -78,7 +78,7 @@ static_assert(std::size(kWidevineSha2Hash) == crypto::kSHA256Length,
  const char ImageLoaderComponentName[] = "WidevineCdm";
  #endif
  
@@ -6432,16 +6432,7 @@ index 7a3c4fb565..28b129fccd 100644
  // On Linux and ChromeOS the Widevine CDM is loaded at startup before the
  // zygote is locked down. As a result there is no need to register the CDM
  // with Chrome as it can't be used until Chrome is restarted.
-@@ -102,7 +102,7 @@ void RegisterWidevineCdmWithChrome(const base::Version& cdm_version,
- }
- #endif  // !BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CHROMEOS)
- 
--#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
- // On Linux and ChromeOS the Widevine CDM is loaded at startup before the
- // zygote is locked down. To locate the Widevine CDM at startup, a hint file
- // is used. Update the hint file with the new Widevine CDM path.
-@@ -388,7 +388,7 @@ void WidevineCdmComponentInstallerPolicy::UpdateCdmPath(
+@@ -364,7 +364,7 @@ void WidevineCdmComponentInstallerPolicy::UpdateCdmPath(
      return;
    }
  
@@ -7517,10 +7508,10 @@ index 0a0aa74972..397156aabd 100644
  // called, the decision to show the dialog or not will be made by Chrome based
  // on a number of factors (such as install type, whether it's a Chrome-branded
 diff --git a/chrome/browser/flag_descriptions.cc b/chrome/browser/flag_descriptions.cc
-index c9bc58df6e..46fada4479 100644
+index a43c624d0f..ae6a2c9447 100644
 --- a/chrome/browser/flag_descriptions.cc
 +++ b/chrome/browser/flag_descriptions.cc
-@@ -2931,7 +2931,7 @@ const char kCbdTimeframeRequiredDescription[] =
+@@ -2936,7 +2936,7 @@ const char kCbdTimeframeRequiredDescription[] =
      "value to the list.";
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -7529,7 +7520,7 @@ index c9bc58df6e..46fada4479 100644
  const char kPolicyIndicationForManagedDefaultSearchName[] =
      "Enable policy indication for managed Default Search provider";
  const char kPolicyIndicationForManagedDefaultSearchDescription[] =
-@@ -3256,7 +3256,7 @@ const char kSiteInstanceGroupsForDataUrlsDescription[] =
+@@ -3261,7 +3261,7 @@ const char kSiteInstanceGroupsForDataUrlsDescription[] =
      "but in the same SiteInstanceGroup, and thus the same process.";
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -7538,7 +7529,7 @@ index c9bc58df6e..46fada4479 100644
  const char kSiteSearchSettingsPolicyName[] = "Enable SiteSearchSettings policy";
  const char kSiteSearchSettingsPolicyDescription[] =
      "Allow site search engines to be defined by the SiteSearchSettings policy.";
-@@ -7485,7 +7485,7 @@ const char kLacrosMergeIcuDataFileDescription[] =
+@@ -7490,7 +7490,7 @@ const char kLacrosMergeIcuDataFileDescription[] =
      "Enables sharing common areas of icudtl.dat between Ash and Lacros.";
  #endif  // #if BUILDFLAG(IS_CHROMEOS_LACROS)
  
@@ -7547,7 +7538,7 @@ index c9bc58df6e..46fada4479 100644
  const char kGetAllScreensMediaName[] = "GetAllScreensMedia API";
  const char kGetAllScreensMediaDescription[] =
      "When enabled, the getAllScreensMedia API for capturing multiple screens "
-@@ -7731,7 +7731,7 @@ const char kV4L2FlatStatefulVideoDecoderDescription[] =
+@@ -7736,7 +7736,7 @@ const char kV4L2FlatStatefulVideoDecoderDescription[] =
  
  // Linux -----------------------------------------------------------------------
  
@@ -7556,7 +7547,7 @@ index c9bc58df6e..46fada4479 100644
  const char kOzonePlatformHintChoiceDefault[] = "Default";
  const char kOzonePlatformHintChoiceAuto[] = "Auto";
  const char kOzonePlatformHintChoiceX11[] = "X11";
-@@ -7779,7 +7779,7 @@ const char kZeroCopyVideoCaptureDescription[] =
+@@ -7784,7 +7784,7 @@ const char kZeroCopyVideoCaptureDescription[] =
  #endif  // BUILDFLAG(IS_CHROMEOS_ASH) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -7565,7 +7556,7 @@ index c9bc58df6e..46fada4479 100644
  const char kFollowingFeedSidepanelName[] = "Following feed in the sidepanel";
  const char kFollowingFeedSidepanelDescription[] =
      "Enables the following feed in the sidepanel.";
-@@ -7794,7 +7794,7 @@ const char kEnableProtoApiForClassifyUrlDescription[] =
+@@ -7799,7 +7799,7 @@ const char kEnableProtoApiForClassifyUrlDescription[] =
      "instead of JSON.";
  #endif
  
@@ -7574,7 +7565,7 @@ index c9bc58df6e..46fada4479 100644
  const char kEnableNetworkServiceSandboxName[] =
      "Enable the network service sandbox.";
  const char kEnableNetworkServiceSandboxDescription[] =
-@@ -7826,7 +7826,7 @@ const char kWebBluetoothConfirmPairingSupportDescription[] =
+@@ -7831,7 +7831,7 @@ const char kWebBluetoothConfirmPairingSupportDescription[] =
      "Bluetooth";
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX)
  
@@ -7583,7 +7574,7 @@ index c9bc58df6e..46fada4479 100644
  const char kSkipUndecryptablePasswordsName[] =
      "Skip undecryptable passwords to use the available decryptable "
      "passwords.";
-@@ -7846,7 +7846,7 @@ const char kRestartToGainAccessToKeychainDescription[] =
+@@ -7851,7 +7851,7 @@ const char kRestartToGainAccessToKeychainDescription[] =
      "to restart Chrome to gain access to computer's password manager.";
  #endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC)
  
@@ -7592,7 +7583,7 @@ index c9bc58df6e..46fada4479 100644
  const char kAsyncDnsName[] = "Async DNS resolver";
  const char kAsyncDnsDescription[] = "Enables the built-in DNS resolver.";
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX)
-@@ -7947,7 +7947,7 @@ const char kElementCaptureDescription[] =
+@@ -7952,7 +7952,7 @@ const char kElementCaptureDescription[] =
  
  #if BUILDFLAG(IS_WIN) ||                                      \
      (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS_LACROS)) || \
@@ -7601,7 +7592,7 @@ index c9bc58df6e..46fada4479 100644
  const char kUIDebugToolsName[] = "Debugging tools for UI";
  const char kUIDebugToolsDescription[] =
      "Enables additional keyboard shortcuts to help debugging.";
-@@ -7996,7 +7996,7 @@ const char kComposeTextSelectionDescription[] =
+@@ -8001,7 +8001,7 @@ const char kComposeTextSelectionDescription[] =
      "Enables feature for different heuristics for selecting text for Compose";
  #endif  // BUILDFLAG(ENABLE_COMPOSE)
  
@@ -7611,10 +7602,10 @@ index c9bc58df6e..46fada4479 100644
      "Third party profile management";
  const char kThirdPartyProfileManagementDescription[] =
 diff --git a/chrome/browser/flag_descriptions.h b/chrome/browser/flag_descriptions.h
-index 73352e40eb..85493cd6c4 100644
+index 22c244fde8..172f3c56dd 100644
 --- a/chrome/browser/flag_descriptions.h
 +++ b/chrome/browser/flag_descriptions.h
-@@ -1691,7 +1691,7 @@ extern const char kCbdTimeframeRequiredName[];
+@@ -1694,7 +1694,7 @@ extern const char kCbdTimeframeRequiredName[];
  extern const char kCbdTimeframeRequiredDescription[];
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -7623,7 +7614,7 @@ index 73352e40eb..85493cd6c4 100644
  extern const char kPolicyIndicationForManagedDefaultSearchName[];
  extern const char kPolicyIndicationForManagedDefaultSearchDescription[];
  #endif
-@@ -1876,7 +1876,7 @@ extern const char kSiteInstanceGroupsForDataUrlsName[];
+@@ -1879,7 +1879,7 @@ extern const char kSiteInstanceGroupsForDataUrlsName[];
  extern const char kSiteInstanceGroupsForDataUrlsDescription[];
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -7632,7 +7623,7 @@ index 73352e40eb..85493cd6c4 100644
  extern const char kSiteSearchSettingsPolicyName[];
  extern const char kSiteSearchSettingsPolicyDescription[];
  #endif
-@@ -4302,7 +4302,7 @@ extern const char kLacrosMergeIcuDataFileName[];
+@@ -4305,7 +4305,7 @@ extern const char kLacrosMergeIcuDataFileName[];
  extern const char kLacrosMergeIcuDataFileDescription[];
  #endif  // #if BUILDFLAG(IS_CHROMEOS_LACROS)
  
@@ -7641,7 +7632,7 @@ index 73352e40eb..85493cd6c4 100644
  extern const char kGetAllScreensMediaName[];
  extern const char kGetAllScreensMediaDescription[];
  #endif  // BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_LINUX)
-@@ -4442,7 +4442,7 @@ extern const char kV4L2FlatStatefulVideoDecoderDescription[];
+@@ -4445,7 +4445,7 @@ extern const char kV4L2FlatStatefulVideoDecoderDescription[];
  
  // Linux ---------------------------------------------------------------------
  
@@ -7650,7 +7641,7 @@ index 73352e40eb..85493cd6c4 100644
  extern const char kOzonePlatformHintChoiceDefault[];
  extern const char kOzonePlatformHintChoiceAuto[];
  extern const char kOzonePlatformHintChoiceX11[];
-@@ -4484,7 +4484,7 @@ extern const char kWebBluetoothConfirmPairingSupportName[];
+@@ -4487,7 +4487,7 @@ extern const char kWebBluetoothConfirmPairingSupportName[];
  extern const char kWebBluetoothConfirmPairingSupportDescription[];
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX)
  
@@ -7659,7 +7650,7 @@ index 73352e40eb..85493cd6c4 100644
  extern const char kSkipUndecryptablePasswordsName[];
  extern const char kSkipUndecryptablePasswordsDescription[];
  
-@@ -4495,13 +4495,13 @@ extern const char kRestartToGainAccessToKeychainName[];
+@@ -4498,13 +4498,13 @@ extern const char kRestartToGainAccessToKeychainName[];
  extern const char kRestartToGainAccessToKeychainDescription[];
  #endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC)
  
@@ -7675,7 +7666,7 @@ index 73352e40eb..85493cd6c4 100644
  extern const char kFollowingFeedSidepanelName[];
  extern const char kFollowingFeedSidepanelDescription[];
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) ||
-@@ -4512,7 +4512,7 @@ extern const char kEnableProtoApiForClassifyUrlName[];
+@@ -4515,7 +4515,7 @@ extern const char kEnableProtoApiForClassifyUrlName[];
  extern const char kEnableProtoApiForClassifyUrlDescription[];
  #endif  // BUILDFLAG(ENABLE_SUPERVISED_USERS)
  
@@ -7684,7 +7675,7 @@ index 73352e40eb..85493cd6c4 100644
  extern const char kEnableNetworkServiceSandboxName[];
  extern const char kEnableNetworkServiceSandboxDescription[];
  
-@@ -4589,7 +4589,7 @@ extern const char kElementCaptureDescription[];
+@@ -4592,7 +4592,7 @@ extern const char kElementCaptureDescription[];
  
  #if BUILDFLAG(IS_WIN) ||                                      \
      (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS_LACROS)) || \
@@ -7693,7 +7684,7 @@ index 73352e40eb..85493cd6c4 100644
  extern const char kUIDebugToolsName[];
  extern const char kUIDebugToolsDescription[];
  
-@@ -4623,7 +4623,7 @@ extern const char kComposeTextSelectionName[];
+@@ -4626,7 +4626,7 @@ extern const char kComposeTextSelectionName[];
  extern const char kComposeTextSelectionDescription[];
  #endif  // BUILDFLAG(ENABLE_COMPOSE)
  
@@ -12866,10 +12857,10 @@ index e89a23cf14..bdd2b8552a 100644
    base::FilePath chrome_exe_dir;
    if (!base::PathService::Get(base::DIR_EXE, &chrome_exe_dir))
 diff --git a/chrome/common/media/cdm_registration.cc b/chrome/common/media/cdm_registration.cc
-index d82d0eb904..6efeaf3ad8 100644
+index cb0a8b27b3..23c6f38c2c 100644
 --- a/chrome/common/media/cdm_registration.cc
 +++ b/chrome/common/media/cdm_registration.cc
-@@ -30,11 +30,11 @@
+@@ -26,11 +26,11 @@
  
  #if BUILDFLAG(ENABLE_WIDEVINE)
  #include "third_party/widevine/cdm/widevine_cdm_common.h"  // nogncheck
@@ -12883,7 +12874,7 @@ index d82d0eb904..6efeaf3ad8 100644
  #include "base/no_destructor.h"
  #include "chrome/common/media/component_widevine_cdm_hint_file_linux.h"
  #include "media/cdm/supported_audio_codecs.h"
-@@ -60,7 +60,7 @@ using Robustness = content::CdmInfo::Robustness;
+@@ -56,7 +56,7 @@ using Robustness = content::CdmInfo::Robustness;
  #if BUILDFLAG(ENABLE_WIDEVINE)
  #if (BUILDFLAG(BUNDLE_WIDEVINE_CDM) ||            \
       BUILDFLAG(ENABLE_WIDEVINE_CDM_COMPONENT)) && \
@@ -12892,25 +12883,25 @@ index d82d0eb904..6efeaf3ad8 100644
  // Create a CdmInfo for a Widevine CDM, using |version|, |cdm_library_path|, and
  // |capability|.
  std::unique_ptr<content::CdmInfo> CreateWidevineCdmInfo(
-@@ -105,7 +105,7 @@ std::unique_ptr<content::CdmInfo> CreateCdmInfoFromWidevineDirectory(
+@@ -101,7 +101,7 @@ std::unique_ptr<content::CdmInfo> CreateCdmInfoFromWidevineDirectory(
          // BUILDFLAG(IS_CHROMEOS))
  
  #if BUILDFLAG(BUNDLE_WIDEVINE_CDM) && \
 -    (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS))
 +    (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD))
  // On Linux/ChromeOS we have to preload the CDM since it uses the zygote
- // sandbox. On Windows and Mac, CDM registration is handled by Component
- // Update (as the CDM can be loaded only when needed).
-@@ -129,7 +129,7 @@ content::CdmInfo* GetBundledWidevine() {
+ // sandbox. On Windows and Mac, the bundled CDM is handled by the component
+ // updater.
+@@ -125,7 +125,7 @@ content::CdmInfo* GetBundledWidevine() {
          // (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS))
  
  #if BUILDFLAG(ENABLE_WIDEVINE_CDM_COMPONENT) && \
 -    (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS))
 +    (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD))
- // This code checks to see if Component Updater picked a version of the Widevine
- // CDM to be used last time it ran. (Component Updater may choose the bundled
- // CDM if there is not a new version available for download.) If there is one
-@@ -171,7 +171,7 @@ void AddSoftwareSecureWidevine(std::vector<content::CdmInfo>* cdms) {
+ // This code checks to see if a component updated Widevine CDM can be found. If
+ // there is one and it looks valid, return the CdmInfo for that CDM. Otherwise
+ // return nullptr.
+@@ -160,7 +160,7 @@ void AddSoftwareSecureWidevine(std::vector<content::CdmInfo>* cdms) {
        /*supports_sub_key_systems=*/false, kWidevineCdmDisplayName,
        kWidevineCdmType, base::Version(), base::FilePath());
  
@@ -12919,33 +12910,11 @@ index d82d0eb904..6efeaf3ad8 100644
  #if defined(WIDEVINE_CDM_MIN_GLIBC_VERSION)
    base::Version glibc_version(gnu_get_libc_version());
    DCHECK(glibc_version.IsValid());
-@@ -414,7 +414,7 @@ void RegisterCdmInfo(std::vector<content::CdmInfo>* cdms) {
-   DVLOG(3) << __func__ << " done with " << cdms->size() << " cdms";
- }
- 
--#if BUILDFLAG(ENABLE_WIDEVINE) && BUILDFLAG(IS_LINUX)
-+#if BUILDFLAG(ENABLE_WIDEVINE) && (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD))
- std::vector<content::CdmInfo> GetSoftwareSecureWidevineForTesting() {
-   std::vector<content::CdmInfo> cdms;
-   AddSoftwareSecureWidevine(&cdms);
-diff --git a/chrome/common/media/cdm_registration.h b/chrome/common/media/cdm_registration.h
-index 94a3efd5b5..832873d163 100644
---- a/chrome/common/media/cdm_registration.h
-+++ b/chrome/common/media/cdm_registration.h
-@@ -14,7 +14,7 @@
- // Register CdmInfo for Content Decryption Modules (CDM) supported.
- void RegisterCdmInfo(std::vector<content::CdmInfo>* cdms);
- 
--#if BUILDFLAG(ENABLE_WIDEVINE) && BUILDFLAG(IS_LINUX)
-+#if BUILDFLAG(ENABLE_WIDEVINE) && (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD))
- // Returns the software secure Widevine CDM.
- std::vector<content::CdmInfo> GetSoftwareSecureWidevineForTesting();
- #endif
 diff --git a/chrome/common/media/component_widevine_cdm_hint_file_linux.h b/chrome/common/media/component_widevine_cdm_hint_file_linux.h
-index 8653521593..0c0d92245e 100644
+index 4e6307a863..8a382ffa20 100644
 --- a/chrome/common/media/component_widevine_cdm_hint_file_linux.h
 +++ b/chrome/common/media/component_widevine_cdm_hint_file_linux.h
-@@ -17,7 +17,7 @@
+@@ -15,7 +15,7 @@
  
  // TODO(crbug.com/1052397): Revisit the macro expression once build flag switch
  // of lacros-chrome is complete.
@@ -17397,7 +17366,7 @@ index 250d68fe80..2ad51cc8b9 100644
  }
  
 diff --git a/content/common/features.cc b/content/common/features.cc
-index 75ca836082..31af2ba218 100644
+index d03624e09e..24b0ed4bcf 100644
 --- a/content/common/features.cc
 +++ b/content/common/features.cc
 @@ -166,7 +166,7 @@ BASE_FEATURE(kEnableBackForwardCacheForOngoingSubframeNavigation,
@@ -17798,7 +17767,7 @@ index 3ac7cdff39..cb5ebab5a2 100644
  #if BUILDFLAG(IS_CHROMEOS)
    // Reinitialize logging for the Zygote processes. Needed on ChromeOS, which
 diff --git a/content/public/common/content_features.cc b/content/public/common/content_features.cc
-index 85ca95c4bd..c53e56f270 100644
+index 6a2bd63622..72fdbdc3ca 100644
 --- a/content/public/common/content_features.cc
 +++ b/content/public/common/content_features.cc
 @@ -32,7 +32,7 @@ BASE_FEATURE(kAudioServiceOutOfProcess,
@@ -31399,7 +31368,7 @@ index 93361c384a..ab11c82f82 100644
            profile.profile == media::VideoCodecProfile::H264PROFILE_BASELINE;
  #endif
 diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
-index 50c74cd0c3..8b941c08bf 100644
+index 0705b30d08..55a1aa3f63 100644
 --- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
 +++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
 @@ -309,7 +309,7 @@
@@ -36750,10 +36719,10 @@ index e7bd26f1d2..d832c7cf18 100644
  #else
    return nullptr;
 diff --git a/ui/ozone/platform/headless/ozone_platform_headless.cc b/ui/ozone/platform/headless/ozone_platform_headless.cc
-index 6cb2f0312d..1963ee1cb0 100644
+index 9f1a2950b9..81ae3c8945 100644
 --- a/ui/ozone/platform/headless/ozone_platform_headless.cc
 +++ b/ui/ozone/platform/headless/ozone_platform_headless.cc
-@@ -102,7 +102,7 @@ class OzonePlatformHeadless : public OzonePlatform {
+@@ -103,7 +103,7 @@ class OzonePlatformHeadless : public OzonePlatform {
    }
  
  // Desktop Linux, not CastOS.
@@ -38217,7 +38186,7 @@ index 294c0cd32d..f7ab8dc3d9 100644
  #include "src/logging/log.h"
  
 diff --git a/v8/src/execution/isolate.cc b/v8/src/execution/isolate.cc
-index 04b93cd7f4..f3fcdcd947 100644
+index b89a835f0c..dd60bfd04e 100644
 --- a/v8/src/execution/isolate.cc
 +++ b/v8/src/execution/isolate.cc
 @@ -153,6 +153,10 @@
