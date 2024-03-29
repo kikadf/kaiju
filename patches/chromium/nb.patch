@@ -31961,7 +31961,7 @@ index 91e2f508c3..f6343fcc73 100644
      }
      if (is_component_ffmpeg) {
 diff --git a/third_party/ffmpeg/chromium/scripts/build_ffmpeg.py b/third_party/ffmpeg/chromium/scripts/build_ffmpeg.py
-index d14ae299c1..e0570737a0 100755
+index d14ae299c1..2b9d42289b 100755
 --- a/third_party/ffmpeg/chromium/scripts/build_ffmpeg.py
 +++ b/third_party/ffmpeg/chromium/scripts/build_ffmpeg.py
 @@ -32,7 +32,7 @@ NDK_ROOT_DIR = os.path.abspath(
@@ -32038,6 +32038,15 @@ index d14ae299c1..e0570737a0 100755
              # See crbug.com/1467681. These could be removed eventually
              '--disable-dotprod',
              '--disable-i8mm',
+@@ -914,7 +918,7 @@ def ConfigureAndBuild(target_arch, target_os, host_os, host_arch, parallel_jobs,
+     # typically be the system one, so explicitly configure use of Clang's
+     # ld.lld, to ensure that things like cross-compilation and LTO work.
+     # This does not work for ia32 and is always used on mac.
+-    if target_arch != 'ia32' and target_os != 'mac':
++    if target_arch != 'ia32' and target_os != 'mac' and target_os != 'netbsd':
+       configure_flags['Common'].append('--extra-ldflags=-fuse-ld=lld')
+ 
+   # Should be run on Mac, unless we're cross-compiling on Linux.
 @@ -1027,7 +1031,7 @@ def ConfigureAndBuild(target_arch, target_os, host_os, host_arch, parallel_jobs,
          'Chrome', configure_flags['Common'] + configure_flags['ChromeAndroid'] +
          configure_args)

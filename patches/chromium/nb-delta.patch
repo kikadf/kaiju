@@ -3119,7 +3119,7 @@ index 7833c5322f..aa885145f0 100644
  #define DAWN_PLATFORM_IS_BSD 1
  #define DAWN_PLATFORM_IS_POSIX 1
 diff --git a/third_party/ffmpeg/chromium/scripts/build_ffmpeg.py b/third_party/ffmpeg/chromium/scripts/build_ffmpeg.py
-index 122e0dd0da..e0570737a0 100755
+index 122e0dd0da..2b9d42289b 100755
 --- a/third_party/ffmpeg/chromium/scripts/build_ffmpeg.py
 +++ b/third_party/ffmpeg/chromium/scripts/build_ffmpeg.py
 @@ -47,6 +47,7 @@ ARCH_MAP = {
@@ -3174,6 +3174,15 @@ index 122e0dd0da..e0570737a0 100755
      if target_arch == 'x64':
        if target_os == 'android':
          configure_flags['Common'].extend([
+@@ -916,7 +918,7 @@ def ConfigureAndBuild(target_arch, target_os, host_os, host_arch, parallel_jobs,
+     # typically be the system one, so explicitly configure use of Clang's
+     # ld.lld, to ensure that things like cross-compilation and LTO work.
+     # This does not work for ia32 and is always used on mac.
+-    if target_arch != 'ia32' and target_os != 'mac':
++    if target_arch != 'ia32' and target_os != 'mac' and target_os != 'netbsd':
+       configure_flags['Common'].append('--extra-ldflags=-fuse-ld=lld')
+ 
+   # Should be run on Mac, unless we're cross-compiling on Linux.
 @@ -1029,7 +1031,7 @@ def ConfigureAndBuild(target_arch, target_os, host_os, host_arch, parallel_jobs,
          'Chrome', configure_flags['Common'] + configure_flags['ChromeAndroid'] +
          configure_args)
