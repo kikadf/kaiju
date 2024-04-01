@@ -1,12 +1,21 @@
 #!/bin/sh
 
-# Usage: ./update_pkgsrc_patches.sh [-d <pkgsrc/chromium/path>]
-# Example: ./update_pkgsrc_patches.sh -d /usr/pkgsrc/wip/chromium
+# Usage: ./update_pkgsrc_patches.sh [-d <pkgsrc/chromium/path> -o <pkgsrc/workobj/dir>]
+# Example: ./update_pkgsrc_patches.sh -d /usr/pkgsrc/wip/chromium -o /mnt/wrkobjdir
+
+# func
+# pkgsrcpath <path>
+ppath() {
+    _p1=$(dirname "$1")
+    _category=$(basename "$_p1")
+    _pkgname=$(basename "$1")
+    echo "$_category/$_pkgname"
+}
 
 # Check arguments
-if [ $# -ne 0 ] && [ $# -ne 2 ]; then
+if [ $# -ne 0 ] && [ $# -ne 2 ] && [ $# -ne 4 ]; then
         echo "Error: wrong args"
-        echo "Usage: ./update_pkgsrc_patches.sh [-d <pkgsrc/chromium/path>]"
+        echo "Usage: ./update_pkgsrc_patches.sh [-d <pkgsrc/chromium/path> -o <pkgsrc/workobj/dir>]"
         exit 1
 fi
 
@@ -14,6 +23,10 @@ for _arg in "$@"; do
     case "$_arg" in
         -d)
             _path="$2"
+            shift 2
+            ;;
+        -o)
+            _obj="$2"
             shift 2
             ;;
     esac
@@ -38,7 +51,22 @@ else
     fi
 fi
 
+_ppath=$(ppath "$_path")
 echo "Used chromium pkgrsc path: $_path"
+
+# Set pkgsrc's workobjdir path
+if [ -n "$_obj" ]; then
+    if [ ! -d "$_obj" ]; then
+        echo "Error: $_obj is not valid"
+        exit 1
+    else
+        _objd="$_obj/$_ppath/work"
+    fi
+else
+    _objd="$_path/work"
+fi
+
+echo "Used workobjdir: $_objd"
 
 # Clean pkgsrc chromium/patches
 cd "$_path" || exit 1
@@ -48,7 +76,7 @@ rm patches/patch-*
 # Create patches in chromium/patches
 # Fix pkglint error: Each patch must be documented
 make extract || exit 1
-cd work/chromium-* || exit 1
+cd "$_objd"/chromium-* || exit 1
 patch -Np1 -i "$_kaiju_repo"/patches/chromium/nb.patch || exit 1
 cd "$_path" || exit 1
 mkpatches || exit 1
