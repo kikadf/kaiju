@@ -77,9 +77,9 @@ rm patches/patch-*
 # Fix pkglint error: Each patch must be documented
 make extract || exit 1
 cd "$_objd"/chromium-* || exit 1
-patch -Np1 -i "$_kaiju_repo"/patches/chromium/nb.patch || exit 1
+patch -p1 -i "$_kaiju_repo"/patches/chromium/nb.patch && echo "==> Patching ok" || exit 1
 cd "$_path" || exit 1
-mkpatches || exit 1
+mkpatches && echo "==> mkpatches ok" || exit 1
 rm patches/*.orig
 rm patches/*Cargo.toml
 for _patch in patches/patch-*; do
