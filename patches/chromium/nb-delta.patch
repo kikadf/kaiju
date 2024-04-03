@@ -764,7 +764,7 @@ index 04df5e08bf..f1eeb2fa82 100644
  
  namespace base {
 diff --git a/build/config/BUILDCONFIG.gn b/build/config/BUILDCONFIG.gn
-index b1ed7a02e5..baca98f789 100644
+index b1ed7a02e5..394c96dd87 100644
 --- a/build/config/BUILDCONFIG.gn
 +++ b/build/config/BUILDCONFIG.gn
 @@ -137,7 +137,7 @@ declare_args() {
@@ -794,8 +794,12 @@ index b1ed7a02e5..baca98f789 100644
    _default_toolchain = host_toolchain
  } else {
    assert(false, "Unsupported target_os: $target_os")
-@@ -313,7 +315,8 @@ is_linux = current_os == "linux" || current_os == "openbsd" ||
-            current_os == "freebsd"
+@@ -310,10 +312,11 @@ is_chromeos = current_os == "chromeos"
+ is_fuchsia = current_os == "fuchsia"
+ is_ios = current_os == "ios"
+ is_linux = current_os == "linux" || current_os == "openbsd" ||
+-           current_os == "freebsd"
++           current_os == "freebsd" || current_os == "netbsd"
  is_openbsd = current_os == "openbsd"
  is_freebsd = current_os == "freebsd"
 -is_bsd = current_os == "openbsd" || current_os == "freebsd"

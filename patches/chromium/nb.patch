@@ -4603,7 +4603,7 @@ index f341687194..758baedebd 100644
      libs = [
        "dl",
 diff --git a/build/config/BUILDCONFIG.gn b/build/config/BUILDCONFIG.gn
-index 894e82b45b..baca98f789 100644
+index 894e82b45b..394c96dd87 100644
 --- a/build/config/BUILDCONFIG.gn
 +++ b/build/config/BUILDCONFIG.gn
 @@ -136,7 +136,8 @@ declare_args() {
@@ -4644,7 +4644,7 @@ index 894e82b45b..baca98f789 100644
  is_ios = current_os == "ios"
 -is_linux = current_os == "linux"
 +is_linux = current_os == "linux" || current_os == "openbsd" ||
-+           current_os == "freebsd"
++           current_os == "freebsd" || current_os == "netbsd"
 +is_openbsd = current_os == "openbsd"
 +is_freebsd = current_os == "freebsd"
 +is_netbsd = current_os == "netbsd"
