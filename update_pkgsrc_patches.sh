@@ -12,6 +12,15 @@ ppath() {
     echo "$_category/$_pkgname"
 }
 
+# die [what]
+die () {
+    _errc=$?
+    if [ -n "$1" ]; then
+        echo ">>> $1 failed ($_errc)"
+    fi
+    exit $_errc
+}
+
 # Check arguments
 if [ $# -ne 0 ] && [ $# -ne 2 ] && [ $# -ne 4 ]; then
         echo "Error: wrong args"
@@ -69,17 +78,17 @@ fi
 echo "Used workobjdir: $_objd"
 
 # Clean pkgsrc chromium/patches
-cd "$_path" || exit 1
+cd "$_path" || die
 rm patches/patch-*
 
 # Apply all-in patch in pkgsrc workdir
 # Create patches in chromium/patches
 # Fix pkglint error: Each patch must be documented
-make extract || exit 1
-cd "$_objd"/chromium-* || exit 1
-patch -p1 -i "$_kaiju_repo"/patches/chromium/nb.patch && echo "==> Patching ok" || exit 1
-cd "$_path" || exit 1
-mkpatches && echo "==> mkpatches ok" || exit 1
+make extract || die "make extract"
+cd "$_objd"/chromium-* || die
+patch -p1 -i "$_kaiju_repo"/patches/chromium/nb.patch || die patch
+cd "$_path" || die
+mkpatches || die mkpatches
 rm patches/*.orig
 rm patches/*Cargo.toml
 for _patch in patches/patch-*; do
@@ -88,12 +97,12 @@ for _patch in patches/patch-*; do
         -e $'3i\\\n* Part of patchset to build on NetBSD\n' \
         -e $'3i\\\n* Based on OpenBSD\'s chromium patches\n' \
         -e $'3i\\\n\n' \
-        "$_patch" || exit 1
+        "$_patch" || die sed
 done
 
 # Update pkgsrc's distinfo
 # Clean pkgsrc's workdir
-make makepatchsum || exit 1
-make clean || exit 1
+make makepatchsum || die
+make clean || die
 
 exit 0

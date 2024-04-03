@@ -5,6 +5,16 @@
 
 c_tarball_url="https://commondatastorage.googleapis.com/chromium-browser-official"
 
+# func
+# die [what]
+die () {
+    _errc=$?
+    if [ -n "$1" ]; then
+        echo ">>> $1 failed ($_errc)"
+    fi
+    exit $_errc
+}
+
 if [ "$1" != "" ]; then
 	c_ver="$1"
 else
@@ -14,24 +24,24 @@ else
 fi
 
 # get chromium
-curl "${c_tarball_url}/chromium-${c_ver}.tar.xz" -o "../chromium-${c_ver}.tar.xz" || exit 1
-curl "${c_tarball_url}/chromium-${c_ver}.tar.xz.hashes" -o "../chromium-${c_ver}.tar.xz.hashes" || exit 1
-cd .. || exit 1
-sed -n 's|sha256 *\(.*\)|\1|p' "chromium-${c_ver}.tar.xz.hashes" | sha256sum -c || exit 1
+curl "${c_tarball_url}/chromium-${c_ver}.tar.xz" -o "../chromium-${c_ver}.tar.xz" || die "curl chromium"
+curl "${c_tarball_url}/chromium-${c_ver}.tar.xz.hashes" -o "../chromium-${c_ver}.tar.xz.hashes" || die "curl hashes"
+cd .. || die
+sed -n 's|sha256 *\(.*\)|\1|p' "chromium-${c_ver}.tar.xz.hashes" | sha256sum -c || die checksum
 
 # extract tarball
-mkdir "chromium-netbsd-${c_ver}" || exit 1
-tar -xJf "chromium-${c_ver}.tar.xz" --strip-components=1 -C "chromium-netbsd-${c_ver}" || exit 1
+mkdir "chromium-netbsd-${c_ver}" || die
+tar -xJf "chromium-${c_ver}.tar.xz" --strip-components=1 -C "chromium-netbsd-${c_ver}" || die extract
 
 # init git repo
-cd "chromium-netbsd-${c_ver}" || exit 1
-git init || exit 1
-git add . || exit 1
-git commit -m "Chromium-${c_ver}" || exit 1
+cd "chromium-netbsd-${c_ver}" || die
+git init || die
+git add . || die
+git commit -m "Chromium-${c_ver}" || die
 
 # clean distfiles
-rm "../chromium-${c_ver}.tar.xz" || exit 1
-rm "../chromium-${c_ver}.tar.xz.hashes" || exit 1
+rm "../chromium-${c_ver}.tar.xz" || die
+rm "../chromium-${c_ver}.tar.xz.hashes" || die
 
 # Apply openbsd patchset in wip branch
 if [ -d "../openbsd-ports/www/chromium/patches" ]; then
@@ -45,16 +55,16 @@ fi
 
 for _patch in "$p_dir"/patch-*; do
     if [ -e "$_patch" ]; then
-        patch -Np0 -i "$_patch" || exit 1
+        patch -Np0 -i "$_patch" || die "Apply OpenBSD patches"
     fi
 done
 
-git add . || exit 1
-git commit -m "Apply OpenBSD patchset" || exit 1
+git add . || die
+git commit -m "Apply OpenBSD patchset" || die
 
 # Apply NetBSD delta patch
 if [ -e "../kaiju/patches/chromium/nb-delta.patch" ]; then
-    git apply --reject ../kaiju/patches/chromium/nb-delta.patch || exit 1
+    git apply --reject ../kaiju/patches/chromium/nb-delta.patch || die "Apply NetBSD delta patch"
 fi
 
 exit 0
