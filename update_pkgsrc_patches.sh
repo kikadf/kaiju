@@ -86,7 +86,7 @@ rm patches/patch-*
 # Fix pkglint error: Each patch must be documented
 make extract || die "make extract"
 cd "$_objd"/chromium-* || die
-patch -p1 -i "$_kaiju_repo"/patches/chromium/nb.patch || die patch
+patch -p1 -s -i "$_kaiju_repo"/patches/chromium/nb.patch || die patch
 cd "$_path" || die
 mkpatches || die mkpatches
 rm patches/*.orig
