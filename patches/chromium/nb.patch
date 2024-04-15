@@ -3421,14 +3421,14 @@ index 4310c05d80..b3467685fc 100644
 +
  }  // namespace base
 diff --git a/base/process/process_metrics_posix.cc b/base/process/process_metrics_posix.cc
-index 9a25ea7081..bdef95e4cc 100644
+index 9a25ea7081..7338e1cee7 100644
 --- a/base/process/process_metrics_posix.cc
 +++ b/base/process/process_metrics_posix.cc
 @@ -21,6 +21,8 @@
  
  #if BUILDFLAG(IS_APPLE)
  #include <malloc/malloc.h>
-+#elif BUILDFLAG(IS_OPENBSD)
++#elif BUILDFLAG(IS_OPENBSD) || BUILDFLAG(IS_NETBSD)
 +#include <stdlib.h>
  #else
  #include <malloc.h>
@@ -17920,10 +17920,10 @@ index fef1829ebd..531aa649e4 100644
      BindHostReceiver(vea_provider.InitWithNewPipeAndPassReceiver());
    } else {
 diff --git a/content/renderer/renderer_blink_platform_impl.cc b/content/renderer/renderer_blink_platform_impl.cc
-index 132aca6cb2..b219b7704c 100644
+index 0ade366382..a67a3d88ec 100644
 --- a/content/renderer/renderer_blink_platform_impl.cc
 +++ b/content/renderer/renderer_blink_platform_impl.cc
-@@ -116,7 +116,7 @@
+@@ -115,7 +115,7 @@
  
  #if BUILDFLAG(IS_MAC)
  #include "content/child/child_process_sandbox_support_impl_mac.h"
@@ -17932,7 +17932,7 @@ index 132aca6cb2..b219b7704c 100644
  #include "content/child/child_process_sandbox_support_impl_linux.h"
  #include "content/child/sandboxed_process_thread_type_handler.h"
  #endif
-@@ -186,13 +186,13 @@ RendererBlinkPlatformImpl::RendererBlinkPlatformImpl(
+@@ -185,13 +185,13 @@ RendererBlinkPlatformImpl::RendererBlinkPlatformImpl(
        is_locked_to_site_(false),
        main_thread_scheduler_(main_thread_scheduler),
        next_frame_sink_id_(uint32_t{std::numeric_limits<int32_t>::max()} + 1) {
@@ -17948,7 +17948,7 @@ index 132aca6cb2..b219b7704c 100644
      mojo::PendingRemote<font_service::mojom::FontService> font_service;
      RenderThreadImpl::current()->BindHostReceiver(
          font_service.InitWithNewPipeAndPassReceiver());
-@@ -201,7 +201,7 @@ RendererBlinkPlatformImpl::RendererBlinkPlatformImpl(
+@@ -200,7 +200,7 @@ RendererBlinkPlatformImpl::RendererBlinkPlatformImpl(
  #endif
    }
  
@@ -17957,7 +17957,7 @@ index 132aca6cb2..b219b7704c 100644
    if (sandboxEnabled()) {
  #if BUILDFLAG(IS_MAC)
      sandbox_support_ = std::make_unique<WebSandboxSupportMac>();
-@@ -262,7 +262,7 @@ void RendererBlinkPlatformImpl::SetThreadType(base::PlatformThreadId thread_id,
+@@ -261,7 +261,7 @@ void RendererBlinkPlatformImpl::SetThreadType(base::PlatformThreadId thread_id,
  #endif
  
  blink::WebSandboxSupport* RendererBlinkPlatformImpl::GetSandboxSupport() {
@@ -17967,10 +17967,10 @@ index 132aca6cb2..b219b7704c 100644
  #else
    // These platforms do not require sandbox support.
 diff --git a/content/renderer/renderer_blink_platform_impl.h b/content/renderer/renderer_blink_platform_impl.h
-index c1b86ec95d..6c234327d5 100644
+index ecbcf12493..13df04f204 100644
 --- a/content/renderer/renderer_blink_platform_impl.h
 +++ b/content/renderer/renderer_blink_platform_impl.h
-@@ -247,7 +247,7 @@ class CONTENT_EXPORT RendererBlinkPlatformImpl : public BlinkPlatformImpl {
+@@ -246,7 +246,7 @@ class CONTENT_EXPORT RendererBlinkPlatformImpl : public BlinkPlatformImpl {
    void Collect3DContextInformation(blink::Platform::GraphicsInfo* gl_info,
                                     const gpu::GPUInfo& gpu_info) const;
  
@@ -20661,7 +20661,7 @@ index 5566c8e8da..ad545ee2ae 100644
  
  }  // namespace media
 diff --git a/media/base/media_switches.cc b/media/base/media_switches.cc
-index 73b7900388..4bac845b97 100644
+index 9f24f8fd64..40b8b58b25 100644
 --- a/media/base/media_switches.cc
 +++ b/media/base/media_switches.cc
 @@ -21,7 +21,7 @@
@@ -20693,7 +20693,7 @@ index 73b7900388..4bac845b97 100644
  // Enables system audio mirroring using pulseaudio.
  BASE_FEATURE(kPulseaudioLoopbackForCast,
               "PulseaudioLoopbackForCast",
-@@ -608,7 +608,7 @@ BASE_FEATURE(kUseWritePixelsYUV,
+@@ -602,7 +602,7 @@ BASE_FEATURE(kUseWritePixelsYUV,
  BASE_FEATURE(kUseMultiPlaneFormatForHardwareVideo,
               "UseMultiPlaneFormatForHardwareVideo",
  #if BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_FUCHSIA) || \
@@ -20702,7 +20702,7 @@ index 73b7900388..4bac845b97 100644
               base::FEATURE_ENABLED_BY_DEFAULT
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
-@@ -721,7 +721,7 @@ BASE_FEATURE(kFallbackAfterDecodeError,
+@@ -715,7 +715,7 @@ BASE_FEATURE(kFallbackAfterDecodeError,
  // Show toolbar button that opens dialog for controlling media sessions.
  BASE_FEATURE(kGlobalMediaControls,
               "GlobalMediaControls",
@@ -20711,7 +20711,7 @@ index 73b7900388..4bac845b97 100644
               base::FEATURE_ENABLED_BY_DEFAULT
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
-@@ -749,7 +749,7 @@ BASE_FEATURE(kGlobalMediaControlsUpdatedUI,
+@@ -743,7 +743,7 @@ BASE_FEATURE(kGlobalMediaControlsUpdatedUI,
  // If enabled, users can request Media Remoting without fullscreen-in-tab.
  BASE_FEATURE(kMediaRemotingWithoutFullscreen,
               "MediaRemotingWithoutFullscreen",
@@ -20720,7 +20720,7 @@ index 73b7900388..4bac845b97 100644
               base::FEATURE_ENABLED_BY_DEFAULT
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
-@@ -761,7 +761,7 @@ BASE_FEATURE(kMediaRemotingWithoutFullscreen,
+@@ -755,7 +755,7 @@ BASE_FEATURE(kMediaRemotingWithoutFullscreen,
  BASE_FEATURE(kGlobalMediaControlsPictureInPicture,
               "GlobalMediaControlsPictureInPicture",
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -20729,7 +20729,7 @@ index 73b7900388..4bac845b97 100644
               base::FEATURE_ENABLED_BY_DEFAULT
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
-@@ -790,7 +790,7 @@ BASE_FEATURE(kUnifiedAutoplay,
+@@ -784,7 +784,7 @@ BASE_FEATURE(kUnifiedAutoplay,
               "UnifiedAutoplay",
               base::FEATURE_ENABLED_BY_DEFAULT);
  
@@ -20738,7 +20738,7 @@ index 73b7900388..4bac845b97 100644
  // Enable vaapi video decoding on linux. This is already enabled by default on
  // chromeos, but needs an experiment on linux.
  BASE_FEATURE(kVaapiVideoDecodeLinux,
-@@ -881,7 +881,7 @@ BASE_FEATURE(kVaapiVp9SModeHWEncoding,
+@@ -875,7 +875,7 @@ BASE_FEATURE(kVaapiVp9SModeHWEncoding,
               "VaapiVp9SModeHWEncoding",
               base::FEATURE_DISABLED_BY_DEFAULT);
  #endif  // defined(ARCH_CPU_X86_FAMILY) && BUILDFLAG(IS_CHROMEOS)
@@ -20747,7 +20747,7 @@ index 73b7900388..4bac845b97 100644
  // Enables the new V4L2StatefulVideoDecoder instead of V4L2VideoDecoder.
  BASE_FEATURE(kV4L2FlatStatelessVideoDecoder,
               "V4L2FlatStatelessVideoDecoder",
-@@ -1000,7 +1000,7 @@ BASE_FEATURE(kLiveCaptionUseWaitK,
+@@ -994,7 +994,7 @@ BASE_FEATURE(kLiveCaptionUseWaitK,
  // Live Caption can be used in multiple languages, as opposed to just English.
  BASE_FEATURE(kLiveCaptionMultiLanguage,
               "LiveCaptionMultiLanguage",
@@ -20756,7 +20756,7 @@ index 73b7900388..4bac845b97 100644
               base::FEATURE_ENABLED_BY_DEFAULT
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
-@@ -1472,7 +1472,7 @@ BASE_FEATURE(kUseOutOfProcessVideoDecoding,
+@@ -1466,7 +1466,7 @@ BASE_FEATURE(kUseOutOfProcessVideoDecoding,
  );
  #endif  // BUILDFLAG(ALLOW_OOP_VIDEO_DECODER)
  
@@ -30245,7 +30245,7 @@ index 44921be4ed..58ae63e82c 100644
      const char *executableName = getprogname();
      return (executableName) ? std::string(executableName) : "ANGLE";
 diff --git a/third_party/angle/src/common/system_utils_linux.cpp b/third_party/angle/src/common/system_utils_linux.cpp
-index 5e86fa6354..919f512c77 100644
+index 5e86fa6354..410ae2f25d 100644
 --- a/third_party/angle/src/common/system_utils_linux.cpp
 +++ b/third_party/angle/src/common/system_utils_linux.cpp
 @@ -15,8 +15,15 @@
@@ -30272,12 +30272,14 @@ index 5e86fa6354..919f512c77 100644
  
  std::string GetExecutableDirectory()
  {
-@@ -56,6 +64,10 @@ void SetCurrentThreadName(const char *name)
+@@ -56,6 +64,12 @@ void SetCurrentThreadName(const char *name)
  {
      // There's a 15-character (16 including '\0') limit.  If the name is too big (and ERANGE is
      // returned), just ignore the name.
 +#if ANGLE_PLATFORM_OPENBSD
 +    pthread_set_name_np(pthread_self(), name);
++#elif ANGLE_PLATFORM_NETBSD
++    pthread_setname_np(pthread_self(), "%s", (void *)name);
 +#else
      pthread_setname_np(pthread_self(), name);
 +#endif
@@ -30638,10 +30640,10 @@ index 3e0b4c30c3..267cbd828a 100644
        const ::blink::RendererPreferences& data) {
      return data.system_font_family_name;
 diff --git a/third_party/blink/public/platform/platform.h b/third_party/blink/public/platform/platform.h
-index 165bd4eae9..654f64e481 100644
+index 38c079e1f9..e8e529256e 100644
 --- a/third_party/blink/public/platform/platform.h
 +++ b/third_party/blink/public/platform/platform.h
-@@ -351,7 +351,7 @@ class BLINK_PLATFORM_EXPORT Platform {
+@@ -347,7 +347,7 @@ class BLINK_PLATFORM_EXPORT Platform {
      return nullptr;
    }
  
@@ -33766,10 +33768,20 @@ index 392f0d88ac..3aac35efda 100644
        # SQLite doesn't believe in compiler warnings, preferring testing.
        # http://www.sqlite.org/faq.html#q17
 diff --git a/third_party/sqlite/src/amalgamation/sqlite3.c b/third_party/sqlite/src/amalgamation/sqlite3.c
-index 23439b9502..a57ef5c27e 100644
+index 23439b9502..2483f00e6f 100644
 --- a/third_party/sqlite/src/amalgamation/sqlite3.c
 +++ b/third_party/sqlite/src/amalgamation/sqlite3.c
-@@ -44510,6 +44510,11 @@ static int unixRandomness(sqlite3_vfs *NotUsed, int nBuf, char *zBuf){
+@@ -20447,6 +20447,9 @@ SQLITE_PRIVATE int sqlite3HeapNearlyFull(void);
+ ** The alloca() routine never returns NULL.  This will cause code paths
+ ** that deal with sqlite3StackAlloc() failures to be unreachable.
+ */
++#if defined(__NetBSD__)
++# undef SQLITE_USE_ALLOCA
++#endif
+ #ifdef SQLITE_USE_ALLOCA
+ # define sqlite3StackAllocRaw(D,N)   alloca(N)
+ # define sqlite3StackAllocRawNN(D,N) alloca(N)
+@@ -44510,6 +44513,11 @@ static int unixRandomness(sqlite3_vfs *NotUsed, int nBuf, char *zBuf){
    memset(zBuf, 0, nBuf);
    randomnessPid = osGetpid(0);
  #if !defined(SQLITE_TEST) && !defined(SQLITE_OMIT_RANDOMNESS)
@@ -33781,7 +33793,7 @@ index 23439b9502..a57ef5c27e 100644
    {
      int fd, got;
      fd = robust_open("/dev/urandom", O_RDONLY, 0);
-@@ -44525,6 +44530,7 @@ static int unixRandomness(sqlite3_vfs *NotUsed, int nBuf, char *zBuf){
+@@ -44525,6 +44533,7 @@ static int unixRandomness(sqlite3_vfs *NotUsed, int nBuf, char *zBuf){
        robust_close(0, fd, __LINE__);
      }
    }
@@ -33789,6 +33801,381 @@ index 23439b9502..a57ef5c27e 100644
  #endif
    return nBuf;
  }
+diff --git a/third_party/swiftshader/src/Reactor/Debug.cpp b/third_party/swiftshader/src/Reactor/Debug.cpp
+index 031524dc6f..580c95b3dd 100644
+--- a/third_party/swiftshader/src/Reactor/Debug.cpp
++++ b/third_party/swiftshader/src/Reactor/Debug.cpp
+@@ -46,7 +46,8 @@ namespace {
+ 
+ bool IsUnderDebugger()
+ {
+-#if defined(PTRACE) && !defined(__APPLE__) && !defined(__MACH__)
++#if defined(PTRACE) && !defined(__APPLE__) && !defined(__MACH__) && !defined(__OpenBSD__) && !defined(__FreeBSD__) && \
++	!defined(__NetBSD__)
+ 	static bool checked = false;
+ 	static bool res = false;
+ 
+diff --git a/third_party/swiftshader/src/System/Configurator.cpp b/third_party/swiftshader/src/System/Configurator.cpp
+index dfe615b8d6..3853d05686 100644
+--- a/third_party/swiftshader/src/System/Configurator.cpp
++++ b/third_party/swiftshader/src/System/Configurator.cpp
+@@ -38,6 +38,9 @@ namespace sw {
+ 
+ Configurator::Configurator(const std::string &filePath)
+ {
++#if defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__NetBSD__)
++	return;
++#endif
+ 	std::fstream file(filePath, std::ios::in);
+ 	if(file.fail())
+ 	{
+diff --git a/third_party/swiftshader/src/System/Linux/MemFd.cpp b/third_party/swiftshader/src/System/Linux/MemFd.cpp
+index 1319d11212..77eb5a3243 100644
+--- a/third_party/swiftshader/src/System/Linux/MemFd.cpp
++++ b/third_party/swiftshader/src/System/Linux/MemFd.cpp
+@@ -25,6 +25,7 @@
+ #	define MFD_CLOEXEC 0x0001U
+ #endif
+ 
++#if !defined(__OpenBSD__) && !defined(__FreeBSD__) && !defined(__NetBSD__)
+ #if __aarch64__
+ #	define __NR_memfd_create 279
+ #elif __arm__
+@@ -36,6 +37,7 @@
+ #elif __x86_64__
+ #	define __NR_memfd_create 319
+ #endif /* __NR_memfd_create__ */
++#endif
+ 
+ LinuxMemFd::~LinuxMemFd()
+ {
+@@ -63,13 +65,17 @@ bool LinuxMemFd::allocate(const char *name, size_t size)
+ {
+ 	close();
+ 
+-#ifndef __NR_memfd_create
++#if !defined(__NR_memfd_create) || defined(__OpenBSD__)
+ 	TRACE("memfd_create() not supported on this system!");
+ 	return false;
+ #else
+ 	// In the event of no system call this returns -1 with errno set
+ 	// as ENOSYS.
++#if defined(__FreeBSD__) ||  defined(__NetBSD__)
++	fd_ = memfd_create(name, MFD_CLOEXEC);
++#else
+ 	fd_ = syscall(__NR_memfd_create, name, MFD_CLOEXEC);
++#endif
+ 	if(fd_ < 0)
+ 	{
+ 		TRACE("memfd_create() returned %d: %s", errno, strerror(errno));
+diff --git a/third_party/swiftshader/src/Vulkan/VkSemaphoreExternalLinux.hpp b/third_party/swiftshader/src/Vulkan/VkSemaphoreExternalLinux.hpp
+index 3689ad9ce5..ba70268f60 100644
+--- a/third_party/swiftshader/src/Vulkan/VkSemaphoreExternalLinux.hpp
++++ b/third_party/swiftshader/src/Vulkan/VkSemaphoreExternalLinux.hpp
+@@ -49,13 +49,17 @@ public:
+ 	{
+ 		pthread_mutexattr_t mattr;
+ 		pthread_mutexattr_init(&mattr);
++#if 0
+ 		pthread_mutexattr_setpshared(&mattr, PTHREAD_PROCESS_SHARED);
++#endif
+ 		pthread_mutex_init(&mutex, &mattr);
+ 		pthread_mutexattr_destroy(&mattr);
+ 
+ 		pthread_condattr_t cattr;
+ 		pthread_condattr_init(&cattr);
++#if 0
+ 		pthread_condattr_setpshared(&cattr, PTHREAD_PROCESS_SHARED);
++#endif
+ 		pthread_cond_init(&cond, &cattr);
+ 		pthread_condattr_destroy(&cattr);
+ 	}
+diff --git a/third_party/swiftshader/src/WSI/libXCB.cpp b/third_party/swiftshader/src/WSI/libXCB.cpp
+index e0784cc556..f3534edc13 100644
+--- a/third_party/swiftshader/src/WSI/libXCB.cpp
++++ b/third_party/swiftshader/src/WSI/libXCB.cpp
+@@ -57,7 +57,7 @@ LibXcbExports *LibXCB::loadExports()
+ 		}
+ 		else
+ 		{
+-			libxcb = loadLibrary("libxcb.so.1");
++			libxcb = loadLibrary("libxcb.so");
+ 		}
+ 
+ 		if(getProcAddress(RTLD_DEFAULT, "xcb_shm_query_version"))  // Search the global scope for pre-loaded XCB library.
+@@ -66,7 +66,7 @@ LibXcbExports *LibXCB::loadExports()
+ 		}
+ 		else
+ 		{
+-			libshm = loadLibrary("libxcb-shm.so.0");
++			libshm = loadLibrary("libxcb-shm.so");
+ 		}
+ 
+ 		return LibXcbExports(libxcb, libshm);
+diff --git a/third_party/swiftshader/third_party/llvm-10.0/configs/linux/include/llvm/Config/config.h b/third_party/swiftshader/third_party/llvm-10.0/configs/linux/include/llvm/Config/config.h
+index 7392898797..848b4328a9 100644
+--- a/third_party/swiftshader/third_party/llvm-10.0/configs/linux/include/llvm/Config/config.h
++++ b/third_party/swiftshader/third_party/llvm-10.0/configs/linux/include/llvm/Config/config.h
+@@ -29,7 +29,7 @@
+ 
+ /* Define to 1 if you have the declaration of `arc4random', and to 0 if you
+    don't. */
+-#define HAVE_DECL_ARC4RANDOM 0
++#define HAVE_DECL_ARC4RANDOM 1
+ 
+ /* Define to 1 if you have the declaration of `FE_ALL_EXCEPT', and to 0 if you
+    don't. */
+@@ -53,7 +53,7 @@
+ #define HAVE_DLOPEN 1
+ 
+ /* Define if dladdr() is available on this platform. */
+-/* #undef HAVE_DLADDR */
++#define HAVE_DLADDR 1
+ 
+ /* Define to 1 if you have the <errno.h> header file. */
+ #define HAVE_ERRNO_H 1
+@@ -92,7 +92,7 @@
+ #define HAVE_ISATTY 1
+ 
+ /* Define to 1 if you have the `edit' library (-ledit). */
+-/* #undef HAVE_LIBEDIT */
++#define HAVE_LIBEDIT 1
+ 
+ /* Define to 1 if you have the `pfm' library (-lpfm). */
+ /* #undef HAVE_LIBPFM */
+@@ -110,13 +110,13 @@
+ /* #undef HAVE_PTHREAD_SETNAME_NP */
+ 
+ /* Define to 1 if you have the `z' library (-lz). */
+-/* #undef HAVE_LIBZ */
++#define HAVE_LIBZ 1
+ 
+ /* Define to 1 if you have the <link.h> header file. */
+-#define HAVE_LINK_H 1
++/* #undef HAVE_LINK_H */
+ 
+ /* Define to 1 if you have the `lseek64' function. */
+-#define HAVE_LSEEK64 1
++/* #undef HAVE_LSEEK64 */
+ 
+ /* Define to 1 if you have the <mach/mach.h> header file. */
+ /* #undef HAVE_MACH_MACH_H */
+@@ -125,7 +125,7 @@
+ /* #undef HAVE_MALLCTL */
+ 
+ /* Define to 1 if you have the `mallinfo' function. */
+-#define HAVE_MALLINFO 1
++/* #undef HAVE_MALLINFO */
+ 
+ /* Define to 1 if you have the <malloc/malloc.h> header file. */
+ /* #undef HAVE_MALLOC_MALLOC_H */
+@@ -134,10 +134,10 @@
+ /* #undef HAVE_MALLOC_ZONE_STATISTICS */
+ 
+ /* Define to 1 if you have the `posix_fallocate' function. */
+-#define HAVE_POSIX_FALLOCATE 1
++/* #undef HAVE_POSIX_FALLOCATE */
+ 
+ /* Define to 1 if you have the `posix_spawn' function. */
+-/* #undef HAVE_POSIX_SPAWN */
++#define HAVE_POSIX_SPAWN 1
+ 
+ /* Define to 1 if you have the `pread' function. */
+ #define HAVE_PREAD 1
+@@ -161,10 +161,10 @@
+ #define HAVE_SETENV 1
+ 
+ /* Define to 1 if you have the `sched_getaffinity' function. */
+-#define HAVE_SCHED_GETAFFINITY 1
++/* #undef HAVE_SCHED_GETAFFINITY */
+ 
+ /* Define to 1 if you have the `CPU_COUNT' macro. */
+-#define HAVE_CPU_COUNT 1
++/* #undef HAVE_CPU_COUNT */
+ 
+ /* Define to 1 if you have the `setrlimit' function. */
+ #define HAVE_SETRLIMIT 1
+@@ -182,7 +182,7 @@
+ #define HAVE_STRERROR_R 1
+ 
+ /* Define to 1 if you have the `sysconf' function. */
+-#define HAVE_SYSCONF 1
++/* #undef HAVE_SYSCONF */
+ 
+ /* Define to 1 if you have the <sys/ioctl.h> header file. */
+ #define HAVE_SYS_IOCTL_H 1
+@@ -209,7 +209,7 @@
+ #define HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC 1
+ 
+ /* Define to 1 if you have the <sys/types.h> header file. */
+-#define HAVE_SYS_TYPES_H 1
++/* #undef HAVE_SYS_TYPES_H */
+ 
+ /* Define if the setupterm() function is supported this platform. */
+ /* #undef HAVE_TERMINFO */
+@@ -218,16 +218,16 @@
+ /* #undef HAVE_LIBXAR */
+ 
+ /* Define to 1 if you have the <termios.h> header file. */
+-/* #undef HAVE_TERMIOS_H */
++#define HAVE_TERMIOS_H 1
+ 
+ /* Define to 1 if you have the <unistd.h> header file. */
+ #define HAVE_UNISTD_H 1
+ 
+ /* Define to 1 if you have the <valgrind/valgrind.h> header file. */
+-/* #undef HAVE_VALGRIND_VALGRIND_H */
++/* #define HAVE_VALGRIND_VALGRIND_H 1 */
+ 
+ /* Define to 1 if you have the <zlib.h> header file. */
+-/* #undef HAVE_ZLIB_H */
++#define HAVE_ZLIB_H 1
+ 
+ /* Have host's _alloca */
+ /* #undef HAVE__ALLOCA */
+@@ -292,30 +292,8 @@
+ /* Linker version detected at compile time. */
+ /* #undef HOST_LINK_VERSION */
+ 
+-/* Target triple LLVM will generate code for by default */
+-/* Doesn't use `cmakedefine` because it is allowed to be empty. */
+-#if defined(__x86_64__)
+-#define LLVM_DEFAULT_TARGET_TRIPLE "x86_64-unknown-linux-gnu"
+-#elif defined(__i386__)
+-#define LLVM_DEFAULT_TARGET_TRIPLE "i686-pc-linux-gnu"
+-#elif defined(__arm__)
+-#define LLVM_DEFAULT_TARGET_TRIPLE "armv7-linux-gnueabihf"
+-#elif defined(__aarch64__)
+-#define LLVM_DEFAULT_TARGET_TRIPLE "aarch64-linux-gnu"
+-#elif defined(__mips__)
+-#define LLVM_DEFAULT_TARGET_TRIPLE "mipsel-linux-gnu"
+-#elif defined(__mips64)
+-#define LLVM_DEFAULT_TARGET_TRIPLE "mips64el-linux-gnuabi64"
+-#elif defined(__powerpc64__)
+-#define LLVM_DEFAULT_TARGET_TRIPLE "powerpc64le-unknown-linux-gnu"
+-#elif defined(__riscv) && __riscv_xlen == 64
+-#define LLVM_DEFAULT_TARGET_TRIPLE "riscv64-unknown-linux-gnu"
+-#else
+-#error "unknown architecture"
+-#endif
+-
+ /* Define if zlib compression is available */
+-#define LLVM_ENABLE_ZLIB 0
++/* #define LLVM_ENABLE_ZLIB 1 */
+ 
+ /* Define if overriding target triple is enabled */
+ /* #undef LLVM_TARGET_TRIPLE_ENV */
+@@ -339,10 +317,10 @@
+ #define PACKAGE_NAME "LLVM"
+ 
+ /* Define to the full name and version of this package. */
+-#define PACKAGE_STRING "LLVM 10.0.0"
++#define PACKAGE_STRING "LLVM 11.1.0"
+ 
+ /* Define to the version of this package. */
+-#define PACKAGE_VERSION "10.0.0"
++#define PACKAGE_VERSION "11.1.0"
+ 
+ /* Define to the vendor of this package. */
+ /* #undef PACKAGE_VENDOR */
+@@ -362,9 +340,6 @@
+ /* Whether GlobalISel rule coverage is being collected */
+ #define LLVM_GISEL_COV_ENABLED 0
+ 
+-/* Define if we have z3 and want to build it */
+-#define LLVM_WITH_Z3 1
+-
+ /* Define to the default GlobalISel coverage file prefix */
+ /* #undef LLVM_GISEL_COV_PREFIX */
+ 
+diff --git a/third_party/swiftshader/third_party/llvm-subzero/build/Linux/include/llvm/Config/config.h b/third_party/swiftshader/third_party/llvm-subzero/build/Linux/include/llvm/Config/config.h
+index 0ffd1bf775..f9a45cee2c 100644
+--- a/third_party/swiftshader/third_party/llvm-subzero/build/Linux/include/llvm/Config/config.h
++++ b/third_party/swiftshader/third_party/llvm-subzero/build/Linux/include/llvm/Config/config.h
+@@ -5,8 +5,6 @@
+ #include "llvm/Config/llvm-config.h"
+ 
+ /* For detecting __GLIBC__ usage */
+-#include <features.h>
+-
+ /* Bug report URL. */
+ #define BUG_REPORT_URL "http://llvm.org/bugs/"
+ 
+@@ -27,7 +25,7 @@
+ 
+ /* Define to 1 if you have the declaration of `arc4random', and to 0 if you
+    don't. */
+-#define HAVE_DECL_ARC4RANDOM 0
++#define HAVE_DECL_ARC4RANDOM 1
+ 
+ /* Define to 1 if you have the declaration of `FE_ALL_EXCEPT', and to 0 if you
+    don't. */
+@@ -124,7 +122,7 @@
+ #define HAVE_LINK_H 1
+ 
+ /* Define to 1 if you have the `lseek64' function. */
+-#define HAVE_LSEEK64 1
++/* #define HAVE_LSEEK64 */
+ 
+ /* Define to 1 if you have the <mach/mach.h> header file. */
+ /* #undef HAVE_MACH_MACH_H */
+@@ -133,7 +131,7 @@
+ /* #undef HAVE_MALLCTL */
+ 
+ /* Define to 1 if you have the `mallinfo' function. */
+-#define HAVE_MALLINFO 1
++/* #define HAVE_MALLINFO */
+ 
+ /* Some projects using SwiftShader bypass cmake (eg Chromium via gn) */
+ /* so we need to check glibc version for the new API to be safe */
+@@ -163,7 +161,7 @@
+ /* #undef HAVE_NDIR_H */
+ 
+ /* Define to 1 if you have the `posix_fallocate' function. */
+-#define HAVE_POSIX_FALLOCATE 1
++/* #define HAVE_POSIX_FALLOCATE */
+ 
+ /* Define to 1 if you have the `posix_spawn' function. */
+ #define HAVE_POSIX_SPAWN 1
+diff --git a/third_party/swiftshader/third_party/marl/src/memory.cpp b/third_party/swiftshader/third_party/marl/src/memory.cpp
+index f52be55990..3b8e460c9b 100644
+--- a/third_party/swiftshader/third_party/marl/src/memory.cpp
++++ b/third_party/swiftshader/third_party/marl/src/memory.cpp
+@@ -19,7 +19,8 @@
+ 
+ #include <cstring>
+ 
+-#if defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
++#if defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__) || defined(__EMSCRIPTEN__) || defined(__OpenBSD__) || \
++      defined(__NetBSD__)
+ #include <sys/mman.h>
+ #include <unistd.h>
+ namespace {
+diff --git a/third_party/swiftshader/third_party/marl/src/thread.cpp b/third_party/swiftshader/third_party/marl/src/thread.cpp
+index 3a275c99da..9609843664 100644
+--- a/third_party/swiftshader/third_party/marl/src/thread.cpp
++++ b/third_party/swiftshader/third_party/marl/src/thread.cpp
+@@ -46,6 +46,9 @@
+ #include <unistd.h>
+ #include <thread>
+ #endif
++#if defined(__NetBSD__)
++#include <stdarg.h>
++#endif
+ 
+ namespace {
+ 
+@@ -444,7 +447,9 @@ void Thread::setName(const char* fmt, ...) {
+   pthread_setname_np(name);
+ #elif defined(__FreeBSD__)
+   pthread_set_name_np(pthread_self(), name);
+-#elif !defined(__Fuchsia__) && !defined(__EMSCRIPTEN__)
++#elif defined(__NetBSD__)
++  pthread_setname_np(pthread_self(), "%s", (void *)name);
++#elif !defined(__Fuchsia__) && !defined(__EMSCRIPTEN__) && !defined(__OpenBSD__) && !defined(__FreeBSD__)
+   pthread_setname_np(pthread_self(), name);
+ #endif
+ 
 diff --git a/third_party/test_fonts/fontconfig/BUILD.gn b/third_party/test_fonts/fontconfig/BUILD.gn
 index 040fdbb149..3db437210d 100644
 --- a/third_party/test_fonts/fontconfig/BUILD.gn

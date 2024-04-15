@@ -669,6 +669,19 @@ index 0000000000..fdf5c8557d
 +}
 +
 +}  // namespace base
+diff --git a/base/process/process_metrics_posix.cc b/base/process/process_metrics_posix.cc
+index bdef95e4cc..7338e1cee7 100644
+--- a/base/process/process_metrics_posix.cc
++++ b/base/process/process_metrics_posix.cc
+@@ -21,7 +21,7 @@
+ 
+ #if BUILDFLAG(IS_APPLE)
+ #include <malloc/malloc.h>
+-#elif BUILDFLAG(IS_OPENBSD)
++#elif BUILDFLAG(IS_OPENBSD) || BUILDFLAG(IS_NETBSD)
+ #include <stdlib.h>
+ #else
+ #include <malloc.h>
 diff --git a/base/profiler/stack_base_address_posix.cc b/base/profiler/stack_base_address_posix.cc
 index 9d0b903006..a9eef9fc26 100644
 --- a/base/profiler/stack_base_address_posix.cc
@@ -1132,7 +1145,7 @@ index 3aab31651f..b7eec49246 100644
          ]
        },
 diff --git a/media/base/media_switches.cc b/media/base/media_switches.cc
-index 383ed29088..4bac845b97 100644
+index db2b5efe75..40b8b58b25 100644
 --- a/media/base/media_switches.cc
 +++ b/media/base/media_switches.cc
 @@ -61,7 +61,7 @@ const char kReportVp9AsAnUnsupportedMimeType[] =
@@ -2957,7 +2970,7 @@ index 9cec644df4..1f6e9bb19a 100644
  #    define ANGLE_PLATFORM_POSIX 1
  #else
 diff --git a/third_party/angle/src/common/system_utils_linux.cpp b/third_party/angle/src/common/system_utils_linux.cpp
-index c64a05f79e..919f512c77 100644
+index c64a05f79e..410ae2f25d 100644
 --- a/third_party/angle/src/common/system_utils_linux.cpp
 +++ b/third_party/angle/src/common/system_utils_linux.cpp
 @@ -17,6 +17,8 @@
@@ -2969,6 +2982,15 @@ index c64a05f79e..919f512c77 100644
  #endif
  
  namespace angle
+@@ -64,6 +66,8 @@ void SetCurrentThreadName(const char *name)
+     // returned), just ignore the name.
+ #if ANGLE_PLATFORM_OPENBSD
+     pthread_set_name_np(pthread_self(), name);
++#elif ANGLE_PLATFORM_NETBSD
++    pthread_setname_np(pthread_self(), "%s", (void *)name);
+ #else
+     pthread_setname_np(pthread_self(), name);
+ #endif
 diff --git a/third_party/angle/src/gpu_info_util/SystemInfo_internal.h b/third_party/angle/src/gpu_info_util/SystemInfo_internal.h
 index 3471ed3f19..12da25f48f 100644
 --- a/third_party/angle/src/gpu_info_util/SystemInfo_internal.h
@@ -3547,6 +3569,106 @@ index c455a1ffa5..4520c3f56f 100644
   */
  
  #ifndef _LIBSPEECHD_VERSION_H
+diff --git a/third_party/sqlite/src/amalgamation/sqlite3.c b/third_party/sqlite/src/amalgamation/sqlite3.c
+index a57ef5c27e..2483f00e6f 100644
+--- a/third_party/sqlite/src/amalgamation/sqlite3.c
++++ b/third_party/sqlite/src/amalgamation/sqlite3.c
+@@ -20447,6 +20447,9 @@ SQLITE_PRIVATE int sqlite3HeapNearlyFull(void);
+ ** The alloca() routine never returns NULL.  This will cause code paths
+ ** that deal with sqlite3StackAlloc() failures to be unreachable.
+ */
++#if defined(__NetBSD__)
++# undef SQLITE_USE_ALLOCA
++#endif
+ #ifdef SQLITE_USE_ALLOCA
+ # define sqlite3StackAllocRaw(D,N)   alloca(N)
+ # define sqlite3StackAllocRawNN(D,N) alloca(N)
+diff --git a/third_party/swiftshader/src/Reactor/Debug.cpp b/third_party/swiftshader/src/Reactor/Debug.cpp
+index d4c16fc2f0..580c95b3dd 100644
+--- a/third_party/swiftshader/src/Reactor/Debug.cpp
++++ b/third_party/swiftshader/src/Reactor/Debug.cpp
+@@ -46,7 +46,8 @@ namespace {
+ 
+ bool IsUnderDebugger()
+ {
+-#if defined(PTRACE) && !defined(__APPLE__) && !defined(__MACH__) && !defined(__OpenBSD__) && !defined(__FreeBSD__)
++#if defined(PTRACE) && !defined(__APPLE__) && !defined(__MACH__) && !defined(__OpenBSD__) && !defined(__FreeBSD__) && \
++	!defined(__NetBSD__)
+ 	static bool checked = false;
+ 	static bool res = false;
+ 
+diff --git a/third_party/swiftshader/src/System/Configurator.cpp b/third_party/swiftshader/src/System/Configurator.cpp
+index 62a9b7eef3..3853d05686 100644
+--- a/third_party/swiftshader/src/System/Configurator.cpp
++++ b/third_party/swiftshader/src/System/Configurator.cpp
+@@ -38,7 +38,7 @@ namespace sw {
+ 
+ Configurator::Configurator(const std::string &filePath)
+ {
+-#if defined(__OpenBSD__) || defined(__FreeBSD__)
++#if defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__NetBSD__)
+ 	return;
+ #endif
+ 	std::fstream file(filePath, std::ios::in);
+diff --git a/third_party/swiftshader/src/System/Linux/MemFd.cpp b/third_party/swiftshader/src/System/Linux/MemFd.cpp
+index 7b5a091b18..77eb5a3243 100644
+--- a/third_party/swiftshader/src/System/Linux/MemFd.cpp
++++ b/third_party/swiftshader/src/System/Linux/MemFd.cpp
+@@ -25,7 +25,7 @@
+ #	define MFD_CLOEXEC 0x0001U
+ #endif
+ 
+-#if !defined(__OpenBSD__) && !defined(__FreeBSD__)
++#if !defined(__OpenBSD__) && !defined(__FreeBSD__) && !defined(__NetBSD__)
+ #if __aarch64__
+ #	define __NR_memfd_create 279
+ #elif __arm__
+@@ -71,7 +71,7 @@ bool LinuxMemFd::allocate(const char *name, size_t size)
+ #else
+ 	// In the event of no system call this returns -1 with errno set
+ 	// as ENOSYS.
+-#if defined(__FreeBSD__)
++#if defined(__FreeBSD__) ||  defined(__NetBSD__)
+ 	fd_ = memfd_create(name, MFD_CLOEXEC);
+ #else
+ 	fd_ = syscall(__NR_memfd_create, name, MFD_CLOEXEC);
+diff --git a/third_party/swiftshader/third_party/marl/src/memory.cpp b/third_party/swiftshader/third_party/marl/src/memory.cpp
+index abecf15baf..3b8e460c9b 100644
+--- a/third_party/swiftshader/third_party/marl/src/memory.cpp
++++ b/third_party/swiftshader/third_party/marl/src/memory.cpp
+@@ -19,7 +19,8 @@
+ 
+ #include <cstring>
+ 
+-#if defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__) || defined(__EMSCRIPTEN__) || defined(__OpenBSD__)
++#if defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__) || defined(__EMSCRIPTEN__) || defined(__OpenBSD__) || \
++      defined(__NetBSD__)
+ #include <sys/mman.h>
+ #include <unistd.h>
+ namespace {
+diff --git a/third_party/swiftshader/third_party/marl/src/thread.cpp b/third_party/swiftshader/third_party/marl/src/thread.cpp
+index b87ab0b41b..9609843664 100644
+--- a/third_party/swiftshader/third_party/marl/src/thread.cpp
++++ b/third_party/swiftshader/third_party/marl/src/thread.cpp
+@@ -46,6 +46,9 @@
+ #include <unistd.h>
+ #include <thread>
+ #endif
++#if defined(__NetBSD__)
++#include <stdarg.h>
++#endif
+ 
+ namespace {
+ 
+@@ -444,6 +447,8 @@ void Thread::setName(const char* fmt, ...) {
+   pthread_setname_np(name);
+ #elif defined(__FreeBSD__)
+   pthread_set_name_np(pthread_self(), name);
++#elif defined(__NetBSD__)
++  pthread_setname_np(pthread_self(), "%s", (void *)name);
+ #elif !defined(__Fuchsia__) && !defined(__EMSCRIPTEN__) && !defined(__OpenBSD__) && !defined(__FreeBSD__)
+   pthread_setname_np(pthread_self(), name);
+ #endif
 diff --git a/tools/json_schema_compiler/feature_compiler.py b/tools/json_schema_compiler/feature_compiler.py
 index e64a9494ed..aae2622130 100644
 --- a/tools/json_schema_compiler/feature_compiler.py
