@@ -95,8 +95,22 @@ index 06e50a54d6..618d168c96 100644
        absl::optional<std::string> bin_dir = StringSysctl({ CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 });
        if (!bin_dir.has_value() || bin_dir.value().length() <= 1) {
          NOTREACHED() << "Unable to resolve path.";
+diff --git a/base/compiler_specific.h b/base/compiler_specific.h
+index 6e3ad007a2..69ade7e78a 100644
+--- a/base/compiler_specific.h
++++ b/base/compiler_specific.h
+@@ -316,7 +316,8 @@
+ //
+ // In some cases it's desirable to remove this, e.g. on hot functions, or if
+ // we have purposely changed the reference canary.
+-#if (defined(COMPILER_GCC) || defined(__clang__)) && !defined(__OpenBSD__) && !defined(__FreeBSD__)
++#if (defined(COMPILER_GCC) || defined(__clang__)) && !defined(__OpenBSD__) && !defined(__FreeBSD__) && \
++      !defined(__NetBSD__)
+ #if HAS_ATTRIBUTE(__no_stack_protector__)
+ #define NO_STACK_PROTECTOR __attribute__((__no_stack_protector__))
+ #else
 diff --git a/base/debug/debugger_posix.cc b/base/debug/debugger_posix.cc
-index 68d23f13cd..9122724539 100644
+index 68d23f13cd..df9dae4af7 100644
 --- a/base/debug/debugger_posix.cc
 +++ b/base/debug/debugger_posix.cc
 @@ -85,6 +85,7 @@ bool BeingDebugged() {
@@ -150,7 +164,7 @@ index 68d23f13cd..9122724539 100644
  #elif BUILDFLAG(IS_OPENBSD)
    being_debugged = (info->p_psflags & PS_TRACED) != 0;
 +#elif BUILDFLAG(IS_NETBSD)
-+  being_debugged = (info->p_pflag & P_TRACED) != 0;
++  being_debugged = (info.p_flag & P_TRACED) != 0;
  #else
    being_debugged = (info.kp_proc.p_flag & P_TRACED) != 0;
  #endif
@@ -3321,6 +3335,21 @@ index 7ed1f74d6d..975507e8df 100644
      else:
        raise ValueError(f"Unsupported platform: {platform.system()}")
  
+diff --git a/third_party/ffmpeg/libavutil/random_seed.c b/third_party/ffmpeg/libavutil/random_seed.c
+index b234db552a..affd8c7bda 100644
+--- a/third_party/ffmpeg/libavutil/random_seed.c
++++ b/third_party/ffmpeg/libavutil/random_seed.c
+@@ -20,6 +20,10 @@
+ 
+ #include "config.h"
+ 
++#if defined(__NetBSD__)
++#define _NETBSD_SOURCE 1
++#endif
++
+ #if HAVE_UNISTD_H
+ #include <unistd.h>
+ #endif
 diff --git a/third_party/libc++/src/src/chrono.cpp b/third_party/libc++/src/src/chrono.cpp
 index e26e681355..8f70facd78 100644
 --- a/third_party/libc++/src/src/chrono.cpp
@@ -4045,11 +4074,11 @@ index f0da9bcbed..af25ce37e7 100644
  #elif V8_TARGET_ARCH_ARM64 && V8_HOST_ARCH_ARM64 && \
 diff --git a/v8/tools/run-paxctl.py b/v8/tools/run-paxctl.py
 new file mode 100644
-index 0000000000..09a102c7ee
+index 0000000000..ffe2b31c47
 --- /dev/null
 +++ b/v8/tools/run-paxctl.py
 @@ -0,0 +1,16 @@
-+@PLACEHOLDER@
++#!@PYTHON@ python3
 +# Copyright 2014 the V8 project authors. All rights reserved.
 +# Use of this source code is governed by a BSD-style license that can be
 +# found in the LICENSE file.
@@ -4065,4 +4094,3 @@ index 0000000000..09a102c7ee
 +  os.utime(sys.argv[1], None)
 +
 +sys.exit(subprocess.call(sys.argv[2:]))
-\ No newline at end of file

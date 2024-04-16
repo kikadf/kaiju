@@ -915,20 +915,21 @@ index 4e32871565..618d168c96 100644
      }
      case DIR_SRC_TEST_DATA_ROOT: {
 diff --git a/base/compiler_specific.h b/base/compiler_specific.h
-index c7dd9ab101..6e3ad007a2 100644
+index c7dd9ab101..69ade7e78a 100644
 --- a/base/compiler_specific.h
 +++ b/base/compiler_specific.h
-@@ -316,7 +316,7 @@
+@@ -316,7 +316,8 @@
  //
  // In some cases it's desirable to remove this, e.g. on hot functions, or if
  // we have purposely changed the reference canary.
 -#if defined(COMPILER_GCC) || defined(__clang__)
-+#if (defined(COMPILER_GCC) || defined(__clang__)) && !defined(__OpenBSD__) && !defined(__FreeBSD__)
++#if (defined(COMPILER_GCC) || defined(__clang__)) && !defined(__OpenBSD__) && !defined(__FreeBSD__) && \
++      !defined(__NetBSD__)
  #if HAS_ATTRIBUTE(__no_stack_protector__)
  #define NO_STACK_PROTECTOR __attribute__((__no_stack_protector__))
  #else
 diff --git a/base/debug/debugger_posix.cc b/base/debug/debugger_posix.cc
-index 8e499f5964..9122724539 100644
+index 8e499f5964..df9dae4af7 100644
 --- a/base/debug/debugger_posix.cc
 +++ b/base/debug/debugger_posix.cc
 @@ -35,6 +35,10 @@
@@ -1013,11 +1014,10 @@ index 8e499f5964..9122724539 100644
  #if BUILDFLAG(IS_FREEBSD)
    being_debugged = (info.ki_flag & P_TRACED) != 0;
 -#elif BUILDFLAG(IS_BSD)
--  being_debugged = (info.p_flag & P_TRACED) != 0;
 +#elif BUILDFLAG(IS_OPENBSD)
 +  being_debugged = (info->p_psflags & PS_TRACED) != 0;
 +#elif BUILDFLAG(IS_NETBSD)
-+  being_debugged = (info->p_pflag & P_TRACED) != 0;
+   being_debugged = (info.p_flag & P_TRACED) != 0;
  #else
    being_debugged = (info.kp_proc.p_flag & P_TRACED) != 0;
  #endif
@@ -32188,10 +32188,21 @@ index 37933f94ac..f20ee5addc 100644
  #include "attributes.h"
  #include "avassert.h"
 diff --git a/third_party/ffmpeg/libavutil/random_seed.c b/third_party/ffmpeg/libavutil/random_seed.c
-index 6d399cee49..b234db552a 100644
+index 6d399cee49..affd8c7bda 100644
 --- a/third_party/ffmpeg/libavutil/random_seed.c
 +++ b/third_party/ffmpeg/libavutil/random_seed.c
-@@ -35,6 +35,11 @@
+@@ -20,6 +20,10 @@
+ 
+ #include "config.h"
+ 
++#if defined(__NetBSD__)
++#define _NETBSD_SOURCE 1
++#endif
++
+ #if HAVE_UNISTD_H
+ #include <unistd.h>
+ #endif
+@@ -35,6 +39,11 @@
  #elif CONFIG_OPENSSL
  #include <openssl/rand.h>
  #endif
@@ -38988,11 +38999,11 @@ index a704cfff48..69a84ed428 100644
    // We expect that the offset has already been added to {dst_addr}, and no
 diff --git a/v8/tools/run-paxctl.py b/v8/tools/run-paxctl.py
 new file mode 100644
-index 0000000000..09a102c7ee
+index 0000000000..ffe2b31c47
 --- /dev/null
 +++ b/v8/tools/run-paxctl.py
 @@ -0,0 +1,16 @@
-+@PLACEHOLDER@
++#!@PYTHON@ python3
 +# Copyright 2014 the V8 project authors. All rights reserved.
 +# Use of this source code is governed by a BSD-style license that can be
 +# found in the LICENSE file.
@@ -39008,7 +39019,6 @@ index 0000000000..09a102c7ee
 +  os.utime(sys.argv[1], None)
 +
 +sys.exit(subprocess.call(sys.argv[2:]))
-\ No newline at end of file
 diff --git a/v8/tools/run.py b/v8/tools/run.py
 index 99ccea1f6c..ee4a37ca61 100755
 --- a/v8/tools/run.py
