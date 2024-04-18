@@ -223,6 +223,29 @@ index cf4871601c..dc90b48852 100644
    return pthread_main_np();
  #else
    auto pid = getpid();
+diff --git a/base/posix/sysctl.cc b/base/posix/sysctl.cc
+index ad041daf27..b4a9804b98 100644
+--- a/base/posix/sysctl.cc
++++ b/base/posix/sysctl.cc
+@@ -19,15 +19,15 @@
+ namespace {
+ 
+ absl::optional<std::string> StringSysctlImpl(
+-    base::FunctionRef<int(char* /*out*/, size_t* /*out_len*/)> sysctl_func) {
++    base::FunctionRef<int(char* /*out*/, size_t* /*out_len*/)> sysctl_func2) {
+   size_t buf_len;
+-  int result = sysctl_func(nullptr, &buf_len);
++  int result = sysctl_func2(nullptr, &buf_len);
+   if (result < 0 || buf_len < 1) {
+     return absl::nullopt;
+   }
+ 
+   std::string value(buf_len - 1, '\0');
+-  result = sysctl_func(&value[0], &buf_len);
++  result = sysctl_func2(&value[0], &buf_len);
+   if (result < 0) {
+     return absl::nullopt;
+   }
 diff --git a/base/process/launch_posix.cc b/base/process/launch_posix.cc
 index 182a119dae..98a4266386 100644
 --- a/base/process/launch_posix.cc
@@ -480,10 +503,10 @@ index 0000000000..7c69155a1b
 +}  // namespace base
 diff --git a/base/process/process_metrics_netbsd.cc b/base/process/process_metrics_netbsd.cc
 new file mode 100644
-index 0000000000..fdf5c8557d
+index 0000000000..5649a1ac88
 --- /dev/null
 +++ b/base/process/process_metrics_netbsd.cc
-@@ -0,0 +1,199 @@
+@@ -0,0 +1,177 @@
 +// Copyright 2013 The Chromium Authors
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
@@ -496,8 +519,6 @@ index 0000000000..fdf5c8557d
 +#include <sys/param.h>
 +#include <sys/sysctl.h>
 +#include <sys/vmmeter.h>
-+
-+#include <kvm.h>
 +
 +#include "base/memory/ptr_util.h"
 +#include "base/process/process_metrics_iocounters.h"
@@ -556,27 +577,7 @@ index 0000000000..fdf5c8557d
 +}
 +
 +int ProcessMetrics::GetOpenFdCount() const {
-+#if 0
-+  struct kinfo_file *files;
-+  kvm_t *kd = NULL;
-+  int total_count = 0;
-+  char errbuf[_POSIX2_LINE_MAX];
-+
-+  if ((kd = kvm_openfiles(NULL, NULL, NULL, KVM_NO_FILES, errbuf)) == NULL)
-+    goto out;
-+
-+  if ((files = kvm_getfiles(kd, KERN_FILE_BYPID, process_,
-+        sizeof(struct kinfo_file), &total_count)) == NULL) {
-+	  total_count = 0;
-+	  goto out;
-+  }
-+
-+  kvm_close(kd);
-+
-+out:
-+  return total_count;
-+#endif
-+  return getdtablecount();
++  return -1;
 +}
 +
 +int ProcessMetrics::GetOpenFdSoftLimit() const {

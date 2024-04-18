@@ -1799,7 +1799,7 @@ index 123ee3a408..ada0b21994 100644
  #error Assumption about OS_AIX is incorrect
  #endif
 diff --git a/base/posix/sysctl.cc b/base/posix/sysctl.cc
-index a6f6d0da4a..ad041daf27 100644
+index a6f6d0da4a..b4a9804b98 100644
 --- a/base/posix/sysctl.cc
 +++ b/base/posix/sysctl.cc
 @@ -4,6 +4,7 @@
@@ -1810,6 +1810,25 @@ index a6f6d0da4a..ad041daf27 100644
  #include <sys/sysctl.h>
  
  #include <initializer_list>
+@@ -18,15 +19,15 @@
+ namespace {
+ 
+ absl::optional<std::string> StringSysctlImpl(
+-    base::FunctionRef<int(char* /*out*/, size_t* /*out_len*/)> sysctl_func) {
++    base::FunctionRef<int(char* /*out*/, size_t* /*out_len*/)> sysctl_func2) {
+   size_t buf_len;
+-  int result = sysctl_func(nullptr, &buf_len);
++  int result = sysctl_func2(nullptr, &buf_len);
+   if (result < 0 || buf_len < 1) {
+     return absl::nullopt;
+   }
+ 
+   std::string value(buf_len - 1, '\0');
+-  result = sysctl_func(&value[0], &buf_len);
++  result = sysctl_func2(&value[0], &buf_len);
+   if (result < 0) {
+     return absl::nullopt;
+   }
 diff --git a/base/posix/unix_domain_socket.cc b/base/posix/unix_domain_socket.cc
 index cb3b0a4558..522356cf6e 100644
 --- a/base/posix/unix_domain_socket.cc
@@ -2988,10 +3007,10 @@ index 9fef783cf8..946063d3cc 100644
  }  // namespace base
 diff --git a/base/process/process_metrics_netbsd.cc b/base/process/process_metrics_netbsd.cc
 new file mode 100644
-index 0000000000..fdf5c8557d
+index 0000000000..5649a1ac88
 --- /dev/null
 +++ b/base/process/process_metrics_netbsd.cc
-@@ -0,0 +1,199 @@
+@@ -0,0 +1,177 @@
 +// Copyright 2013 The Chromium Authors
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
@@ -3004,8 +3023,6 @@ index 0000000000..fdf5c8557d
 +#include <sys/param.h>
 +#include <sys/sysctl.h>
 +#include <sys/vmmeter.h>
-+
-+#include <kvm.h>
 +
 +#include "base/memory/ptr_util.h"
 +#include "base/process/process_metrics_iocounters.h"
@@ -3064,27 +3081,7 @@ index 0000000000..fdf5c8557d
 +}
 +
 +int ProcessMetrics::GetOpenFdCount() const {
-+#if 0
-+  struct kinfo_file *files;
-+  kvm_t *kd = NULL;
-+  int total_count = 0;
-+  char errbuf[_POSIX2_LINE_MAX];
-+
-+  if ((kd = kvm_openfiles(NULL, NULL, NULL, KVM_NO_FILES, errbuf)) == NULL)
-+    goto out;
-+
-+  if ((files = kvm_getfiles(kd, KERN_FILE_BYPID, process_,
-+        sizeof(struct kinfo_file), &total_count)) == NULL) {
-+	  total_count = 0;
-+	  goto out;
-+  }
-+
-+  kvm_close(kd);
-+
-+out:
-+  return total_count;
-+#endif
-+  return getdtablecount();
++  return -1;
 +}
 +
 +int ProcessMetrics::GetOpenFdSoftLimit() const {
