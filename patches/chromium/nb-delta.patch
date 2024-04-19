@@ -3586,6 +3586,19 @@ index e499a96a50..b351d0ee58 100644
          completeSize = malloc_usable_size(ptr);
          SkASSERT(completeSize >= size);
      #elif defined(SK_BUILD_FOR_WIN)
+diff --git a/third_party/skia/src/gpu/ganesh/GrAutoLocaleSetter.h b/third_party/skia/src/gpu/ganesh/GrAutoLocaleSetter.h
+index db7a0d9353..4146bc6959 100644
+--- a/third_party/skia/src/gpu/ganesh/GrAutoLocaleSetter.h
++++ b/third_party/skia/src/gpu/ganesh/GrAutoLocaleSetter.h
+@@ -27,7 +27,7 @@
+ #define HAVE_XLOCALE 0
+ #endif
+ 
+-#if defined(SK_BUILD_FOR_ANDROID) || defined(__UCLIBC__) || defined(_NEWLIB_VERSION)
++#if defined(SK_BUILD_FOR_ANDROID) || defined(__UCLIBC__) || defined(_NEWLIB_VERSION) || defined(__NetBSD__)
+ #define HAVE_LOCALE_T 0
+ #else
+ #define HAVE_LOCALE_T 1
 diff --git a/third_party/speech-dispatcher/libspeechd_version.h b/third_party/speech-dispatcher/libspeechd_version.h
 index c455a1ffa5..4520c3f56f 100644
 --- a/third_party/speech-dispatcher/libspeechd_version.h
