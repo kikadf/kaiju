@@ -839,6 +839,31 @@ index 04df5e08bf..f1eeb2fa82 100644
  #endif
  
  namespace base {
+diff --git a/base/types/strong_alias.h b/base/types/strong_alias.h
+index 9f80b7fc8a..04ae797f67 100644
+--- a/base/types/strong_alias.h
++++ b/base/types/strong_alias.h
+@@ -79,7 +79,7 @@ class StrongAlias {
+  public:
+   using underlying_type = UnderlyingType;
+ 
+-  constexpr StrongAlias() = default;
++  StrongAlias() = default;
+   constexpr explicit StrongAlias(const UnderlyingType& v) : value_(v) {}
+   constexpr explicit StrongAlias(UnderlyingType&& v) noexcept
+       : value_(std::move(v)) {}
+@@ -108,9 +108,9 @@ class StrongAlias {
+   // because it is from an external library), then a work-around is to create a
+   // thin wrapper `W` around it, define `operator<=>` for the wrapper and create
+   // a `StrongAlias<W>`.
+-  friend constexpr auto operator<=>(const StrongAlias& lhs,
++  friend auto operator<=>(const StrongAlias& lhs,
+                                     const StrongAlias& rhs) = default;
+-  friend constexpr bool operator==(const StrongAlias& lhs,
++  friend bool operator==(const StrongAlias& lhs,
+                                    const StrongAlias& rhs) = default;
+ 
+   // Hasher to use in std::unordered_map, std::unordered_set, etc.
 diff --git a/build/config/BUILDCONFIG.gn b/build/config/BUILDCONFIG.gn
 index b1ed7a02e5..394c96dd87 100644
 --- a/build/config/BUILDCONFIG.gn
@@ -1022,6 +1047,39 @@ index 3c7274e738..22c56d8c15 100644
  #else
        cur = base::FilePath(
            FILE_PATH_LITERAL("/etc/chromium/native-messaging-hosts"));
+diff --git a/components/autofill/core/common/dense_set.h b/components/autofill/core/common/dense_set.h
+index b2d979d6bc..f644262105 100644
+--- a/components/autofill/core/common/dense_set.h
++++ b/components/autofill/core/common/dense_set.h
+@@ -87,10 +87,8 @@ class Bitset {
+     return x;
+   }
+ 
+-  friend constexpr auto operator<=>(const Bitset& lhs,
+-                                    const Bitset& rhs) = default;
+-  friend constexpr bool operator==(const Bitset& lhs,
+-                                   const Bitset& rhs) = default;
++  friend auto operator<=>(const Bitset& lhs, const Bitset& rhs) = default;
++  friend bool operator==(const Bitset& lhs, const Bitset& rhs) = default;
+ 
+   constexpr base::span<const Word, kNumWords> data() const { return words_; }
+ 
+diff --git a/components/autofill/core/common/unique_ids.h b/components/autofill/core/common/unique_ids.h
+index 50b1f5475c..596c658840 100644
+--- a/components/autofill/core/common/unique_ids.h
++++ b/components/autofill/core/common/unique_ids.h
+@@ -135,9 +135,9 @@ struct GlobalId {
+     return static_cast<bool>(renderer_id);
+   }
+ 
+-  friend constexpr auto operator<=>(const GlobalId<RendererId>& lhs,
++  friend auto operator<=>(const GlobalId<RendererId>& lhs,
+                                     const GlobalId<RendererId>& rhs) = default;
+-  friend constexpr bool operator==(const GlobalId<RendererId>& lhs,
++  friend bool operator==(const GlobalId<RendererId>& lhs,
+                                    const GlobalId<RendererId>& rhs) = default;
+ };
+ 
 diff --git a/components/crash/core/app/chrome_crashpad_handler.cc b/components/crash/core/app/chrome_crashpad_handler.cc
 index 9aa752e77f..5c3ba36cc3 100644
 --- a/components/crash/core/app/chrome_crashpad_handler.cc
@@ -1035,6 +1093,32 @@ index 9aa752e77f..5c3ba36cc3 100644
    return -1;
  #else
    return CrashpadHandlerMain(argc, argv);
+diff --git a/components/performance_manager/resource_attribution/context_collection.h b/components/performance_manager/resource_attribution/context_collection.h
+index febdef415a..6f62c6100f 100644
+--- a/components/performance_manager/resource_attribution/context_collection.h
++++ b/components/performance_manager/resource_attribution/context_collection.h
+@@ -28,7 +28,7 @@ class ContextCollection {
+   ContextCollection(const ContextCollection& other);
+   ContextCollection& operator=(const ContextCollection& other);
+ 
+-  friend constexpr bool operator==(const ContextCollection&,
++  friend bool operator==(const ContextCollection&,
+                                    const ContextCollection&) = default;
+ 
+   // Adds `context` to the collection.
+diff --git a/components/performance_manager/resource_attribution/query_params.h b/components/performance_manager/resource_attribution/query_params.h
+index 7021ca5308..37adad853e 100644
+--- a/components/performance_manager/resource_attribution/query_params.h
++++ b/components/performance_manager/resource_attribution/query_params.h
+@@ -17,7 +17,7 @@ struct QueryParams {
+   QueryParams(const QueryParams& other);
+   QueryParams& operator=(const QueryParams& other);
+ 
+-  friend constexpr bool operator==(const QueryParams&,
++  friend bool operator==(const QueryParams&,
+                                    const QueryParams&) = default;
+ 
+   // Resource types to measure.
 diff --git a/components/policy/core/common/cloud/cloud_policy_util.cc b/components/policy/core/common/cloud/cloud_policy_util.cc
 index f19eb6492e..c26c569849 100644
 --- a/components/policy/core/common/cloud/cloud_policy_util.cc
@@ -1185,6 +1269,19 @@ index 9826539150..d770ab5015 100644
  MEDIA_EXPORT extern const char kAlsaInputDevice[];
  MEDIA_EXPORT extern const char kAlsaOutputDevice[];
  #endif
+diff --git a/media/capture/video/linux/fake_v4l2_impl.h b/media/capture/video/linux/fake_v4l2_impl.h
+index 8dc249424d..4adfa0cfb8 100644
+--- a/media/capture/video/linux/fake_v4l2_impl.h
++++ b/media/capture/video/linux/fake_v4l2_impl.h
+@@ -9,7 +9,7 @@
+ #include <string>
+ 
+ #include "build/build_config.h"
+-#if BUILDFLAG(IS_OPENBSD)
++#if BUILDFLAG(IS_OPENBSD) || BUILDFLAG(IS_NETBSD)
+ #include <sys/videoio.h>
+ typedef __uint32_t __u32;
+ #else
 diff --git a/media/capture/video/linux/v4l2_capture_delegate.h b/media/capture/video/linux/v4l2_capture_delegate.h
 index fd69cf9115..c15cc9e654 100644
 --- a/media/capture/video/linux/v4l2_capture_delegate.h
@@ -1195,6 +1292,19 @@ index fd69cf9115..c15cc9e654 100644
  
 -#if BUILDFLAG(IS_OPENBSD)
 +#if BUILDFLAG(IS_OPENBSD) || defined(OS_NETBSD)
+ #include <sys/videoio.h>
+ #else
+ #include <linux/videodev2.h>
+diff --git a/media/capture/video/linux/video_capture_device_factory_v4l2.cc b/media/capture/video/linux/video_capture_device_factory_v4l2.cc
+index cfaa24bdaa..9b8a0df6c6 100644
+--- a/media/capture/video/linux/video_capture_device_factory_v4l2.cc
++++ b/media/capture/video/linux/video_capture_device_factory_v4l2.cc
+@@ -23,7 +23,7 @@
+ #include "media/capture/video/linux/scoped_v4l2_device_fd.h"
+ #include "media/capture/video/linux/video_capture_device_linux.h"
+ 
+-#if BUILDFLAG(IS_OPENBSD)
++#if BUILDFLAG(IS_OPENBSD) || BUILDFLAG(IS_NETBSD)
  #include <sys/videoio.h>
  #else
  #include <linux/videodev2.h>
@@ -1224,6 +1334,22 @@ index c7e609a16b..7851375ac6 100644
    uid_t socket_euid;
    gid_t socket_gid;
    if (getpeereid(fd, &socket_euid, &socket_gid) < 0) {
+diff --git a/mojo/public/tools/bindings/mojom.gni b/mojo/public/tools/bindings/mojom.gni
+index f47cb5b544..9ffbab63d5 100644
+--- a/mojo/public/tools/bindings/mojom.gni
++++ b/mojo/public/tools/bindings/mojom.gni
+@@ -753,6 +753,11 @@ template("mojom") {
+       enabled_features += [ "is_bsd" ]
+     }
+ 
++    if (is_netbsd) {
++      enabled_features += [ "is_netbsd" ]
++      enabled_features += [ "is_bsd" ]
++    }
++
+     if (is_freebsd) {
+       enabled_features += [ "is_freebsd" ]
+       enabled_features += [ "is_bsd" ]
 diff --git a/net/socket/udp_socket_posix.cc b/net/socket/udp_socket_posix.cc
 index 1b1e06b2f5..e0c5af94b1 100644
 --- a/net/socket/udp_socket_posix.cc
@@ -1957,34 +2083,44 @@ index ba5379fac1..291a14f45f 100644
      case sandbox::mojom::Sandbox::kUtility:
      case sandbox::mojom::Sandbox::kService:
 diff --git a/sandbox/policy/sandbox.h b/sandbox/policy/sandbox.h
-index 44f331a70f..49842d9ef0 100644
+index 44f331a70f..4a27162638 100644
 --- a/sandbox/policy/sandbox.h
 +++ b/sandbox/policy/sandbox.h
 @@ -14,6 +14,8 @@
  
  #if BUILDFLAG(IS_OPENBSD)
  #include "sandbox/policy/openbsd/sandbox_openbsd.h"
-+#if BUILDFLAG(IS_NETBSD)
++#elif BUILDFLAG(IS_NETBSD)
 +#include "sandbox/policy/netbsd/sandbox_netbsd.h"
  #elif BUILDFLAG(IS_FREEBSD)
  #include "sandbox/policy/freebsd/sandbox_freebsd.h"
  #endif
 diff --git a/services/device/hid/BUILD.gn b/services/device/hid/BUILD.gn
-index 1215615a54..b57ba414e4 100644
+index 1215615a54..1559ceab33 100644
 --- a/services/device/hid/BUILD.gn
 +++ b/services/device/hid/BUILD.gn
-@@ -55,6 +55,15 @@ source_set("hid") {
+@@ -36,7 +36,7 @@ source_set("hid") {
+     "//services/device/public/mojom",
+   ]
+ 
+-  if (is_openbsd) {
++  if (is_openbsd || is_netbsd) {
+     sources += [
+       "hid_connection_fido.cc",
+       "hid_connection_fido.h",
+@@ -55,6 +55,16 @@ source_set("hid") {
      ]
    }
  
-+  if (is_netbsd) {
-+    sources += [
-+      "hid_connection_netbsd.cc",
-+      "hid_connection_netbsd.h",
-+      "hid_service_netbsd.cc",
-+      "hid_service_netbsd.h",
-+    ]
-+  }
++# TODO: remove this files
++#  if (is_netbsd) {
++#    sources += [
++#      "hid_connection_netbsd.cc",
++#      "hid_connection_netbsd.h",
++#      "hid_service_netbsd.cc",
++#      "hid_service_netbsd.h",
++#    ]
++#  }
 +
    if ((is_linux || is_chromeos) && !is_bsd && use_udev) {
      sources += [
@@ -3736,6 +3872,19 @@ index 872083e1cb..05bf464a76 100755
  ]
  
  _form_factors = [
+diff --git a/ui/qt/qt.gni b/ui/qt/qt.gni
+index 5fa4253aca..09785580f9 100644
+--- a/ui/qt/qt.gni
++++ b/ui/qt/qt.gni
+@@ -14,7 +14,7 @@ declare_args() {
+ 
+ declare_args() {
+   if (!use_sysroot && use_qt) {
+-    moc_qt5_path = ""
++    moc_qt5_path = "@QTDIR@/bin"
+   }
+ }
+ 
 diff --git a/v8/BUILD.gn b/v8/BUILD.gn
 index 7e9246bf7f..692b5d2432 100644
 --- a/v8/BUILD.gn
@@ -4088,11 +4237,11 @@ index f0da9bcbed..af25ce37e7 100644
  #elif V8_TARGET_ARCH_ARM64 && V8_HOST_ARCH_ARM64 && \
 diff --git a/v8/tools/run-paxctl.py b/v8/tools/run-paxctl.py
 new file mode 100644
-index 0000000000..ffe2b31c47
+index 0000000000..740aaf6189
 --- /dev/null
 +++ b/v8/tools/run-paxctl.py
 @@ -0,0 +1,16 @@
-+#!@PYTHON@ python3
++#!/usr/bin/env python
 +# Copyright 2014 the V8 project authors. All rights reserved.
 +# Use of this source code is governed by a BSD-style license that can be
 +# found in the LICENSE file.
