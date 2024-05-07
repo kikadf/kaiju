@@ -61,7 +61,7 @@ else
 fi
 
 _ppath=$(ppath "$_path")
-echo "Used chromium pkgrsc path: $_path"
+echo ">>> Used chromium pkgrsc path: $_path"
 
 # Set pkgsrc's workobjdir path
 if [ -n "$_obj" ]; then
@@ -75,9 +75,10 @@ else
     _objd="$_path/work"
 fi
 
-echo "Used workobjdir: $_objd"
+echo ">>> Used workobjdir: $_objd"
 
 # Clean pkgsrc chromium/patches
+echo ">>> Remove old patches"
 cd "$_path" || die
 rm patches/patch-*
 
@@ -85,8 +86,10 @@ rm patches/patch-*
 # Create patches in chromium/patches
 # Fix pkglint error: Each patch must be documented
 make extract || die "make extract"
+echo ">>> Apply new patchset on source"
 cd "$_objd"/chromium-* || die
 patch -p1 -s -i "$_kaiju_repo"/patches/chromium/nb.patch || die patch
+echo ">>> Generate new patches with mkpatches"
 cd "$_path" || die
 mkpatches || die mkpatches
 rm patches/*.orig
@@ -102,6 +105,7 @@ done
 
 # Update pkgsrc's distinfo
 # Clean pkgsrc's workdir
+echo ">>> Generate the checksums for the patch files"
 make makepatchsum || die
 make clean || die
 
