@@ -33,6 +33,7 @@ sed -n 's|sha256 *\(.*\)|\1|p' "chromium-${c_ver}.tar.xz.hashes" | sha256sum -c 
 mkdir "chromium-netbsd-${c_ver}" || die
 tar -xJf "chromium-${c_ver}.tar.xz" --strip-components=1 -C "chromium-netbsd-${c_ver}" || die extract
 sed 's/swiftshader/swiftshaderXXX/g' -i "chromium-netbsd-${c_ver}/third_party/.gitignore"
+sed 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' -i "chromium-netbsd-${c_ver}/third_party/vulkan-deps/.gitignore"
 
 # init git repo
 cd "chromium-netbsd-${c_ver}" || die
