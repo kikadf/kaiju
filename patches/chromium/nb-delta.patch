@@ -264,7 +264,7 @@ index 182a119dae..98a4266386 100644
  #endif
 diff --git a/base/process/process_handle_netbsd.cc b/base/process/process_handle_netbsd.cc
 new file mode 100644
-index 0000000000..c205793115
+index 0000000000..3c06d42345
 --- /dev/null
 +++ b/base/process/process_handle_netbsd.cc
 @@ -0,0 +1,73 @@
@@ -296,7 +296,7 @@ index 0000000000..c205793115
 +
 +  info = (struct kinfo_proc2 *)malloc(length);
 +
-+  mib[5] = (length / sizeof(struct kinfo_proc2));
++  mib[5] = static_cast<int>((length / sizeof(struct kinfo_proc2)));
 +
 +  if (sysctl(mib, std::size(mib), info, &length, NULL, 0) < 0) {
 +    ppid = -1;
@@ -322,7 +322,7 @@ index 0000000000..c205793115
 +
 +  info = (struct kinfo_proc2 *)malloc(length);
 +
-+  mib[5] = (length / sizeof(struct kinfo_proc2));
++  mib[5] = static_cast<int>((length / sizeof(struct kinfo_proc2)));
 +
 +  if (sysctl(mib, std::size(mib), info, &length, NULL, 0) < 0)
 +    goto out;
@@ -506,10 +506,10 @@ index 0000000000..7c69155a1b
 +}  // namespace base
 diff --git a/base/process/process_metrics_netbsd.cc b/base/process/process_metrics_netbsd.cc
 new file mode 100644
-index 0000000000..0b42f1d2e5
+index 0000000000..089820e68c
 --- /dev/null
 +++ b/base/process/process_metrics_netbsd.cc
-@@ -0,0 +1,175 @@
+@@ -0,0 +1,174 @@
 +// Copyright 2013 The Chromium Authors
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
@@ -525,7 +525,6 @@ index 0000000000..0b42f1d2e5
 +#include <optional>
 +
 +#include "base/memory/ptr_util.h"
-+#include "base/process/process_metrics_iocounters.h"
 +#include "base/values.h"
 +#include "base/notreached.h"
 +
@@ -3451,32 +3450,6 @@ index 31d7446de1..4b08dbd931 100644
  #  define _LIBCPP_HAS_CLOCK_GETTIME
  #endif
  
-diff --git a/third_party/libc++abi/src/src/cxa_guard_impl.h b/third_party/libc++abi/src/src/cxa_guard_impl.h
-index 6739659848..3512f77ebf 100644
---- a/third_party/libc++abi/src/src/cxa_guard_impl.h
-+++ b/third_party/libc++abi/src/src/cxa_guard_impl.h
-@@ -424,6 +424,21 @@ void PlatformFutexWake(int* addr) {
-   __tsan_release(addr);
-   futex((volatile uint32_t *)addr, WAKE, INT_MAX, NULL, NULL);
- }
-+#elif defined(__NetBSD__)
-+#include <sys/futex.h>
-+
-+void PlatformFutexWait(int* addr, int expect) {
-+  constexpr int WAIT = 0;
-+  register_t retval;
-+  do_futex(addr, WAIT, expect, NULL, NULL, 0, 0, &retval);
-+  __tsan_acquire(addr);
-+}
-+void PlatformFutexWake(int* addr) {
-+  constexpr int WAKE = 1;
-+  register_t retval;
-+  __tsan_release(addr);
-+  do_futex(addr, WAKE, INT_MAX, NULL, NULL, 0, 0, &retval);
-+}
- #elif defined(SYS_futex)
- void PlatformFutexWait(int* addr, int expect) {
-   constexpr int WAIT = 0;
 diff --git a/third_party/libdrm/src/xf86drmMode.c b/third_party/libdrm/src/xf86drmMode.c
 index 22a8a7c229..246d81d7f4 100644
 --- a/third_party/libdrm/src/xf86drmMode.c

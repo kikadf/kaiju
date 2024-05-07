@@ -2017,7 +2017,7 @@ index ef5e930c99..f5b1c5b006 100644
  
 diff --git a/base/process/process_handle_netbsd.cc b/base/process/process_handle_netbsd.cc
 new file mode 100644
-index 0000000000..c205793115
+index 0000000000..3c06d42345
 --- /dev/null
 +++ b/base/process/process_handle_netbsd.cc
 @@ -0,0 +1,73 @@
@@ -2049,7 +2049,7 @@ index 0000000000..c205793115
 +
 +  info = (struct kinfo_proc2 *)malloc(length);
 +
-+  mib[5] = (length / sizeof(struct kinfo_proc2));
++  mib[5] = static_cast<int>((length / sizeof(struct kinfo_proc2)));
 +
 +  if (sysctl(mib, std::size(mib), info, &length, NULL, 0) < 0) {
 +    ppid = -1;
@@ -2075,7 +2075,7 @@ index 0000000000..c205793115
 +
 +  info = (struct kinfo_proc2 *)malloc(length);
 +
-+  mib[5] = (length / sizeof(struct kinfo_proc2));
++  mib[5] = static_cast<int>((length / sizeof(struct kinfo_proc2)));
 +
 +  if (sysctl(mib, std::size(mib), info, &length, NULL, 0) < 0)
 +    goto out;
@@ -2965,10 +2965,10 @@ index fc99bafd21..3db8a4f508 100644
  }  // namespace base
 diff --git a/base/process/process_metrics_netbsd.cc b/base/process/process_metrics_netbsd.cc
 new file mode 100644
-index 0000000000..0b42f1d2e5
+index 0000000000..089820e68c
 --- /dev/null
 +++ b/base/process/process_metrics_netbsd.cc
-@@ -0,0 +1,175 @@
+@@ -0,0 +1,174 @@
 +// Copyright 2013 The Chromium Authors
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
@@ -2984,7 +2984,6 @@ index 0000000000..0b42f1d2e5
 +#include <optional>
 +
 +#include "base/memory/ptr_util.h"
-+#include "base/process/process_metrics_iocounters.h"
 +#include "base/values.h"
 +#include "base/notreached.h"
 +
@@ -32747,10 +32746,10 @@ index e13b2853e3..4b08dbd931 100644
  #endif
  
 diff --git a/third_party/libc++abi/src/src/cxa_guard_impl.h b/third_party/libc++abi/src/src/cxa_guard_impl.h
-index 7b140d3c36..3512f77ebf 100644
+index 7b140d3c36..6739659848 100644
 --- a/third_party/libc++abi/src/src/cxa_guard_impl.h
 +++ b/third_party/libc++abi/src/src/cxa_guard_impl.h
-@@ -411,7 +411,35 @@ private:
+@@ -411,7 +411,20 @@ private:
  //                         Futex Implementation
  //===----------------------------------------------------------------------===//
  
@@ -32767,21 +32766,6 @@ index 7b140d3c36..3512f77ebf 100644
 +  constexpr int WAKE = 1;
 +  __tsan_release(addr);
 +  futex((volatile uint32_t *)addr, WAKE, INT_MAX, NULL, NULL);
-+}
-+#elif defined(__NetBSD__)
-+#include <sys/futex.h>
-+
-+void PlatformFutexWait(int* addr, int expect) {
-+  constexpr int WAIT = 0;
-+  register_t retval;
-+  do_futex(addr, WAIT, expect, NULL, NULL, 0, 0, &retval);
-+  __tsan_acquire(addr);
-+}
-+void PlatformFutexWake(int* addr) {
-+  constexpr int WAKE = 1;
-+  register_t retval;
-+  __tsan_release(addr);
-+  do_futex(addr, WAKE, INT_MAX, NULL, NULL, 0, 0, &retval);
 +}
 +#elif defined(SYS_futex)
  void PlatformFutexWait(int* addr, int expect) {
