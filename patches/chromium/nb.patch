@@ -5431,7 +5431,7 @@ index 79369cfd24..84750fc04b 100644
  #if BUILDFLAG(GOOGLE_CHROME_BRANDING)
        command_line->AppendSwitch(::headless::switches::kEnableCrashReporter);
 diff --git a/chrome/app/chrome_main_delegate.cc b/chrome/app/chrome_main_delegate.cc
-index 73b6ab0934..a3796c80b2 100644
+index 81254cc2dd..7241fd8c56 100644
 --- a/chrome/app/chrome_main_delegate.cc
 +++ b/chrome/app/chrome_main_delegate.cc
 @@ -146,7 +146,7 @@
@@ -5468,7 +5468,16 @@ index 73b6ab0934..a3796c80b2 100644
  #include "chrome/browser/policy/policy_path_parser.h"
  #include "components/crash/core/app/crashpad.h"
  #endif
-@@ -346,7 +346,7 @@ void AdjustLinuxOOMScore(const std::string& process_type) {
+@@ -249,7 +249,7 @@
+ #include "base/scoped_add_feature_flags.h"
+ #include "ui/base/ui_base_features.h"
+ #include "ui/ozone/public/ozone_platform.h"
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include "chrome/browser/chrome_browser_main_extra_parts_linux.h"
+ #endif
+ #endif  // BUILDFLAG(IS_OZONE)
+@@ -349,7 +349,7 @@ void AdjustLinuxOOMScore(const std::string& process_type) {
  // and resources loaded.
  bool SubprocessNeedsResourceBundle(const std::string& process_type) {
    return
@@ -5477,7 +5486,7 @@ index 73b6ab0934..a3796c80b2 100644
        // The zygote process opens the resources for the renderers.
        process_type == switches::kZygoteProcess ||
  #endif
-@@ -431,7 +431,7 @@ bool HandleVersionSwitches(const base::CommandLine& command_line) {
+@@ -434,7 +434,7 @@ bool HandleVersionSwitches(const base::CommandLine& command_line) {
  
  // TODO(crbug.com/1052397): Revisit the macro expression once build flag switch
  // of lacros-chrome is complete.
@@ -5486,7 +5495,7 @@ index 73b6ab0934..a3796c80b2 100644
  // Show the man page if --help or -h is on the command line.
  void HandleHelpSwitches(const base::CommandLine& command_line) {
    if (command_line.HasSwitch(switches::kHelp) ||
-@@ -477,7 +477,7 @@ void SetCrashpadUploadConsentPostLogin() {
+@@ -480,7 +480,7 @@ void SetCrashpadUploadConsentPostLogin() {
  }
  #endif  // BUILDFLAG(IS_CHROMEOS_LACROS)
  
@@ -5495,7 +5504,7 @@ index 73b6ab0934..a3796c80b2 100644
  void SIGTERMProfilingShutdown(int signal) {
    content::Profiling::Stop();
    struct sigaction sigact;
-@@ -559,7 +559,7 @@ std::optional<int> AcquireProcessSingleton(
+@@ -562,7 +562,7 @@ std::optional<int> AcquireProcessSingleton(
    // process can be exited.
    ChromeProcessSingleton::CreateInstance(user_data_dir);
  
@@ -5504,7 +5513,7 @@ index 73b6ab0934..a3796c80b2 100644
    // Read the xdg-activation token and set it in the command line for the
    // duration of the notification in order to ensure this is propagated to an
    // already running browser process if it exists.
-@@ -643,7 +643,7 @@ void InitializeUserDataDir(base::CommandLine* command_line) {
+@@ -646,7 +646,7 @@ void InitializeUserDataDir(base::CommandLine* command_line) {
    std::string process_type =
        command_line->GetSwitchValueASCII(switches::kProcessType);
  
@@ -5513,7 +5522,7 @@ index 73b6ab0934..a3796c80b2 100644
    // On Linux, Chrome does not support running multiple copies under different
    // DISPLAYs, so the profile directory can be specified in the environment to
    // support the virtual desktop use-case.
-@@ -770,7 +770,7 @@ void RecordMainStartupMetrics(base::TimeTicks application_start_time) {
+@@ -773,7 +773,7 @@ void RecordMainStartupMetrics(base::TimeTicks application_start_time) {
  #endif
  
  #if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX) || \
@@ -5522,7 +5531,16 @@ index 73b6ab0934..a3796c80b2 100644
    // Record the startup process creation time on supported platforms. On Android
    // this is recorded in ChromeMainDelegateAndroid.
    startup_metric_utils::GetCommon().RecordStartupProcessCreationTime(
-@@ -1155,7 +1155,7 @@ void ChromeMainDelegate::CommonEarlyInitialization(InvokedIn invoked_in) {
+@@ -964,7 +964,7 @@ std::optional<int> ChromeMainDelegate::PostEarlyInitialization(
+ #if BUILDFLAG(IS_OZONE)
+   // Initialize Ozone platform and add required feature flags as per platform's
+   // properties.
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   ChromeBrowserMainExtraPartsLinux::InitOzonePlatformHint();
+ #endif
+   ui::OzonePlatform::PreEarlyInitialization();
+@@ -1162,7 +1162,7 @@ void ChromeMainDelegate::CommonEarlyInitialization(InvokedIn invoked_in) {
        chrome::GetChannel() == version_info::Channel::DEV;
    const bool emit_crashes =
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_MAC) || \
@@ -5531,7 +5549,7 @@ index 73b6ab0934..a3796c80b2 100644
        is_canary_dev;
  #else
        false;
-@@ -1174,7 +1174,7 @@ void ChromeMainDelegate::CommonEarlyInitialization(InvokedIn invoked_in) {
+@@ -1181,7 +1181,7 @@ void ChromeMainDelegate::CommonEarlyInitialization(InvokedIn invoked_in) {
    // for more context.
    base::sequence_manager::internal::ThreadController::InitializeFeatures(
        /*record_sample_metadata=*/is_canary_dev);
@@ -5540,7 +5558,7 @@ index 73b6ab0934..a3796c80b2 100644
    base::MessagePumpLibevent::InitializeFeatures();
  #elif BUILDFLAG(IS_MAC)
    base::PlatformThread::InitFeaturesPostFieldTrial();
-@@ -1323,7 +1323,7 @@ std::optional<int> ChromeMainDelegate::BasicStartupComplete() {
+@@ -1330,7 +1330,7 @@ std::optional<int> ChromeMainDelegate::BasicStartupComplete() {
  
    // TODO(crbug.com/1052397): Revisit the macro expression once build flag
    // switch of lacros-chrome is complete.
@@ -5549,7 +5567,7 @@ index 73b6ab0934..a3796c80b2 100644
    // This will directly exit if the user asked for help.
    HandleHelpSwitches(command_line);
  #endif
-@@ -1353,7 +1353,7 @@ std::optional<int> ChromeMainDelegate::BasicStartupComplete() {
+@@ -1360,7 +1360,7 @@ std::optional<int> ChromeMainDelegate::BasicStartupComplete() {
  #if BUILDFLAG(IS_CHROMEOS)
    chromeos::dbus_paths::RegisterPathProvider();
  #endif
@@ -5558,7 +5576,7 @@ index 73b6ab0934..a3796c80b2 100644
    nacl::RegisterPathProvider();
  #endif
  
-@@ -1750,7 +1750,7 @@ void ChromeMainDelegate::PreSandboxStartup() {
+@@ -1757,7 +1757,7 @@ void ChromeMainDelegate::PreSandboxStartup() {
      CHECK(!loaded_locale.empty()) << "Locale could not be found for " << locale;
    }
  
@@ -5567,7 +5585,7 @@ index 73b6ab0934..a3796c80b2 100644
    // Zygote needs to call InitCrashReporter() in RunZygote().
    if (process_type != switches::kZygoteProcess) {
      if (command_line.HasSwitch(switches::kPreCrashpadCrashTest)) {
-@@ -1851,7 +1851,7 @@ absl::variant<int, content::MainFunctionParams> ChromeMainDelegate::RunProcess(
+@@ -1858,7 +1858,7 @@ absl::variant<int, content::MainFunctionParams> ChromeMainDelegate::RunProcess(
  
    // This entry is not needed on Linux, where the NaCl loader
    // process is launched via nacl_helper instead.
@@ -5577,10 +5595,10 @@ index 73b6ab0934..a3796c80b2 100644
  #else
      {"<invalid>", nullptr},  // To avoid constant array of size 0
 diff --git a/chrome/browser/BUILD.gn b/chrome/browser/BUILD.gn
-index e382658efb..3a5526bfb1 100644
+index 0386b3db3c..f1af3dea6d 100644
 --- a/chrome/browser/BUILD.gn
 +++ b/chrome/browser/BUILD.gn
-@@ -6552,6 +6552,13 @@ static_library("browser") {
+@@ -6554,6 +6554,13 @@ static_library("browser") {
      }
    }
  
@@ -6233,13 +6251,13 @@ index 1d9bfb1c1d..de348d510e 100644
        command_line.HasSwitch(switches::kHeadless)) {
      return false;
 diff --git a/chrome/browser/chrome_browser_main_extra_parts_linux.cc b/chrome/browser/chrome_browser_main_extra_parts_linux.cc
-index dba7b116ec..d40284f773 100644
+index ea0487022d..60e7fa38ed 100644
 --- a/chrome/browser/chrome_browser_main_extra_parts_linux.cc
 +++ b/chrome/browser/chrome_browser_main_extra_parts_linux.cc
-@@ -169,7 +169,7 @@ ChromeBrowserMainExtraPartsLinux::ChromeBrowserMainExtraPartsLinux() = default;
- ChromeBrowserMainExtraPartsLinux::~ChromeBrowserMainExtraPartsLinux() = default;
+@@ -175,7 +175,7 @@ void ChromeBrowserMainExtraPartsLinux::PostBrowserStart() {
  
- void ChromeBrowserMainExtraPartsLinux::PreEarlyInitialization() {
+ // static
+ void ChromeBrowserMainExtraPartsLinux::InitOzonePlatformHint() {
 -#if BUILDFLAG(IS_LINUX)
 +#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
    // On the desktop, we fix the platform name if necessary.
@@ -9203,7 +9221,7 @@ index c2f99bc5e1..45ff750a99 100644
      cloud_policy_manager = profile->GetProfileCloudPolicyManager();
    }
 diff --git a/chrome/browser/prefs/browser_prefs.cc b/chrome/browser/prefs/browser_prefs.cc
-index 9686c676b0..f075c275c8 100644
+index 0328a8c6e8..8d3990664a 100644
 --- a/chrome/browser/prefs/browser_prefs.cc
 +++ b/chrome/browser/prefs/browser_prefs.cc
 @@ -488,18 +488,18 @@
@@ -9237,7 +9255,7 @@ index 9686c676b0..f075c275c8 100644
  #include "ui/color/system_theme.h"
  #endif
  
-@@ -1715,7 +1715,7 @@ void RegisterLocalState(PrefRegistrySimple* registry) {
+@@ -1722,7 +1722,7 @@ void RegisterLocalState(PrefRegistrySimple* registry) {
    registry->RegisterBooleanPref(prefs::kOopPrintDriversAllowedByPolicy, true);
  #endif
  
@@ -9246,7 +9264,7 @@ index 9686c676b0..f075c275c8 100644
    registry->RegisterBooleanPref(prefs::kChromeForTestingAllowed, true);
  #endif
  
-@@ -2060,12 +2060,12 @@ void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry,
+@@ -2067,12 +2067,12 @@ void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry,
  #endif
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -11621,10 +11639,10 @@ index c9c5eeb340..d87348662c 100644
  #else
    return false;
 diff --git a/chrome/browser/ui/views/tabs/tab.cc b/chrome/browser/ui/views/tabs/tab.cc
-index 444832f1c6..6f95d0f71c 100644
+index 3453a8fa3f..e8dff133de 100644
 --- a/chrome/browser/ui/views/tabs/tab.cc
 +++ b/chrome/browser/ui/views/tabs/tab.cc
-@@ -618,7 +618,7 @@ void Tab::MaybeUpdateHoverStatus(const ui::MouseEvent& event) {
+@@ -621,7 +621,7 @@ void Tab::MaybeUpdateHoverStatus(const ui::MouseEvent& event) {
      return;
    }
  
@@ -14889,7 +14907,7 @@ index be4d66b20b..5b763bc8f3 100644
    // be set before every call to this method.
    std::unique_ptr<KeyStorageLinux> CreateKeyStorage();
 diff --git a/components/paint_preview/browser/paint_preview_client.cc b/components/paint_preview/browser/paint_preview_client.cc
-index 9f1d05b53e..805cd89e7a 100644
+index e6f1112a0d..32fd8b054d 100644
 --- a/components/paint_preview/browser/paint_preview_client.cc
 +++ b/components/paint_preview/browser/paint_preview_client.cc
 @@ -313,8 +313,8 @@ void PaintPreviewClient::CapturePaintPreview(
@@ -15818,13 +15836,13 @@ index 02d232f1bf..45898866e7 100644
      // to easily see regions that were not drawn on the screen.
      // ClearCavas() call causes slight pixel difference, so linux-ref and
 diff --git a/components/viz/service/display_embedder/skia_output_surface_impl.cc b/components/viz/service/display_embedder/skia_output_surface_impl.cc
-index 070a9b9a57..a44bd2f92e 100644
+index 8de026058c..1593b78430 100644
 --- a/components/viz/service/display_embedder/skia_output_surface_impl.cc
 +++ b/components/viz/service/display_embedder/skia_output_surface_impl.cc
-@@ -1526,7 +1526,7 @@ GrBackendFormat SkiaOutputSurfaceImpl::GetGrBackendFormatForTexture(
-             ->GetDeviceQueue()
-             ->GetVulkanPhysicalDevice(),
-         VK_IMAGE_TILING_OPTIMAL, vk_format, yuv_color_space, ycbcr_info);
+@@ -1527,7 +1527,7 @@ GrBackendFormat SkiaOutputSurfaceImpl::GetGrBackendFormatForTexture(
+                                           ->GetVulkanPhysicalDevice(),
+                                       VK_IMAGE_TILING_OPTIMAL, vk_format,
+                                       si_format, yuv_color_space, ycbcr_info);
 -#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
 +#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
      // Textures that were allocated _on linux_ with ycbcr info came from
@@ -17974,7 +17992,7 @@ index 3ac7cdff39..cb5ebab5a2 100644
  #if BUILDFLAG(IS_CHROMEOS)
    // Reinitialize logging for the Zygote processes. Needed on ChromeOS, which
 diff --git a/content/public/common/content_features.cc b/content/public/common/content_features.cc
-index c6343d4a37..7ba9df64ab 100644
+index 0d036889a5..dc2349eefc 100644
 --- a/content/public/common/content_features.cc
 +++ b/content/public/common/content_features.cc
 @@ -27,7 +27,7 @@ BASE_FEATURE(kAudioServiceOutOfProcess,
@@ -19171,7 +19189,7 @@ index cb25c9de94..4d604125c0 100644
  #endif
      SHARED_IMAGE_USAGE_GLES2_READ | SHARED_IMAGE_USAGE_GLES2_WRITE |
 diff --git a/gpu/command_buffer/service/shared_image/external_vk_image_backing.cc b/gpu/command_buffer/service/shared_image/external_vk_image_backing.cc
-index 5a360dac20..e47642f328 100644
+index 8a00a2c804..802a53caec 100644
 --- a/gpu/command_buffer/service/shared_image/external_vk_image_backing.cc
 +++ b/gpu/command_buffer/service/shared_image/external_vk_image_backing.cc
 @@ -50,7 +50,7 @@
@@ -31684,10 +31702,10 @@ index 4682fdaf98..aa4322a02d 100644
            profile.profile == media::VideoCodecProfile::H264PROFILE_BASELINE;
  #endif
 diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
-index 4148ab1e2b..9e514b056c 100644
+index ce3c7fa860..bfa6ef84aa 100644
 --- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
 +++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
-@@ -321,7 +321,7 @@
+@@ -313,7 +313,7 @@
        name: "AppTitle",
        status: "experimental",
        origin_trial_feature_name: "AppTitle",
@@ -31696,7 +31714,7 @@ index 4148ab1e2b..9e514b056c 100644
        base_feature: "WebAppEnableAppTitle",
      },
      {
-@@ -1969,7 +1969,7 @@
+@@ -1961,7 +1961,7 @@
        base_feature_status: "enabled",
        copied_from_base_feature_if: "overridden",
        origin_trial_feature_name: "FullscreenPopupWindows",
@@ -31705,7 +31723,7 @@ index 4148ab1e2b..9e514b056c 100644
      },
      {
        name: "GamepadButtonAxisEvents",
-@@ -2890,7 +2890,7 @@
+@@ -2882,7 +2882,7 @@
        name: "PaymentHandlerMinimalHeaderUX",
        origin_trial_feature_name: "PaymentHandlerMinimalHeaderUX",
        origin_trial_allows_third_party: true,
@@ -31714,7 +31732,7 @@ index 4148ab1e2b..9e514b056c 100644
        status: "stable",
      },
      {
-@@ -3082,7 +3082,7 @@
+@@ -3074,7 +3074,7 @@
      {
        name: "PrivateNetworkAccessPermissionPrompt",
        origin_trial_feature_name: "PrivateNetworkAccessPermissionPrompt",
@@ -31723,7 +31741,7 @@ index 4148ab1e2b..9e514b056c 100644
        status: "stable",
        public: true,
        base_feature: "none",
-@@ -3950,7 +3950,7 @@
+@@ -3942,7 +3942,7 @@
        name: "UnrestrictedSharedArrayBuffer",
        base_feature: "none",
        origin_trial_feature_name: "UnrestrictedSharedArrayBuffer",
@@ -31732,7 +31750,7 @@ index 4148ab1e2b..9e514b056c 100644
      },
      // Enables using policy-controlled feature "usb-unrestricted" to allow
      // isolated context to access protected USB interface classes and to
-@@ -4110,7 +4110,7 @@
+@@ -4102,7 +4102,7 @@
      {
        name: "WebAppScopeExtensions",
        origin_trial_feature_name: "WebAppScopeExtensions",
@@ -34611,6 +34629,33 @@ index 318b2144d1..7ca53c1963 100644
  #elif defined(_UNIX)
    FILE *rndf = fopen("/dev/urandom", "r");
    if (rndf!=NULL)
+diff --git a/third_party/vulkan-deps/vulkan-validation-layers/src/layers/external/vma/vk_mem_alloc.h b/third_party/vulkan-deps/vulkan-validation-layers/src/layers/external/vma/vk_mem_alloc.h
+index 823cef8ade..fe3fafe39c 100644
+--- a/third_party/vulkan-deps/vulkan-validation-layers/src/layers/external/vma/vk_mem_alloc.h
++++ b/third_party/vulkan-deps/vulkan-validation-layers/src/layers/external/vma/vk_mem_alloc.h
+@@ -2740,7 +2740,7 @@ static void* vma_aligned_alloc(size_t alignment, size_t size)
+ 
+     return memalign(alignment, size);
+ }
+-#elif defined(__APPLE__) || defined(__ANDROID__) || (defined(__linux__) && defined(__GLIBCXX__) && !defined(_GLIBCXX_HAVE_ALIGNED_ALLOC))
++#elif defined(__APPLE__) || defined(__ANDROID__) || (defined(__linux__) && defined(__GLIBCXX__) && !defined(_GLIBCXX_HAVE_ALIGNED_ALLOC)) || defined(__OpenBSD__) || defined(__FreeBSD__)
+ #include <cstdlib>
+ 
+ #if defined(__APPLE__)
+diff --git a/third_party/vulkan-deps/vulkan-validation-layers/src/layers/vulkan/generated/vk_function_pointers.cpp b/third_party/vulkan-deps/vulkan-validation-layers/src/layers/vulkan/generated/vk_function_pointers.cpp
+index d3120b0c7a..2a431a6b0f 100644
+--- a/third_party/vulkan-deps/vulkan-validation-layers/src/layers/vulkan/generated/vk_function_pointers.cpp
++++ b/third_party/vulkan-deps/vulkan-validation-layers/src/layers/vulkan/generated/vk_function_pointers.cpp
+@@ -53,7 +53,8 @@ static void *get_proc_address(dl_handle library, const char *name) {
+     assert(name);
+     return (void *)GetProcAddress(library, name);
+ }
+-#elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__QNX__)
++#elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__QNX__) || \
++	defined(__NetBSD__)
+ 
+ #include <dlfcn.h>
+ 
 diff --git a/third_party/vulkan_memory_allocator/include/vk_mem_alloc.h b/third_party/vulkan_memory_allocator/include/vk_mem_alloc.h
 index 0bbfeedb17..2bf9b127d8 100644
 --- a/third_party/vulkan_memory_allocator/include/vk_mem_alloc.h
@@ -35745,10 +35790,10 @@ index ef9a75df2e..bcb0597596 100644
  // not really available, the next time that ui_controls::SendMouseMove() or
  // ui_controls::SendMouseMoveNotifyWhenDone() is called, or some other method
 diff --git a/ui/base/ui_base_features.cc b/ui/base/ui_base_features.cc
-index 84db3af297..8c52d4a49f 100644
+index 348d1df4fc..5cf08323ac 100644
 --- a/ui/base/ui_base_features.cc
 +++ b/ui/base/ui_base_features.cc
-@@ -227,7 +227,7 @@ BASE_FEATURE(kExperimentalFlingAnimation,
+@@ -228,7 +228,7 @@ BASE_FEATURE(kExperimentalFlingAnimation,
               "ExperimentalFlingAnimation",
  // TODO(crbug.com/1052397): Revisit the macro expression once build flag switch
  // of lacros-chrome is complete.
@@ -35757,7 +35802,7 @@ index 84db3af297..8c52d4a49f 100644
      (BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CHROMEOS_ASH) && \
       !BUILDFLAG(IS_CHROMEOS_LACROS))
               base::FEATURE_ENABLED_BY_DEFAULT
-@@ -326,7 +326,7 @@ bool IsForcedColorsEnabled() {
+@@ -327,7 +327,7 @@ bool IsForcedColorsEnabled() {
  BASE_FEATURE(kEyeDropper,
               "EyeDropper",
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
