@@ -5130,7 +5130,7 @@ index 03ef042618..80bc6cd675 100755
                          bufsize=-1,
                          universal_newlines=True)
 diff --git a/build/toolchain/gcc_toolchain.gni b/build/toolchain/gcc_toolchain.gni
-index a74a4ffb75..e2509f1b28 100644
+index a74a4ffb75..e44db6a90e 100644
 --- a/build/toolchain/gcc_toolchain.gni
 +++ b/build/toolchain/gcc_toolchain.gni
 @@ -57,6 +57,13 @@ if (enable_resource_allowlist_generation) {
@@ -5147,6 +5147,18 @@ index a74a4ffb75..e2509f1b28 100644
  # This template defines a toolchain for something that works like gcc
  # (including clang).
  #
+@@ -638,9 +645,9 @@ template("single_gcc_toolchain") {
+         # the "--start-group .. --end-group" feature isn't available on the aix
+         # ld.
+         start_group_flag = "-Wl,--start-group"
+-        end_group_flag = "-Wl,--end-group "
++        end_group_flag = "-Wl,--end-group"
+       }
+-      link_command = "$ld {{ldflags}}${extra_ldflags} -o \"$unstripped_outfile\" $start_group_flag @\"$rspfile\" {{solibs}} $end_group_flag {{libs}} {{rlibs}}"
++      link_command = "$ld $start_group_flag {{ldflags}}${extra_ldflags} -o \"$unstripped_outfile\" @\"$rspfile\" {{solibs}} {{libs}} {{rlibs}} $end_group_flag"
+ 
+       # Generate a map file to be used for binary size analysis.
+       # Map file adds ~10% to the link time on a z620.
 @@ -890,22 +897,12 @@ template("gcc_toolchain") {
  # use_gold too.
  template("clang_toolchain") {
