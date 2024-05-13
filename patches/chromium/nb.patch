@@ -8301,7 +8301,7 @@ index 58fe3bd8f6..fb988b6f41 100644
        process.process_type = content::PROCESS_TYPE_ZYGOTE;
      }
 diff --git a/chrome/browser/metrics/chrome_browser_main_extra_parts_metrics.cc b/chrome/browser/metrics/chrome_browser_main_extra_parts_metrics.cc
-index a4b72f4e0c..9c02404a9d 100644
+index 956ae2a0fc..d49b841ac7 100644
 --- a/chrome/browser/metrics/chrome_browser_main_extra_parts_metrics.cc
 +++ b/chrome/browser/metrics/chrome_browser_main_extra_parts_metrics.cc
 @@ -80,8 +80,10 @@
@@ -8334,7 +8334,7 @@ index a4b72f4e0c..9c02404a9d 100644
  #include "components/power_metrics/system_power_monitor.h"
  #endif
  
-@@ -858,7 +860,7 @@ void RecordStartupMetrics() {
+@@ -860,7 +862,7 @@ void RecordStartupMetrics() {
  
    // Record whether Chrome is the default browser or not.
    // Disabled on Linux due to hanging browser tests, see crbug.com/1216328.
@@ -8343,7 +8343,7 @@ index a4b72f4e0c..9c02404a9d 100644
    shell_integration::DefaultWebClientState default_state =
        shell_integration::GetDefaultBrowser();
    base::UmaHistogramEnumeration("DefaultBrowser.State", default_state,
-@@ -1162,11 +1164,11 @@ void ChromeBrowserMainExtraPartsMetrics::PostBrowserStart() {
+@@ -1164,11 +1166,11 @@ void ChromeBrowserMainExtraPartsMetrics::PostBrowserStart() {
    }
  #endif  // !BUILDFLAG(IS_ANDROID)
  
@@ -18004,7 +18004,7 @@ index 3ac7cdff39..cb5ebab5a2 100644
  #if BUILDFLAG(IS_CHROMEOS)
    // Reinitialize logging for the Zygote processes. Needed on ChromeOS, which
 diff --git a/content/public/common/content_features.cc b/content/public/common/content_features.cc
-index 0d036889a5..dc2349eefc 100644
+index 06657dad95..40c85e322f 100644
 --- a/content/public/common/content_features.cc
 +++ b/content/public/common/content_features.cc
 @@ -27,7 +27,7 @@ BASE_FEATURE(kAudioServiceOutOfProcess,
@@ -20890,7 +20890,7 @@ index 5566c8e8da..ad545ee2ae 100644
  
  }  // namespace media
 diff --git a/media/base/media_switches.cc b/media/base/media_switches.cc
-index 92d68c889a..712f0d3251 100644
+index 0ed71c61d2..a166bb00bf 100644
 --- a/media/base/media_switches.cc
 +++ b/media/base/media_switches.cc
 @@ -21,7 +21,7 @@
@@ -20994,7 +20994,7 @@ index 92d68c889a..712f0d3251 100644
               base::FEATURE_ENABLED_BY_DEFAULT
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
-@@ -1500,7 +1500,7 @@ BASE_FEATURE(kUseGTFOOutOfProcessVideoDecoding,
+@@ -1496,7 +1496,7 @@ BASE_FEATURE(kUseGTFOOutOfProcessVideoDecoding,
               base::FEATURE_DISABLED_BY_DEFAULT);
  #endif  // BUILDFLAG(ALLOW_OOP_VIDEO_DECODER)
  
