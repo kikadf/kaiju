@@ -83,18 +83,47 @@ index 22625621c2..ae3c5dd7a1 100644
  void* GetStackTop() {
     pthread_attr_t attr;
 diff --git a/base/base_paths_posix.cc b/base/base_paths_posix.cc
-index 720ba71dc8..37ef6a4d94 100644
+index 720ba71dc8..760a1c507a 100644
 --- a/base/base_paths_posix.cc
 +++ b/base/base_paths_posix.cc
-@@ -52,7 +52,7 @@ bool PathProviderPosix(int key, FilePath* result) {
+@@ -60,6 +60,37 @@ bool PathProviderPosix(int key, FilePath* result) {
        }
-       *result = bin_dir;
+       *result = FilePath(bin_dir.value());
        return true;
--#elif BUILDFLAG(IS_FREEBSD)
-+#elif BUILDFLAG(IS_FREEBSD) || BUILDFLAG(IS_NETBSD)
-       std::optional<std::string> bin_dir = StringSysctl({ CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 });
-       if (!bin_dir.has_value() || bin_dir.value().length() <= 1) {
-         NOTREACHED() << "Unable to resolve path.";
++#elif BUILDFLAG(IS_NETBSD)
++      struct kinfo_proc2 *info;
++      size_t length;
++      bool ret = false;
++      int mib[] = { CTL_KERN, KERN_PROC2, KERN_PROC_PID, -1,
++                    sizeof(struct kinfo_proc2), 1 };
++
++      if (sysctl(mib, std::size(mib), NULL, &length, NULL, 0) == -1) {
++        NOTREACHED() << "Unable to resolve path.";
++        return false;
++      }
++
++      info = (struct kinfo_proc2 *)malloc(length);
++
++      mib[5] = static_cast<int>((length / sizeof(struct kinfo_proc2)));
++
++      if (sysctl(mib, std::size(mib), info, &length, NULL, 0) < 0)
++        goto out;
++
++      if ((info->p_flag & P_SYSTEM) != 0)
++        goto out;
++
++      if (strcmp(info->p_comm, "chrome") == 0) {
++        *result = FilePath(info->p_comm);
++        ret = true;
++        goto out;
++      }
++
++out:
++      free(info);
++      return ret;
+ #elif BUILDFLAG(IS_SOLARIS)
+       char bin_dir[PATH_MAX + 1];
+       if (realpath(getexecname(), bin_dir) == NULL) {
 diff --git a/base/compiler_specific.h b/base/compiler_specific.h
 index 315ef04173..12e1c374ad 100644
 --- a/base/compiler_specific.h
@@ -3825,6 +3854,48 @@ index e64a9494ed..aae2622130 100644
              }
          }
      },
+diff --git a/tools/v8_context_snapshot/BUILD.gn b/tools/v8_context_snapshot/BUILD.gn
+index 6b38d3f4e1..b891480707 100644
+--- a/tools/v8_context_snapshot/BUILD.gn
++++ b/tools/v8_context_snapshot/BUILD.gn
+@@ -35,6 +35,24 @@ buildflag_header("buildflags") {
+   ]
+ }
+ 
++action("run_paxctl_v8_context_snapshot_generator") {
++  deps = [ ":v8_context_snapshot_generator($v8_snapshot_toolchain)" ]
++
++  script = "//v8/tools/run-paxctl.py"
++  stamp = "$target_gen_dir/paxctl_stamp"
++  outputs = [ stamp ]
++
++  sources = []
++  data = []
++
++  args = [
++    rebase_path(stamp, root_build_dir),
++    "/usr/sbin/paxctl", "+m",
++    "./" + rebase_path(get_label_info(":v8_context_snapshot_generator", "root_out_dir") + "/v8_context_snapshot_generator",
++    root_build_dir),
++  ]
++}
++
+ if (use_v8_context_snapshot) {
+   if (v8_snapshot_toolchain == current_toolchain) {
+     action("generate_v8_context_snapshot") {
+@@ -51,7 +69,11 @@ if (use_v8_context_snapshot) {
+         "--output_file=$output_path",
+       ]
+ 
+-      deps = [ ":v8_context_snapshot_generator" ]
++      if (target_os == "netbsd") {
++        deps = [ ":v8_context_snapshot_generator", ":run_paxctl_v8_context_snapshot_generator" ]
++      } else {
++        deps = [ ":v8_context_snapshot_generator" ]
++      }
+ 
+       # TODO(sky): figure out why this doesn't work on android cross compile.
+       # In the case of compiling for the snapshot `shlib_extension` is ".so"
 diff --git a/tools/variations/fieldtrial_to_struct.py b/tools/variations/fieldtrial_to_struct.py
 index 872083e1cb..05bf464a76 100755
 --- a/tools/variations/fieldtrial_to_struct.py
