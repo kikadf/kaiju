@@ -644,14 +644,14 @@ index 29aacf3134..aa8d792c5b 100644
    errno = saved_errno;
  }
 diff --git a/base/allocator/partition_allocator/src/partition_alloc/stack/stack.cc b/base/allocator/partition_allocator/src/partition_alloc/stack/stack.cc
-index ac79887af4..7d13ad9a22 100644
+index ac79887af4..ef8ce83c38 100644
 --- a/base/allocator/partition_allocator/src/partition_alloc/stack/stack.cc
 +++ b/base/allocator/partition_allocator/src/partition_alloc/stack/stack.cc
 @@ -18,6 +18,10 @@
  #include <pthread.h>
  #endif
  
-+#if BUILDFLAG(IS_BSD)
++#if BUILDFLAG(IS_BSD) && !BUILDFLAG(IS_NETBSD)
 +#include <pthread_np.h>
 +#endif
 +
@@ -671,7 +671,7 @@ index ac79887af4..7d13ad9a22 100644
 +  return reinterpret_cast<uint8_t*>(ss.ss_sp);
 +}
 +
-+#elif defined(OS_FREEBSD)
++#elif defined(OS_FREEBSD) || defined(OS_NETBSD)
 +
 +void* GetStackTop() {
 +   pthread_attr_t attr;
@@ -21913,7 +21913,7 @@ index 1dd10660f8..85bff7c8e7 100644
  } else if (is_win) {
    component_os = "win"
 diff --git a/media/ffmpeg/scripts/build_ffmpeg.py b/media/ffmpeg/scripts/build_ffmpeg.py
-index 54bab6a1a3..26024bf80d 100755
+index 54bab6a1a3..3fb713eb72 100755
 --- a/media/ffmpeg/scripts/build_ffmpeg.py
 +++ b/media/ffmpeg/scripts/build_ffmpeg.py
 @@ -33,7 +33,7 @@ NDK_ROOT_DIR = os.path.abspath(
@@ -21925,43 +21925,44 @@ index 54bab6a1a3..26024bf80d 100755
  
  BRANDINGS = [
      'Chrome',
-@@ -44,6 +44,8 @@ BRANDINGS = [
+@@ -44,6 +44,9 @@ BRANDINGS = [
  ARCH_MAP = {
      'android': ['ia32', 'x64', 'arm-neon', 'arm64'],
      'linux': ['ia32', 'x64', 'noasm-x64', 'arm', 'arm-neon', 'arm64'],
 +    'openbsd': ['x64', 'arm64', 'ia32'],
 +    'freebsd': ['x64', 'arm64', 'ia32'],
++    'netbsd': ['x64', 'arm64', 'ia32'],
      'mac': ['x64', 'arm64'],
      'win': ['ia32', 'x64', 'arm64'],
  }
-@@ -123,7 +125,7 @@ def PrintAndCheckCall(argv, *args, **kwargs):
+@@ -123,7 +126,7 @@ def PrintAndCheckCall(argv, *args, **kwargs):
  
  
  def GetDsoName(target_os, dso_name, dso_version):
 -    if target_os in ('linux', 'linux-noasm', 'android'):
-+    if target_os in ('linux', 'linux-noasm', 'android', 'openbsd', 'freebsd'):
++    if target_os in ('linux', 'linux-noasm', 'android', 'openbsd', 'freebsd', 'netbsd'):
          return 'lib%s.so.%s' % (dso_name, dso_version)
      elif target_os == 'mac':
          return 'lib%s.%s.dylib' % (dso_name, dso_version)
-@@ -476,7 +478,7 @@ def BuildFFmpeg(target_os, target_arch, host_os, host_arch, parallel_jobs,
+@@ -476,7 +479,7 @@ def BuildFFmpeg(target_os, target_arch, host_os, host_arch, parallel_jobs,
      # removing <sys/sysctl.h> soon, so this is needed to silence a deprecation
      # #warning which will be converted to an error via -Werror.
      # There is also no prctl.h
 -    if target_os in ['linux', 'linux-noasm']:
-+    if target_os in ['linux', 'linux-noasm', 'openbsd', 'freebsd']:
++    if target_os in ['linux', 'linux-noasm', 'openbsd', 'freebsd', 'netbsd']:
          pre_make_rewrites += [
              (r'(#define HAVE_SYSCTL [01])',
               r'#define HAVE_SYSCTL 0 /* \1 -- forced to 0 for Fuchsia */'),
-@@ -599,7 +601,7 @@ def main(argv):
+@@ -599,7 +602,7 @@ def main(argv):
      configure_args = args[2:]
  
      if target_os not in ('android', 'linux', 'linux-noasm', 'mac', 'win',
 -                         'all'):
-+                         'all', 'openbsd', 'freebsd'):
++                         'all', 'openbsd', 'freebsd', 'netbsd'):
          parser.print_help()
          return 1
  
-@@ -672,7 +674,6 @@ def ConfigureAndBuild(target_arch, target_os, host_os, host_arch,
+@@ -672,7 +675,6 @@ def ConfigureAndBuild(target_arch, target_os, host_os, host_arch,
          '--disable-securetransport',
          '--disable-faan',
          '--disable-alsa',
@@ -21969,16 +21970,16 @@ index 54bab6a1a3..26024bf80d 100755
  
          # Disable automatically detected external libraries. This prevents
          # automatic inclusion of things like hardware decoders. Each roll should
-@@ -713,7 +714,7 @@ def ConfigureAndBuild(target_arch, target_os, host_os, host_arch,
+@@ -713,7 +715,7 @@ def ConfigureAndBuild(target_arch, target_os, host_os, host_arch,
              '--optflags="-O2"',
          ])
  
 -    if target_os in ('linux', 'linux-noasm', 'android'):
-+    if target_os in ('linux', 'linux-noasm', 'android', 'openbsd', 'freebsd'):
++    if target_os in ('linux', 'linux-noasm', 'android', 'openbsd', 'freebsd', 'netbsd'):
          if target_arch == 'x64':
              if target_os == 'android':
                  configure_flags['Common'].extend([
-@@ -829,8 +830,6 @@ def ConfigureAndBuild(target_arch, target_os, host_os, host_arch,
+@@ -829,8 +831,6 @@ def ConfigureAndBuild(target_arch, target_os, host_os, host_arch,
                  configure_flags['Common'].extend([
                      '--target-os=linux',
                      '--sysroot=' +
@@ -21987,17 +21988,26 @@ index 54bab6a1a3..26024bf80d 100755
                      # See crbug.com/1467681. These could be removed eventually
                      '--disable-dotprod',
                      '--disable-i8mm',
-@@ -1034,7 +1033,7 @@ def ConfigureAndBuild(target_arch, target_os, host_os, host_arch,
+@@ -922,7 +922,7 @@ def ConfigureAndBuild(target_arch, target_os, host_os, host_arch,
+         # typically be the system one, so explicitly configure use of Clang's
+         # ld.lld, to ensure that things like cross-compilation and LTO work.
+         # This does not work for ia32 and is always used on mac.
+-        if target_arch != 'ia32' and target_os != 'mac':
++        if target_arch != 'ia32' and target_os != 'mac' and target_os != 'netbsd':
+             configure_flags['Common'].append('--extra-ldflags=-fuse-ld=lld')
+ 
+     # Should be run on Mac, unless we're cross-compiling on Linux.
+@@ -1034,7 +1034,7 @@ def ConfigureAndBuild(target_arch, target_os, host_os, host_arch,
              'Chrome', configure_flags['Common'] +
              configure_flags['ChromeAndroid'] + configure_args)
  
 -    if target_os in ['linux', 'linux-noasm']:
-+    if target_os in ['linux', 'linux-noasm', 'openbsd', 'freebsd']:
++    if target_os in ['linux', 'linux-noasm', 'openbsd', 'freebsd', 'netbsd']:
          # ChromeOS enables MPEG4 which requires error resilience :(
          chrome_os_flags = (configure_flags['Common'] +
                             configure_flags['Chrome'] +
 diff --git a/media/ffmpeg/scripts/robo_lib/config.py b/media/ffmpeg/scripts/robo_lib/config.py
-index 74b5d5a53d..f3b626490d 100644
+index 74b5d5a53d..d7804babbf 100644
 --- a/media/ffmpeg/scripts/robo_lib/config.py
 +++ b/media/ffmpeg/scripts/robo_lib/config.py
 @@ -54,19 +54,13 @@ class RoboConfiguration:
@@ -22032,7 +22042,7 @@ index 74b5d5a53d..f3b626490d 100644
              self._host_architecture = "arm64"
          elif platform.machine() == "mips32":
              self._host_architecture = "mipsel"
-@@ -216,6 +210,10 @@ class RoboConfiguration:
+@@ -216,6 +210,12 @@ class RoboConfiguration:
          elif platform.system() == "Windows" or "CYGWIN_NT" in platform.system(
          ):
              self._host_operating_system = "win"
@@ -22040,10 +22050,12 @@ index 74b5d5a53d..f3b626490d 100644
 +            self._host_operating_system = "openbsd"
 +        elif platform.system() == "FreeBSD":
 +            self._host_operating_system = "freebsd"
++        elif platform.system() == "NetBSD":
++            self._host_operating_system = "netbsd"
          else:
              raise ValueError(f"Unsupported platform: {platform.system()}")
  
-@@ -224,8 +222,8 @@ class RoboConfiguration:
+@@ -224,8 +224,8 @@ class RoboConfiguration:
          wd = os.getcwd()
          # Walk up the tree until we find src/AUTHORS
          while wd != "/":
@@ -32620,21 +32632,6 @@ index 3cce79931d..9cd3aafc96 100644
        ]
      }
      if (is_component_ffmpeg) {
-diff --git a/third_party/ffmpeg/configure b/third_party/ffmpeg/configure
-index 02687458c2..732ed42a11 100755
---- a/third_party/ffmpeg/configure
-+++ b/third_party/ffmpeg/configure
-@@ -6769,8 +6769,8 @@ if ! disabled pthreads && ! enabled w32threads && ! enabled os2threads; then
-         if enabled pthread_np_h; then
-             hdrs="$hdrs pthread_np.h"
-         fi
--        check_lib pthread_set_name_np "$hdrs" pthread_set_name_np -lpthread
--        check_lib pthread_setname_np "$hdrs" pthread_setname_np -lpthread
-+        check_lib pthread_set_name_np pthread_np.h pthread_set_name_np -lpthread
-+        check_lib pthread_setname_np pthread_np.h pthread_setname_np -lpthread
-     fi
- fi
- 
 diff --git a/third_party/ffmpeg/libavcodec/x86/cabac.h b/third_party/ffmpeg/libavcodec/x86/cabac.h
 index ce2aefcbac..92cb3cdede 100644
 --- a/third_party/ffmpeg/libavcodec/x86/cabac.h

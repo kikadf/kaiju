@@ -60,6 +60,28 @@ index 6234b397a1..aa8d792c5b 100644
  #else
    long retval = syscall(SYS_futex, &state_, FUTEX_WAKE | FUTEX_PRIVATE_FLAG,
                          1 /* wake up a single waiter */, nullptr, nullptr, 0);
+diff --git a/base/allocator/partition_allocator/src/partition_alloc/stack/stack.cc b/base/allocator/partition_allocator/src/partition_alloc/stack/stack.cc
+index 7d13ad9a22..ef8ce83c38 100644
+--- a/base/allocator/partition_allocator/src/partition_alloc/stack/stack.cc
++++ b/base/allocator/partition_allocator/src/partition_alloc/stack/stack.cc
+@@ -18,7 +18,7 @@
+ #include <pthread.h>
+ #endif
+ 
+-#if BUILDFLAG(IS_BSD)
++#if BUILDFLAG(IS_BSD) && !BUILDFLAG(IS_NETBSD)
+ #include <pthread_np.h>
+ #endif
+ 
+@@ -63,7 +63,7 @@ void* GetStackTop() {
+   return reinterpret_cast<uint8_t*>(ss.ss_sp);
+ }
+ 
+-#elif defined(OS_FREEBSD)
++#elif defined(OS_FREEBSD) || defined(OS_NETBSD)
+ 
+ void* GetStackTop() {
+    pthread_attr_t attr;
 diff --git a/base/base_paths_posix.cc b/base/base_paths_posix.cc
 index 720ba71dc8..760a1c507a 100644
 --- a/base/base_paths_posix.cc
@@ -1296,6 +1318,85 @@ index 41ab4b5346..1101d226b6 100644
  #include <sys/videoio.h>
  #else
  #include <linux/videodev2.h>
+diff --git a/media/ffmpeg/scripts/build_ffmpeg.py b/media/ffmpeg/scripts/build_ffmpeg.py
+index 26024bf80d..3fb713eb72 100755
+--- a/media/ffmpeg/scripts/build_ffmpeg.py
++++ b/media/ffmpeg/scripts/build_ffmpeg.py
+@@ -46,6 +46,7 @@ ARCH_MAP = {
+     'linux': ['ia32', 'x64', 'noasm-x64', 'arm', 'arm-neon', 'arm64'],
+     'openbsd': ['x64', 'arm64', 'ia32'],
+     'freebsd': ['x64', 'arm64', 'ia32'],
++    'netbsd': ['x64', 'arm64', 'ia32'],
+     'mac': ['x64', 'arm64'],
+     'win': ['ia32', 'x64', 'arm64'],
+ }
+@@ -125,7 +126,7 @@ def PrintAndCheckCall(argv, *args, **kwargs):
+ 
+ 
+ def GetDsoName(target_os, dso_name, dso_version):
+-    if target_os in ('linux', 'linux-noasm', 'android', 'openbsd', 'freebsd'):
++    if target_os in ('linux', 'linux-noasm', 'android', 'openbsd', 'freebsd', 'netbsd'):
+         return 'lib%s.so.%s' % (dso_name, dso_version)
+     elif target_os == 'mac':
+         return 'lib%s.%s.dylib' % (dso_name, dso_version)
+@@ -478,7 +479,7 @@ def BuildFFmpeg(target_os, target_arch, host_os, host_arch, parallel_jobs,
+     # removing <sys/sysctl.h> soon, so this is needed to silence a deprecation
+     # #warning which will be converted to an error via -Werror.
+     # There is also no prctl.h
+-    if target_os in ['linux', 'linux-noasm', 'openbsd', 'freebsd']:
++    if target_os in ['linux', 'linux-noasm', 'openbsd', 'freebsd', 'netbsd']:
+         pre_make_rewrites += [
+             (r'(#define HAVE_SYSCTL [01])',
+              r'#define HAVE_SYSCTL 0 /* \1 -- forced to 0 for Fuchsia */'),
+@@ -601,7 +602,7 @@ def main(argv):
+     configure_args = args[2:]
+ 
+     if target_os not in ('android', 'linux', 'linux-noasm', 'mac', 'win',
+-                         'all', 'openbsd', 'freebsd'):
++                         'all', 'openbsd', 'freebsd', 'netbsd'):
+         parser.print_help()
+         return 1
+ 
+@@ -714,7 +715,7 @@ def ConfigureAndBuild(target_arch, target_os, host_os, host_arch,
+             '--optflags="-O2"',
+         ])
+ 
+-    if target_os in ('linux', 'linux-noasm', 'android', 'openbsd', 'freebsd'):
++    if target_os in ('linux', 'linux-noasm', 'android', 'openbsd', 'freebsd', 'netbsd'):
+         if target_arch == 'x64':
+             if target_os == 'android':
+                 configure_flags['Common'].extend([
+@@ -921,7 +922,7 @@ def ConfigureAndBuild(target_arch, target_os, host_os, host_arch,
+         # typically be the system one, so explicitly configure use of Clang's
+         # ld.lld, to ensure that things like cross-compilation and LTO work.
+         # This does not work for ia32 and is always used on mac.
+-        if target_arch != 'ia32' and target_os != 'mac':
++        if target_arch != 'ia32' and target_os != 'mac' and target_os != 'netbsd':
+             configure_flags['Common'].append('--extra-ldflags=-fuse-ld=lld')
+ 
+     # Should be run on Mac, unless we're cross-compiling on Linux.
+@@ -1033,7 +1034,7 @@ def ConfigureAndBuild(target_arch, target_os, host_os, host_arch,
+             'Chrome', configure_flags['Common'] +
+             configure_flags['ChromeAndroid'] + configure_args)
+ 
+-    if target_os in ['linux', 'linux-noasm', 'openbsd', 'freebsd']:
++    if target_os in ['linux', 'linux-noasm', 'openbsd', 'freebsd', 'netbsd']:
+         # ChromeOS enables MPEG4 which requires error resilience :(
+         chrome_os_flags = (configure_flags['Common'] +
+                            configure_flags['Chrome'] +
+diff --git a/media/ffmpeg/scripts/robo_lib/config.py b/media/ffmpeg/scripts/robo_lib/config.py
+index f3b626490d..d7804babbf 100644
+--- a/media/ffmpeg/scripts/robo_lib/config.py
++++ b/media/ffmpeg/scripts/robo_lib/config.py
+@@ -214,6 +214,8 @@ class RoboConfiguration:
+             self._host_operating_system = "openbsd"
+         elif platform.system() == "FreeBSD":
+             self._host_operating_system = "freebsd"
++        elif platform.system() == "NetBSD":
++            self._host_operating_system = "netbsd"
+         else:
+             raise ValueError(f"Unsupported platform: {platform.system()}")
+ 
 diff --git a/mojo/public/cpp/platform/socket_utils_posix.cc b/mojo/public/cpp/platform/socket_utils_posix.cc
 index c7e609a16b..7851375ac6 100644
 --- a/mojo/public/cpp/platform/socket_utils_posix.cc
@@ -3351,6 +3452,21 @@ index 7833c5322f..aa885145f0 100644
  #define DAWN_PLATFORM_IS_LINUX 1
  #define DAWN_PLATFORM_IS_BSD 1
  #define DAWN_PLATFORM_IS_POSIX 1
+diff --git a/third_party/ffmpeg/configure b/third_party/ffmpeg/configure
+index 732ed42a11..02687458c2 100755
+--- a/third_party/ffmpeg/configure
++++ b/third_party/ffmpeg/configure
+@@ -6769,8 +6769,8 @@ if ! disabled pthreads && ! enabled w32threads && ! enabled os2threads; then
+         if enabled pthread_np_h; then
+             hdrs="$hdrs pthread_np.h"
+         fi
+-        check_lib pthread_set_name_np pthread_np.h pthread_set_name_np -lpthread
+-        check_lib pthread_setname_np pthread_np.h pthread_setname_np -lpthread
++        check_lib pthread_set_name_np "$hdrs" pthread_set_name_np -lpthread
++        check_lib pthread_setname_np "$hdrs" pthread_setname_np -lpthread
+     fi
+ fi
+ 
 diff --git a/third_party/ffmpeg/libavutil/random_seed.c b/third_party/ffmpeg/libavutil/random_seed.c
 index b234db552a..affd8c7bda 100644
 --- a/third_party/ffmpeg/libavutil/random_seed.c
