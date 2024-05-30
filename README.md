@@ -15,14 +15,18 @@ Get repositories:
 * Working with repository
 
 Get chromium to the version of OpenBSD port, apply OpenBSD patches,
-finally apply the NetBSD delta patch from kaiju/patches/chromium:
+apply the NetBSD delta patch from kaiju/patches/chromium,
+check the changes in the reference Open-, FreeBSD files:
 
 `cd kaiju`
 
 `./update_vanilla.sh <chromium version>`
 
+`./check_new_files.sh <chromium version>`
+
 Finally fix the rejected parts of nb-delta.patch in chromium repo,
-what is created by update_vanilla.sh, and commit:
+what is created by update_vanilla.sh, update the added NetBSD files
+based on the output of check_new_files.sh, and commit:
 
 `cd ../chromium-netbsd-*`
 
