@@ -1427,6 +1427,22 @@ index c2239c00c3..a19d928cc0 100644
      if (is_freebsd) {
        enabled_features += [ "is_freebsd" ]
        enabled_features += [ "is_bsd" ]
+diff --git a/net/dns/BUILD.gn b/net/dns/BUILD.gn
+index 7ae49b2c96..552afdfc84 100644
+--- a/net/dns/BUILD.gn
++++ b/net/dns/BUILD.gn
+@@ -171,7 +171,10 @@ source_set("dns") {
+     ]
+   }
+ 
+-  deps = [ "//net:net_deps" ]
++  deps = [
++    "//net:net_deps",
++    "///services/screen_ai/buildflags",
++  ]
+ 
+   public_deps = [
+     ":dns_client",
 diff --git a/net/socket/udp_socket_posix.cc b/net/socket/udp_socket_posix.cc
 index 1b1e06b2f5..e0c5af94b1 100644
 --- a/net/socket/udp_socket_posix.cc

@@ -23014,7 +23014,7 @@ index b41ded573f..59074f05a0 100644
  SimpleFileTracker::~SimpleFileTracker() {
    DCHECK(lru_.empty());
 diff --git a/net/dns/BUILD.gn b/net/dns/BUILD.gn
-index 19a205a32f..7ae49b2c96 100644
+index 19a205a32f..552afdfc84 100644
 --- a/net/dns/BUILD.gn
 +++ b/net/dns/BUILD.gn
 @@ -138,7 +138,7 @@ source_set("dns") {
@@ -23026,7 +23026,19 @@ index 19a205a32f..7ae49b2c96 100644
      sources += [
        "dns_config_service_linux.cc",
        "dns_config_service_linux.h",
-@@ -179,6 +179,7 @@ source_set("dns") {
+@@ -171,7 +171,10 @@ source_set("dns") {
+     ]
+   }
+ 
+-  deps = [ "//net:net_deps" ]
++  deps = [
++    "//net:net_deps",
++    "///services/screen_ai/buildflags",
++  ]
+ 
+   public_deps = [
+     ":dns_client",
+@@ -179,6 +182,7 @@ source_set("dns") {
      ":host_resolver_manager",
      ":mdns_client",
      "//net:net_public_deps",
@@ -23034,7 +23046,7 @@ index 19a205a32f..7ae49b2c96 100644
    ]
  
    allow_circular_includes_from = [
-@@ -447,9 +448,9 @@ source_set("tests") {
+@@ -447,9 +451,9 @@ source_set("tests") {
  
    if (is_android) {
      sources += [ "dns_config_service_android_unittest.cc" ]
