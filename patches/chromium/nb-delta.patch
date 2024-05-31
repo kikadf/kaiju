@@ -1030,6 +1030,18 @@ index 0000000000..27240dd95a
 +    current_os = "netbsd"
 +  }
 +}
+diff --git a/chrome/browser/devtools/BUILD.gn b/chrome/browser/devtools/BUILD.gn
+index 3f4e18b7d3..3aa6e2f63b 100644
+--- a/chrome/browser/devtools/BUILD.gn
++++ b/chrome/browser/devtools/BUILD.gn
+@@ -115,6 +115,7 @@ static_library("devtools") {
+     "//chrome/browser/autofill:autofill",
+     "//components/autofill/content/browser:browser",
+     "//components/autofill/core/browser:browser",
++    "//components/enterprise/buildflags",
+     "//components/paint_preview/buildflags:buildflags",
+     "//components/variations/service:service",
+     "//components/webapps/common:common",
 diff --git a/chrome/browser/extensions/api/runtime/chrome_runtime_api_delegate.cc b/chrome/browser/extensions/api/runtime/chrome_runtime_api_delegate.cc
 index be38081ad0..97af32e268 100644
 --- a/chrome/browser/extensions/api/runtime/chrome_runtime_api_delegate.cc

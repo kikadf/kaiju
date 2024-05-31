@@ -6656,6 +6656,18 @@ index bb746b4856..d39170b816 100644
    return std::make_unique<DeviceOAuth2TokenStoreDesktop>(local_state);
  #else
    NOTREACHED();
+diff --git a/chrome/browser/devtools/BUILD.gn b/chrome/browser/devtools/BUILD.gn
+index 3f4e18b7d3..3aa6e2f63b 100644
+--- a/chrome/browser/devtools/BUILD.gn
++++ b/chrome/browser/devtools/BUILD.gn
+@@ -115,6 +115,7 @@ static_library("devtools") {
+     "//chrome/browser/autofill:autofill",
+     "//components/autofill/content/browser:browser",
+     "//components/autofill/core/browser:browser",
++    "//components/enterprise/buildflags",
+     "//components/paint_preview/buildflags:buildflags",
+     "//components/variations/service:service",
+     "//components/webapps/common:common",
 diff --git a/chrome/browser/diagnostics/diagnostics_writer.h b/chrome/browser/diagnostics/diagnostics_writer.h
 index 6259a29cdc..5712e181bc 100644
 --- a/chrome/browser/diagnostics/diagnostics_writer.h
