@@ -1047,14 +1047,16 @@ index 4883b39e64..9167af6a29 100644
  #else
    os << "StackTrace::OutputToStream not implemented.";
 diff --git a/base/debug/stack_trace_posix.cc b/base/debug/stack_trace_posix.cc
-index f962f278c6..fc3194dc49 100644
+index f962f278c6..c752e299ea 100644
 --- a/base/debug/stack_trace_posix.cc
 +++ b/base/debug/stack_trace_posix.cc
-@@ -41,7 +41,7 @@
+@@ -40,8 +40,8 @@
+ // Surprisingly, uClibc defines __GLIBC__ in some build configs, but
  // execinfo.h and backtrace(3) are really only present in glibc and in macOS
  // libc.
- #if BUILDFLAG(IS_APPLE) || \
+-#if BUILDFLAG(IS_APPLE) || \
 -    (defined(__GLIBC__) && !defined(__UCLIBC__) && !defined(__AIX))
++#if BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_NETBSD) || \
 +    (defined(__GLIBC__) && !defined(__UCLIBC__) && !defined(__AIX) && !BUILDFLAG(IS_BSD))
  #define HAVE_BACKTRACE
  #include <execinfo.h>
@@ -4287,7 +4289,7 @@ index 49a87b4d23..9274e2f1f3 100644
  }
  
 diff --git a/base/task/thread_pool/environment_config_unittest.cc b/base/task/thread_pool/environment_config_unittest.cc
-index 3a726d07e8..72f4ba59be 100644
+index 3a726d07e8..baae579604 100644
 --- a/base/task/thread_pool/environment_config_unittest.cc
 +++ b/base/task/thread_pool/environment_config_unittest.cc
 @@ -15,7 +15,7 @@ TEST(ThreadPoolEnvironmentConfig, CanUseBackgroundPriorityForWorker) {
@@ -4297,6 +4299,15 @@ index 3a726d07e8..72f4ba59be 100644
 -    BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_NACL)
 +    BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_NACL) || BUILDFLAG(IS_BSD)
    EXPECT_FALSE(CanUseBackgroundThreadTypeForWorkerThread());
+ #else
+ #error Platform doesn't match any block
+@@ -24,7 +24,7 @@ TEST(ThreadPoolEnvironmentConfig, CanUseBackgroundPriorityForWorker) {
+ #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_ANDROID)
+   EXPECT_TRUE(CanUseUtilityThreadTypeForWorkerThread());
+ #elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_FUCHSIA) || \
+-    BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_NACL)
++    BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_NACL) || BUILDFLAG(IS_BSD)
+   EXPECT_FALSE(CanUseUtilityThreadTypeForWorkerThread());
  #else
  #error Platform doesn't match any block
 diff --git a/base/test/launcher/test_launcher.cc b/base/test/launcher/test_launcher.cc
@@ -14188,7 +14199,7 @@ index 7f1bfebafd..c2669da178 100644
    return a < b;
  #else
 diff --git a/components/device_signals/test/signals_contract.cc b/components/device_signals/test/signals_contract.cc
-index f64c871b00..b039b31ef9 100644
+index f64c871b00..368872b22d 100644
 --- a/components/device_signals/test/signals_contract.cc
 +++ b/components/device_signals/test/signals_contract.cc
 @@ -212,7 +212,7 @@ GetSignalsContract() {
@@ -14196,7 +14207,7 @@ index f64c871b00..b039b31ef9 100644
  #endif
  
 -#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
-+#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || BUIDLFLAG(IS_BSD)
++#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
    contract[names::kAllowScreenLock] =
        base::BindRepeating(VerifyUnset, names::kAllowScreenLock);
    contract[names::kImei] = base::BindRepeating(VerifyUnset, names::kImei);
@@ -14768,19 +14779,26 @@ index 790579c3f9..49de41ff77 100644
  #include "components/metrics/motherboard.h"
  
 diff --git a/components/named_mojo_ipc_server/connection_info.h b/components/named_mojo_ipc_server/connection_info.h
-index f3610c4e1d..21d1f361af 100644
+index f3610c4e1d..a8d42bbfe5 100644
 --- a/components/named_mojo_ipc_server/connection_info.h
 +++ b/components/named_mojo_ipc_server/connection_info.h
-@@ -14,7 +14,7 @@
+@@ -14,8 +14,14 @@
  #include "base/win/scoped_handle.h"
  #elif BUILDFLAG(IS_MAC)
  #include <bsm/libbsm.h>
 -#elif BUILDFLAG(IS_LINUX)
 +#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
  #include <sys/socket.h>
++#if defined(__NetBSD__)
++#include <sys/un.h>
++#define ucred unpcbid
++#define SO_PEERCRED LOCAL_PEEREID
++#define pid unp_pid
++#endif
  #endif
  
-@@ -33,7 +33,7 @@ struct ConnectionInfo {
+ namespace named_mojo_ipc_server {
+@@ -33,7 +39,7 @@ struct ConnectionInfo {
    std::optional<base::win::ScopedHandle> impersonation_token{};
  #elif BUILDFLAG(IS_MAC)
    audit_token_t audit_token{};
@@ -17437,6 +17455,19 @@ index ba5eeb3e3f..aca531b258 100644
      // It is possible for the web-contents to be destroyed while it is being
      // activated. Use a weak-ptr to track whether that happened or not.
      // More in https://crbug.com/1040725
+diff --git a/content/browser/web_contents/web_contents_view_aura_unittest.cc b/content/browser/web_contents/web_contents_view_aura_unittest.cc
+index f95ac023d3..7b30357cea 100644
+--- a/content/browser/web_contents/web_contents_view_aura_unittest.cc
++++ b/content/browser/web_contents/web_contents_view_aura_unittest.cc
+@@ -97,7 +97,7 @@ class TestDragDropClient : public aura::client::DragDropClient {
+     drag_drop_data_ = std::move(data);
+     return DragOperation::kCopy;
+   }
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   void UpdateDragImage(const gfx::ImageSkia& image,
+                        const gfx::Vector2d& offset) override {}
+ #endif
 diff --git a/content/browser/webui/web_ui_main_frame_observer.cc b/content/browser/webui/web_ui_main_frame_observer.cc
 index ca1e3b694f..a9c7423b4f 100644
 --- a/content/browser/webui/web_ui_main_frame_observer.cc
@@ -18475,6 +18506,19 @@ index e4fc8628ad..0fd1e40466 100644
    if (register_sandbox_status_helper_) {
      binders->Add<content::mojom::SandboxStatusService>(
          base::BindRepeating(
+diff --git a/content/test/BUILD.gn b/content/test/BUILD.gn
+index 7143a91346..8df07a6588 100644
+--- a/content/test/BUILD.gn
++++ b/content/test/BUILD.gn
+@@ -1682,7 +1682,7 @@ test("content_browsertests") {
+     "../test/url_loader_interceptor_browsertest.cc",
+   ]
+ 
+-  if (is_linux) {
++  if ((is_linux) && !is_bsd) {
+     sources += [ "../browser/network/address_map_linux_browsertest.cc" ]
+   }
+ 
 diff --git a/content/utility/services.cc b/content/utility/services.cc
 index 8b47ee9d80..2dacb04fdd 100644
 --- a/content/utility/services.cc
@@ -22423,6 +22467,19 @@ index e55171c4d1..a54c59d919 100644
        (!is_castos || (target_cpu == "x86" || target_cpu == "x64") ||
         is_cast_audio_only)) {
      use_alsa = true
+diff --git a/media/mojo/mojom/stable/BUILD.gn b/media/mojo/mojom/stable/BUILD.gn
+index 8c3d3bb7f6..f27c311fac 100644
+--- a/media/mojo/mojom/stable/BUILD.gn
++++ b/media/mojo/mojom/stable/BUILD.gn
+@@ -196,7 +196,7 @@ source_set("unit_tests") {
+   } else if (use_v4l2_codec) {
+     deps += [ "//media/gpu/v4l2:v4l2_status" ]
+   }
+-  if (is_linux || is_chromeos) {
++  if ((is_linux || is_chromeos) && !is_bsd) {
+     sources += [
+       "mojom_traits_test_util.cc",
+       "mojom_traits_test_util.h",
 diff --git a/media/mojo/mojom/stable/stable_video_decoder_types_mojom_traits.cc b/media/mojo/mojom/stable/stable_video_decoder_types_mojom_traits.cc
 index 8cffea3cf4..33f9e4c1a2 100644
 --- a/media/mojo/mojom/stable/stable_video_decoder_types_mojom_traits.cc
@@ -22773,7 +22830,7 @@ index 21e5414f20..a19d928cc0 100644
        allow_remote = true
  
 diff --git a/net/BUILD.gn b/net/BUILD.gn
-index 069215334d..a71b6dba22 100644
+index 069215334d..8c18681696 100644
 --- a/net/BUILD.gn
 +++ b/net/BUILD.gn
 @@ -123,7 +123,7 @@ net_configs = [
@@ -22814,7 +22871,24 @@ index 069215334d..a71b6dba22 100644
      sources += [
        "base/network_interfaces_getifaddrs.cc",
        "base/network_interfaces_getifaddrs.h",
-@@ -2838,7 +2851,7 @@ test("net_unittests") {
+@@ -2013,7 +2026,7 @@ static_library("test_support") {
+     "url_request/url_request_test_util.h",
+   ]
+ 
+-  if (is_linux || is_chromeos || is_android) {
++  if ((is_linux || is_chromeos || is_android)  && !is_bsd) {
+     sources += [
+       "base/address_tracker_linux_test_util.cc",
+       "base/address_tracker_linux_test_util.h",
+@@ -2831,14 +2844,14 @@ test("net_unittests") {
+     ]
+   }
+ 
+-  if (is_linux) {
++  if (is_linux && !is_bsd) {
+     sources += [
+       "base/network_change_notifier_linux_unittest.cc",
+       "proxy_resolution/proxy_config_service_linux_unittest.cc",
      ]
    }
  
@@ -22914,7 +22988,7 @@ index bd1b34e0b9..9c57c13d56 100644
  #endif
  };
 diff --git a/net/base/network_change_notifier.cc b/net/base/network_change_notifier.cc
-index 80e55b1a7b..7de0d276cd 100644
+index 80e55b1a7b..f95265b4df 100644
 --- a/net/base/network_change_notifier.cc
 +++ b/net/base/network_change_notifier.cc
 @@ -37,7 +37,7 @@
@@ -22936,6 +23010,55 @@ index 80e55b1a7b..7de0d276cd 100644
  #else
    NOTIMPLEMENTED();
    return nullptr;
+@@ -520,7 +523,7 @@ const char* NetworkChangeNotifier::ConnectionTypeToString(
+   return kConnectionTypeNames[type];
+ }
+ 
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
+ // static
+ AddressMapOwnerLinux* NetworkChangeNotifier::GetAddressMapOwner() {
+   return g_network_change_notifier
+@@ -874,7 +877,7 @@ NetworkChangeNotifier::NetworkChangeNotifier(
+   }
+ }
+ 
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
+ AddressMapOwnerLinux* NetworkChangeNotifier::GetAddressMapOwnerInternal() {
+   return nullptr;
+ }
+diff --git a/net/base/network_change_notifier.h b/net/base/network_change_notifier.h
+index 26e25e172f..e92917ae43 100644
+--- a/net/base/network_change_notifier.h
++++ b/net/base/network_change_notifier.h
+@@ -18,7 +18,7 @@
+ #include "net/base/net_export.h"
+ #include "net/base/network_handle.h"
+ 
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
+ #include "net/base/address_map_linux.h"
+ #endif
+ 
+@@ -459,7 +459,7 @@ class NET_EXPORT NetworkChangeNotifier {
+   // packets sent lazily.
+   static bool IsDefaultNetworkActive();
+ 
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
+   // Returns the AddressTrackerLinux if present.
+   static AddressMapOwnerLinux* GetAddressMapOwner();
+ #endif
+@@ -629,7 +629,7 @@ class NET_EXPORT NetworkChangeNotifier {
+       SystemDnsConfigChangeNotifier* system_dns_config_notifier = nullptr,
+       bool omit_observers_in_constructor_for_testing = false);
+ 
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
+   // Returns the AddressMapOwnerLinux if present.
+   virtual AddressMapOwnerLinux* GetAddressMapOwnerInternal();
+ #endif
 diff --git a/net/base/network_change_notifier_passive.cc b/net/base/network_change_notifier_passive.cc
 index 58022d7f60..9557865fcc 100644
 --- a/net/base/network_change_notifier_passive.cc
@@ -30096,7 +30219,7 @@ index 6185033977..94850bc3ca 100644
  #endif  // BUILDFLAG(IS_LINUX)
  
 diff --git a/services/network/public/cpp/BUILD.gn b/services/network/public/cpp/BUILD.gn
-index 90b7bf0ac6..3199b73d5a 100644
+index 90b7bf0ac6..6107a251e4 100644
 --- a/services/network/public/cpp/BUILD.gn
 +++ b/services/network/public/cpp/BUILD.gn
 @@ -510,7 +510,7 @@ component("cpp_base") {
@@ -30108,6 +30231,15 @@ index 90b7bf0ac6..3199b73d5a 100644
      sources += [
        "network_interface_change_listener_mojom_traits.cc",
        "network_interface_change_listener_mojom_traits.h",
+@@ -630,7 +630,7 @@ source_set("tests") {
+     ]
+   }
+ 
+-  if (is_linux) {
++  if ((is_linux) && !is_bsd) {
+     sources += [ "network_interface_change_listener_mojom_traits_unittest.cc" ]
+   }
+ 
 diff --git a/services/network/public/cpp/features.cc b/services/network/public/cpp/features.cc
 index b89ae38ae5..cf51dc82e5 100644
 --- a/services/network/public/cpp/features.cc
@@ -32420,10 +32552,10 @@ index 0000000000..f0f485433e
 +
 +}  // namespace crashpad
 diff --git a/third_party/crashpad/crashpad/minidump/minidump_misc_info_writer.cc b/third_party/crashpad/crashpad/minidump/minidump_misc_info_writer.cc
-index 1abb46c318..420fe059fd 100644
+index 1abb46c318..742616f562 100644
 --- a/third_party/crashpad/crashpad/minidump/minidump_misc_info_writer.cc
 +++ b/third_party/crashpad/crashpad/minidump/minidump_misc_info_writer.cc
-@@ -159,6 +159,10 @@ std::string MinidumpMiscInfoDebugBuildString() {
+@@ -159,6 +159,12 @@ std::string MinidumpMiscInfoDebugBuildString() {
    static constexpr char kOS[] = "win";
  #elif BUILDFLAG(IS_FUCHSIA)
    static constexpr char kOS[] = "fuchsia";
@@ -32431,6 +32563,8 @@ index 1abb46c318..420fe059fd 100644
 +  static constexpr char kOS[] = "openbsd";
 +#elif defined(OS_FREEBSD)
 +  static constexpr char kOS[] = "freebsd";
++#elif defined(OS_NETBSD)
++  static constexpr char kOS[] = "netbsd";
  #else
  #error define kOS for this operating system
  #endif
@@ -32820,27 +32954,56 @@ index 798de63be0..e832b7f7d0 100644
      static char statebuf[256];
      static FcBool initialized = FcFalse;
 diff --git a/third_party/ipcz/src/reference_drivers/random.cc b/third_party/ipcz/src/reference_drivers/random.cc
-index 0f89405199..831b3a61d7 100644
+index 0f89405199..faaebde8b3 100644
 --- a/third_party/ipcz/src/reference_drivers/random.cc
 +++ b/third_party/ipcz/src/reference_drivers/random.cc
-@@ -14,7 +14,7 @@
+@@ -14,7 +14,8 @@
  #include <windows.h>
  #elif BUILDFLAG(IS_FUCHSIA)
  #include <zircon/syscalls.h>
 -#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID)
-+#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_BSD)
++#elif (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_BSD)) && \
++         !BUILDFLAG(IS_NETBSD)
  #include <asm/unistd.h>
  #include <sys/syscall.h>
  #include <unistd.h>
-@@ -86,7 +86,7 @@ void RandomBytes(absl::Span<uint8_t> destination) {
+@@ -25,7 +26,7 @@
+ #include <nacl/nacl_random.h>
+ #endif
+ 
+-#if BUILDFLAG(IS_POSIX)
++#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_NETBSD)
+ #include <errno.h>
+ #include <fcntl.h>
+ #include <unistd.h>
+@@ -55,7 +56,7 @@ decltype(&ProcessPrng) GetProcessPrng() {
+ }
+ #endif
+ 
+-#if defined(OS_POSIX) && !BUILDFLAG(IS_MAC)
++#if (defined(OS_POSIX) && !BUILDFLAG(IS_MAC)) || BUILDFLAG(IS_NETBSD)
+ void RandomBytesFromDevUrandom(absl::Span<uint8_t> destination) {
+   static int urandom_fd = [] {
+     for (;;) {
+@@ -86,7 +87,8 @@ void RandomBytes(absl::Span<uint8_t> destination) {
    process_prng_fn(destination.data(), destination.size());
  #elif BUILDFLAG(IS_FUCHSIA)
    zx_cprng_draw(destination.data(), destination.size());
 -#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID)
-+#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_BSD)
++#elif (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_BSD)) && \
++         !BUILDFLAG(IS_NETBSD)
    while (!destination.empty()) {
      ssize_t result =
          syscall(__NR_getrandom, destination.data(), destination.size(), 0);
+@@ -102,7 +104,7 @@ void RandomBytes(absl::Span<uint8_t> destination) {
+ #elif BUILDFLAG(IS_MAC)
+   const bool ok = getentropy(destination.data(), destination.size()) == 0;
+   ABSL_ASSERT(ok);
+-#elif BUILDFLAG(IS_IOS)
++#elif BUILDFLAG(IS_IOS) || BUILDFLAG(IS_NETBSD)
+   RandomBytesFromDevUrandom(destination);
+ #elif BUILDFLAG(IS_NACL)
+   while (!destination.empty()) {
 diff --git a/third_party/ipcz/src/standalone/base/logging.cc b/third_party/ipcz/src/standalone/base/logging.cc
 index 8db8a85956..7b8d3c1605 100644
 --- a/third_party/ipcz/src/standalone/base/logging.cc
@@ -33969,7 +34132,7 @@ index 08e3ceadb5..d1b52c5aa1 100644
  #endif
  
 diff --git a/third_party/perfetto/src/base/unix_socket.cc b/third_party/perfetto/src/base/unix_socket.cc
-index fea57c55db..860e957dd0 100644
+index fea57c55db..9387172028 100644
 --- a/third_party/perfetto/src/base/unix_socket.cc
 +++ b/third_party/perfetto/src/base/unix_socket.cc
 @@ -44,7 +44,7 @@
@@ -33981,12 +34144,12 @@ index fea57c55db..860e957dd0 100644
  #include <sys/ucred.h>
  #endif
  
-@@ -917,9 +917,13 @@ void UnixSocket::ReadPeerCredentialsPosix() {
+@@ -917,15 +917,27 @@ void UnixSocket::ReadPeerCredentialsPosix() {
      return;
    PERFETTO_CHECK(peer_cred_mode_ != SockPeerCredMode::kIgnore);
  
 -#if PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) || \
-+#if !defined(__FreeBSD__) && !defined(__NetBSD__) && PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) || \
++#if !defined(__FreeBSD__) && PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) || \
      PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID)
 +#if PERFETTO_BUILDFLAG(PERFETTO_OS_BSD)
 +  struct sockpeercred user_cred;
@@ -33996,6 +34159,78 @@ index fea57c55db..860e957dd0 100644
    socklen_t len = sizeof(user_cred);
    int fd = sock_raw_.fd();
    int res = getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &user_cred, &len);
+   PERFETTO_CHECK(res == 0);
+   peer_uid_ = user_cred.uid;
+   peer_pid_ = user_cred.pid;
++#elif PERFETTO_BUILDFLAG(PERFETTO_OS_NETBSD)
++  struct unpcbid user_cred;
++  socklen_t len = sizeof(user_cred);
++  int fd = sock_raw_.fd();
++  int res = getsockopt(fd, 0, LOCAL_PEEREID, &user_cred, &len);
++  PERFETTO_CHECK(res == 0);
++  peer_uid_ = user_cred.unp_euid;
++  peer_pid_ = user_cred.unp_pid;
+ #elif PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
+   struct xucred user_cred;
+   socklen_t len = sizeof(user_cred);
+diff --git a/third_party/perfetto/src/trace_processor/importers/ftrace/v4l2_tracker.cc b/third_party/perfetto/src/trace_processor/importers/ftrace/v4l2_tracker.cc
+index c441fb124b..0387d9b06b 100644
+--- a/third_party/perfetto/src/trace_processor/importers/ftrace/v4l2_tracker.cc
++++ b/third_party/perfetto/src/trace_processor/importers/ftrace/v4l2_tracker.cc
+@@ -62,7 +62,7 @@ void V4l2Tracker::ParseV4l2Event(uint64_t fld_id,
+     case FtraceEvent::kV4l2QbufFieldNumber: {
+       V4l2QbufFtraceEvent::Decoder pb_evt(bytes.data, bytes.size);
+       BufferEvent evt;
+-      evt.device_minor = pb_evt.minor();
++      evt.device_minor = pb_evt.gminor();
+       evt.index = pb_evt.index();
+       evt.type = pb_evt.type();
+       evt.bytesused = pb_evt.bytesused();
+@@ -103,7 +103,7 @@ void V4l2Tracker::ParseV4l2Event(uint64_t fld_id,
+     case FtraceEvent::kV4l2DqbufFieldNumber: {
+       V4l2DqbufFtraceEvent::Decoder pb_evt(bytes.data, bytes.size);
+       BufferEvent evt;
+-      evt.device_minor = pb_evt.minor();
++      evt.device_minor = pb_evt.gminor();
+       evt.index = pb_evt.index();
+       evt.type = pb_evt.type();
+       evt.bytesused = pb_evt.bytesused();
+@@ -149,7 +149,7 @@ void V4l2Tracker::ParseV4l2Event(uint64_t fld_id,
+     case FtraceEvent::kVb2V4l2BufQueueFieldNumber: {
+       Vb2V4l2BufQueueFtraceEvent::Decoder pb_evt(bytes.data, bytes.size);
+       BufferEvent evt;
+-      evt.device_minor = pb_evt.minor();
++      evt.device_minor = pb_evt.gminor();
+       evt.index = std::nullopt;
+       evt.type = std::nullopt;
+       evt.bytesused = std::nullopt;
+@@ -180,7 +180,7 @@ void V4l2Tracker::ParseV4l2Event(uint64_t fld_id,
+     case FtraceEvent::kVb2V4l2BufDoneFieldNumber: {
+       Vb2V4l2BufDoneFtraceEvent::Decoder pb_evt(bytes.data, bytes.size);
+       BufferEvent evt;
+-      evt.device_minor = pb_evt.minor();
++      evt.device_minor = pb_evt.gminor();
+       evt.index = std::nullopt;
+       evt.type = std::nullopt;
+       evt.bytesused = std::nullopt;
+@@ -211,7 +211,7 @@ void V4l2Tracker::ParseV4l2Event(uint64_t fld_id,
+     case FtraceEvent::kVb2V4l2QbufFieldNumber: {
+       Vb2V4l2QbufFtraceEvent::Decoder pb_evt(bytes.data, bytes.size);
+       BufferEvent evt;
+-      evt.device_minor = pb_evt.minor();
++      evt.device_minor = pb_evt.gminor();
+       evt.index = std::nullopt;
+       evt.type = std::nullopt;
+       evt.bytesused = std::nullopt;
+@@ -242,7 +242,7 @@ void V4l2Tracker::ParseV4l2Event(uint64_t fld_id,
+     case FtraceEvent::kVb2V4l2DqbufFieldNumber: {
+       Vb2V4l2DqbufFtraceEvent::Decoder pb_evt(bytes.data, bytes.size);
+       BufferEvent evt;
+-      evt.device_minor = pb_evt.minor();
++      evt.device_minor = pb_evt.gminor();
+       evt.index = std::nullopt;
+       evt.type = std::nullopt;
+       evt.bytesused = std::nullopt;
 diff --git a/third_party/perfetto/src/tracing/core/clock_snapshots.cc b/third_party/perfetto/src/tracing/core/clock_snapshots.cc
 index a4fe6c0ee9..756702cb0c 100644
 --- a/third_party/perfetto/src/tracing/core/clock_snapshots.cc
@@ -34325,6 +34560,20 @@ index ea9c2380fc..6a5df68424 100644
  #endif
    return nBuf;
  }
+diff --git a/third_party/sqlite/src/amalgamation_dev/sqlite3.c b/third_party/sqlite/src/amalgamation_dev/sqlite3.c
+index 618b2f659d..263eba9c74 100644
+--- a/third_party/sqlite/src/amalgamation_dev/sqlite3.c
++++ b/third_party/sqlite/src/amalgamation_dev/sqlite3.c
+@@ -20545,6 +20545,9 @@ SQLITE_PRIVATE int sqlite3HeapNearlyFull(void);
+ ** The alloca() routine never returns NULL.  This will cause code paths
+ ** that deal with sqlite3StackAlloc() failures to be unreachable.
+ */
++#if defined(__NetBSD__)
++# undef SQLITE_USE_ALLOCA
++#endif
+ #ifdef SQLITE_USE_ALLOCA
+ # define sqlite3StackAllocRaw(D,N)   alloca(N)
+ # define sqlite3StackAllocRawNN(D,N) alloca(N)
 diff --git a/third_party/swiftshader/src/Reactor/Debug.cpp b/third_party/swiftshader/src/Reactor/Debug.cpp
 index cdb1afc6cc..3fc8049988 100644
 --- a/third_party/swiftshader/src/Reactor/Debug.cpp
@@ -34747,15 +34996,24 @@ index 289f566b40..ed4c230f6c 100644
  
  void SetUpFontconfig() {
 diff --git a/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc b/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc
-index 905854b755..47b5b51412 100644
+index 905854b755..68d65ed278 100644
 --- a/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc
 +++ b/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc
+@@ -28,7 +28,7 @@ int main() {
+   // fontconfig cache.
+   //     $ echo -n /test_fonts | md5sum
+   //     fb5c91b2895aa445d23aebf7f9e2189c  -
+-  static const char kCacheKey[] = "fb5c91b2895aa445d23aebf7f9e2189c";
++  static const char kCacheKey[] = "cd4b5bc7-6cfc-41dc-8982-f2db624179ba";
+ 
+   // fontconfig writes the mtime of the test_fonts directory into the cache. It
+   // presumably checks this later to ensure that the cache is still up to date.
 @@ -56,7 +56,7 @@ int main() {
    FcFini();
  
    // Check existence of intended fontconfig cache file.
 -  auto cache = fontconfig_caches + "/" + kCacheKey + "-le64.cache-9";
-+  auto cache = fontconfig_caches + "/" + kCacheKey + "-le64.cache-" + FC_CACHE_VERSION;
++  auto cache = fontconfig_caches + "/" + kCacheKey + "-x86_64.cache-" + FC_CACHE_VERSION;
    bool cache_exists = access(cache.c_str(), F_OK) == 0;
    return !cache_exists;
  }
