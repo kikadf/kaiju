@@ -103,8 +103,9 @@ rm patches/*Cargo.toml
 for _patch in patches/patch-*; do
     # shellcheck disable=SC3003
     sed -i'' \
-        -e $'3i\\\n* Part of patchset to build on NetBSD\n' \
-        -e $'3i\\\n* Based on OpenBSD\'s chromium patches\n' \
+        -e $'3i\\\n* Part of patchset to build chromium on NetBSD\n' \
+        -e $'3i\\\n* Based on OpenBSD\'s chromium patches, and\n' \
+        -e $'3i\\\n  pkgsrc\'s qt5-qtwebengine patches\n' \
         -e $'3i\\\n\n' \
         "$_patch" || die sed
 done
