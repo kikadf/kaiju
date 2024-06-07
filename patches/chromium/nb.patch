@@ -39942,11 +39942,11 @@ index 100930a29d..df24a10bbb 100644
    // We expect that the offset has already been added to {dst_addr}, and no
 diff --git a/v8/tools/run-paxctl.py b/v8/tools/run-paxctl.py
 new file mode 100644
-index 0000000000..740aaf6189
+index 0000000000..7cffa35b09
 --- /dev/null
 +++ b/v8/tools/run-paxctl.py
 @@ -0,0 +1,16 @@
-+#!/usr/bin/env python
++#!@PYTHONBIN@
 +# Copyright 2014 the V8 project authors. All rights reserved.
 +# Use of this source code is governed by a BSD-style license that can be
 +# found in the LICENSE file.
