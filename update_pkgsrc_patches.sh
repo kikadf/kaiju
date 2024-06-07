@@ -77,6 +77,12 @@ fi
 
 echo ">>> Used workobjdir: $_objd"
 
+# Clean obj dir
+if [ -d "$_objd" ]; then
+    cd "$_path" || die
+    make clean || die
+fi
+
 # Clean pkgsrc chromium/patches
 echo ">>> Remove old patches"
 cd "$_path" || die
