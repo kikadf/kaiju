@@ -3949,7 +3949,7 @@ index 417a48b458..51b4faf244 100644
  #elif defined(__FreeBSD__)
    return GetTimeInternalNs(CLOCK_MONOTONIC_FAST);
 diff --git a/third_party/perfetto/src/base/unix_socket.cc b/third_party/perfetto/src/base/unix_socket.cc
-index 76a91369de..9387172028 100644
+index 76a91369de..a9b899f5ae 100644
 --- a/third_party/perfetto/src/base/unix_socket.cc
 +++ b/third_party/perfetto/src/base/unix_socket.cc
 @@ -44,7 +44,7 @@
@@ -3961,11 +3961,20 @@ index 76a91369de..9387172028 100644
  #include <sys/ucred.h>
  #endif
  
+@@ -917,7 +917,7 @@ void UnixSocket::ReadPeerCredentialsPosix() {
+     return;
+   PERFETTO_CHECK(peer_cred_mode_ != SockPeerCredMode::kIgnore);
+ 
+-#if !defined(__FreeBSD__) && PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) || \
++#if !defined(__FreeBSD__) && !defined(__NetBSD__) && PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) || \
+     PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID)
+ #if PERFETTO_BUILDFLAG(PERFETTO_OS_BSD)
+   struct sockpeercred user_cred;
 @@ -930,6 +930,14 @@ void UnixSocket::ReadPeerCredentialsPosix() {
    PERFETTO_CHECK(res == 0);
    peer_uid_ = user_cred.uid;
    peer_pid_ = user_cred.pid;
-+#elif PERFETTO_BUILDFLAG(PERFETTO_OS_NETBSD)
++#elif defined(__NetBSD__)
 +  struct unpcbid user_cred;
 +  socklen_t len = sizeof(user_cred);
 +  int fd = sock_raw_.fd();
