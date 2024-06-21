@@ -581,7 +581,7 @@ index c3d31c4448..58d2feef7d 100644
      // not merged with the IS_APPLE case above as a 1 << 16 case needs to be
      // added here in the future, to allow 64 kiB pagesize. That is only
 diff --git a/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc b/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc
-index 56b289ec0b..b38e24d04c 100644
+index 56b289ec0b..dcad975e0c 100644
 --- a/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc
 +++ b/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc
 @@ -17,7 +17,16 @@
@@ -601,7 +601,7 @@ index 56b289ec0b..b38e24d04c 100644
  #include <sys/syscall.h>
  #include <unistd.h>
  
-@@ -109,8 +118,20 @@ void SpinningMutex::FutexWait() {
+@@ -109,8 +118,19 @@ void SpinningMutex::FutexWait() {
    // |kLockedContended| anymore. Note that even without spurious wakeups, the
    // value of |state_| is not guaranteed when this returns, as another thread
    // may get the lock before we get to run.
@@ -612,9 +612,8 @@ index 56b289ec0b..b38e24d04c 100644
 +  int err = futex(reinterpret_cast<volatile unsigned int *>(&state_), FUTEX_WAIT | FUTEX_PRIVATE_FLAG,
 +                    kLockedContended, nullptr, nullptr);
 +#elif defined(OS_NETBSD)
-+  register_t retval;
-+  int err = do_futex(reinterpret_cast<int *>(&state_), FUTEX_WAIT | FUTEX_PRIVATE_FLAG,
-+                    kLockedContended, nullptr, nullptr, 0, 0, &retval);
++  int err = syscall(SYS___futex, reinterpret_cast<int *>(&state_), FUTEX_WAIT | FUTEX_PRIVATE_FLAG,
++                     kLockedContended, nullptr, nullptr, 0, 0);
 +#else
    int err = syscall(SYS_futex, &state_, FUTEX_WAIT | FUTEX_PRIVATE_FLAG,
                      kLockedContended, nullptr, nullptr, 0);
@@ -622,7 +621,7 @@ index 56b289ec0b..b38e24d04c 100644
  
    if (err) {
      // These are programming error, check them.
-@@ -122,8 +143,20 @@ void SpinningMutex::FutexWait() {
+@@ -122,8 +142,19 @@ void SpinningMutex::FutexWait() {
  
  void SpinningMutex::FutexWake() {
    int saved_errno = errno;
@@ -633,9 +632,8 @@ index 56b289ec0b..b38e24d04c 100644
 +  long retval = futex(reinterpret_cast<volatile unsigned int *>(&state_), FUTEX_WAKE | FUTEX_PRIVATE_FLAG,
 +                        1 /* wake up a single waiter */, nullptr, nullptr);
 +#elif defined(OS_NETBSD)
-+  register_t retval2;
-+  long retval = do_futex(reinterpret_cast<int *>(&state_), FUTEX_WAKE | FUTEX_PRIVATE_FLAG,
-+                         1, nullptr, nullptr, 0, 0, &retval2);
++  long retval = syscall(SYS___futex, reinterpret_cast<int *>(&state_), FUTEX_WAKE | FUTEX_PRIVATE_FLAG,
++                         1 /* wake up a single waiter */, nullptr, nullptr, 0, 0);
 +#else
    long retval = syscall(SYS_futex, &state_, FUTEX_WAKE | FUTEX_PRIVATE_FLAG,
                          1 /* wake up a single waiter */, nullptr, nullptr, 0);
@@ -33370,10 +33368,10 @@ index e13b2853e3..4b08dbd931 100644
  #endif
  
 diff --git a/third_party/libc++abi/src/src/cxa_guard_impl.h b/third_party/libc++abi/src/src/cxa_guard_impl.h
-index 7b140d3c36..6739659848 100644
+index 7b140d3c36..bb825ccb21 100644
 --- a/third_party/libc++abi/src/src/cxa_guard_impl.h
 +++ b/third_party/libc++abi/src/src/cxa_guard_impl.h
-@@ -411,7 +411,20 @@ private:
+@@ -411,7 +411,31 @@ private:
  //                         Futex Implementation
  //===----------------------------------------------------------------------===//
  
@@ -33390,6 +33388,17 @@ index 7b140d3c36..6739659848 100644
 +  constexpr int WAKE = 1;
 +  __tsan_release(addr);
 +  futex((volatile uint32_t *)addr, WAKE, INT_MAX, NULL, NULL);
++}
++#elif defined(__NetBSD__)
++void PlatformFutexWait(int* addr, int expect) {
++  constexpr int WAIT = 0;
++  syscall(SYS___futex, addr, WAIT, expect, NULL, NULL, 0, 0);
++  __tsan_acquire(addr);
++}
++void PlatformFutexWake(int* addr) {
++  constexpr int WAKE = 1;
++  __tsan_release(addr);
++  syscall(SYS___futex, addr, WAKE, INT_MAX, NULL, NULL, 0, 0);
 +}
 +#elif defined(SYS_futex)
  void PlatformFutexWait(int* addr, int expect) {

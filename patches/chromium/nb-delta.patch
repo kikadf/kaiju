@@ -26,7 +26,7 @@ index db92e9d4fa..b1299db82d 100644
  
    # iOS
 diff --git a/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc b/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc
-index 3b8595369c..b38e24d04c 100644
+index 3b8595369c..dcad975e0c 100644
 --- a/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc
 +++ b/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc
 @@ -17,7 +17,7 @@
@@ -38,25 +38,23 @@ index 3b8595369c..b38e24d04c 100644
  #include <sys/time.h>
  #include <sys/futex.h>
  #elif defined(OS_FREEBSD)
-@@ -124,6 +124,10 @@ void SpinningMutex::FutexWait() {
+@@ -124,6 +124,9 @@ void SpinningMutex::FutexWait() {
  #elif defined(OS_OPENBSD)
    int err = futex(reinterpret_cast<volatile unsigned int *>(&state_), FUTEX_WAIT | FUTEX_PRIVATE_FLAG,
                      kLockedContended, nullptr, nullptr);
 +#elif defined(OS_NETBSD)
-+  register_t retval;
-+  int err = do_futex(reinterpret_cast<int *>(&state_), FUTEX_WAIT | FUTEX_PRIVATE_FLAG,
-+                    kLockedContended, nullptr, nullptr, 0, 0, &retval);
++  int err = syscall(SYS___futex, reinterpret_cast<int *>(&state_), FUTEX_WAIT | FUTEX_PRIVATE_FLAG,
++                     kLockedContended, nullptr, nullptr, 0, 0);
  #else
    int err = syscall(SYS_futex, &state_, FUTEX_WAIT | FUTEX_PRIVATE_FLAG,
                      kLockedContended, nullptr, nullptr, 0);
-@@ -145,6 +149,10 @@ void SpinningMutex::FutexWake() {
+@@ -145,6 +148,9 @@ void SpinningMutex::FutexWake() {
  #elif defined(OS_OPENBSD)
    long retval = futex(reinterpret_cast<volatile unsigned int *>(&state_), FUTEX_WAKE | FUTEX_PRIVATE_FLAG,
                          1 /* wake up a single waiter */, nullptr, nullptr);
 +#elif defined(OS_NETBSD)
-+  register_t retval2;
-+  long retval = do_futex(reinterpret_cast<int *>(&state_), FUTEX_WAKE | FUTEX_PRIVATE_FLAG,
-+                         1, nullptr, nullptr, 0, 0, &retval2);
++  long retval = syscall(SYS___futex, reinterpret_cast<int *>(&state_), FUTEX_WAKE | FUTEX_PRIVATE_FLAG,
++                         1 /* wake up a single waiter */, nullptr, nullptr, 0, 0);
  #else
    long retval = syscall(SYS_futex, &state_, FUTEX_WAKE | FUTEX_PRIVATE_FLAG,
                          1 /* wake up a single waiter */, nullptr, nullptr, 0);
@@ -3810,6 +3808,28 @@ index 31d7446de1..4b08dbd931 100644
  #  define _LIBCPP_HAS_CLOCK_GETTIME
  #endif
  
+diff --git a/third_party/libc++abi/src/src/cxa_guard_impl.h b/third_party/libc++abi/src/src/cxa_guard_impl.h
+index 6739659848..bb825ccb21 100644
+--- a/third_party/libc++abi/src/src/cxa_guard_impl.h
++++ b/third_party/libc++abi/src/src/cxa_guard_impl.h
+@@ -424,6 +424,17 @@ void PlatformFutexWake(int* addr) {
+   __tsan_release(addr);
+   futex((volatile uint32_t *)addr, WAKE, INT_MAX, NULL, NULL);
+ }
++#elif defined(__NetBSD__)
++void PlatformFutexWait(int* addr, int expect) {
++  constexpr int WAIT = 0;
++  syscall(SYS___futex, addr, WAIT, expect, NULL, NULL, 0, 0);
++  __tsan_acquire(addr);
++}
++void PlatformFutexWake(int* addr) {
++  constexpr int WAKE = 1;
++  __tsan_release(addr);
++  syscall(SYS___futex, addr, WAKE, INT_MAX, NULL, NULL, 0, 0);
++}
+ #elif defined(SYS_futex)
+ void PlatformFutexWait(int* addr, int expect) {
+   constexpr int WAIT = 0;
 diff --git a/third_party/libdrm/src/xf86drmMode.c b/third_party/libdrm/src/xf86drmMode.c
 index 22a8a7c229..246d81d7f4 100644
 --- a/third_party/libdrm/src/xf86drmMode.c
