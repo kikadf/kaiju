@@ -2369,18 +2369,9 @@ index 44f331a70f..4a27162638 100644
  #include "sandbox/policy/freebsd/sandbox_freebsd.h"
  #endif
 diff --git a/services/device/hid/BUILD.gn b/services/device/hid/BUILD.gn
-index 1215615a54..dd8532cce2 100644
+index 1215615a54..38e1e14aca 100644
 --- a/services/device/hid/BUILD.gn
 +++ b/services/device/hid/BUILD.gn
-@@ -9,7 +9,7 @@ import("//testing/libfuzzer/fuzzer_test.gni")
- source_set("hid") {
-   # HID is not implemented on Android and we want to be particularly careful
-   # about not bloating binary size by accidentially including it.
--  assert(!is_android)
-+  assert(!is_android && !is_netbsd)
- 
-   sources = [
-     "hid_connection.cc",
 @@ -55,6 +55,15 @@ source_set("hid") {
      ]
    }
