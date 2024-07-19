@@ -723,7 +723,7 @@ index 47a10e65e7..60e5d3c5af 100644
  // Atomically execute:
  //      result = *ptr;
 diff --git a/base/base_paths_posix.cc b/base/base_paths_posix.cc
-index fbab9d26e2..535fd8785f 100644
+index fbab9d26e2..1bd6713b0c 100644
 --- a/base/base_paths_posix.cc
 +++ b/base/base_paths_posix.cc
 @@ -15,6 +15,7 @@
@@ -749,7 +749,7 @@ index fbab9d26e2..535fd8785f 100644
  #elif BUILDFLAG(IS_SOLARIS) || BUILDFLAG(IS_AIX)
  #include <stdlib.h>
  #endif
-@@ -49,14 +54,44 @@ bool PathProviderPosix(int key, FilePath* result) {
+@@ -49,14 +54,22 @@ bool PathProviderPosix(int key, FilePath* result) {
        *result = bin_dir;
        return true;
  #elif BUILDFLAG(IS_FREEBSD)
@@ -763,40 +763,18 @@ index fbab9d26e2..535fd8785f 100644
        *result = FilePath(bin_dir.value());
        return true;
 +#elif BUILDFLAG(IS_NETBSD)
-+      struct kinfo_proc2 *info;
-+      size_t length;
-+      bool ret = false;
-+      int mib[] = { CTL_KERN, KERN_PROC2, KERN_PROC_PID, -1,
-+                    sizeof(struct kinfo_proc2), 1 };
-+
-+      if (sysctl(mib, std::size(mib), NULL, &length, NULL, 0) == -1) {
++      std::optional<std::string> bin_dir = StringSysctl({ CTL_KERN, KERN_PROC_ARGS, getpid(), KERN_PROC_PATHNAME });
++      if (!bin_dir.has_value() || bin_dir.value().length() <= 1) {
 +        NOTREACHED_IN_MIGRATION() << "Unable to resolve path.";
 +        return false;
 +      }
-+
-+      info = (struct kinfo_proc2 *)malloc(length);
-+
-+      mib[5] = static_cast<int>((length / sizeof(struct kinfo_proc2)));
-+
-+      if (sysctl(mib, std::size(mib), info, &length, NULL, 0) < 0)
-+        goto out;
-+
-+      if ((info->p_flag & P_SYSTEM) != 0)
-+        goto out;
-+
-+      if (strcmp(info->p_comm, "chrome") == 0) {
-+        *result = FilePath(info->p_comm);
-+        ret = true;
-+        goto out;
-+      }
-+
-+out:
-+      free(info);
-+      return ret;
++      *result = FilePath(bin_dir.value());
++      VLOG(1) << "PathProviderPosix result: " << bin_dir.value();
++      return true;
  #elif BUILDFLAG(IS_SOLARIS)
        char bin_dir[PATH_MAX + 1];
        if (realpath(getexecname(), bin_dir) == NULL) {
-@@ -67,13 +102,65 @@ bool PathProviderPosix(int key, FilePath* result) {
+@@ -67,13 +80,65 @@ bool PathProviderPosix(int key, FilePath* result) {
        *result = FilePath(bin_dir);
        return true;
  #elif BUILDFLAG(IS_OPENBSD) || BUILDFLAG(IS_AIX)
@@ -15508,15 +15486,17 @@ index e3d326e986..b377defed2 100644
  #endif
  #if !BUILDFLAG(IS_IOS)
 diff --git a/components/policy/core/common/policy_paths.cc b/components/policy/core/common/policy_paths.cc
-index 7c15eeaa4f..2afbdd5d3f 100644
+index 7c15eeaa4f..f849c13dfd 100644
 --- a/components/policy/core/common/policy_paths.cc
 +++ b/components/policy/core/common/policy_paths.cc
-@@ -17,6 +17,8 @@ namespace policy {
+@@ -17,6 +17,10 @@ namespace policy {
  const char kPolicyPath[] = "/etc/opt/chrome/policies";
  #elif BUILDFLAG(GOOGLE_CHROME_FOR_TESTING_BRANDING)
  const char kPolicyPath[] = "/etc/opt/chrome_for_testing/policies";
 +#elif BUILDFLAG(IS_FREEBSD)
 +const char kPolicyPath[] = "/usr/local/etc/chromium/policies";
++#elif BUILDFLAG(IS_NETBSD)
++const char kPolicyPath[] = "@PKG_SYSCONFBASE@/chromium/policies";
  #else
  const char kPolicyPath[] = "/etc/chromium/policies";
  #endif  // BUILDFLAG(GOOGLE_CHROME_BRANDING)
@@ -15599,24 +15579,25 @@ index 9c60259436..f21caf53de 100644
              file_type.platform_settings(0).danger_level());
    EXPECT_EQ(DownloadFileType::DISALLOW_AUTO_OPEN,
 diff --git a/components/safe_browsing/content/resources/gen_file_type_proto.py b/components/safe_browsing/content/resources/gen_file_type_proto.py
-index c0c8bd5564..95001c7809 100755
+index c0c8bd5564..62eb2acd2f 100755
 --- a/components/safe_browsing/content/resources/gen_file_type_proto.py
 +++ b/components/safe_browsing/content/resources/gen_file_type_proto.py
-@@ -38,6 +38,8 @@ def PlatformTypes():
+@@ -38,6 +38,9 @@ def PlatformTypes():
          "fuchsia":
          download_file_types_pb2.DownloadFileType.PLATFORM_TYPE_FUCHSIA,
          "linux": download_file_types_pb2.DownloadFileType.PLATFORM_TYPE_LINUX,
 +        "openbsd": download_file_types_pb2.DownloadFileType.PLATFORM_TYPE_LINUX,
 +        "freebsd": download_file_types_pb2.DownloadFileType.PLATFORM_TYPE_LINUX,
++        "netbsd": download_file_types_pb2.DownloadFileType.PLATFORM_TYPE_LINUX,
          "mac": download_file_types_pb2.DownloadFileType.PLATFORM_TYPE_MAC,
          "win": download_file_types_pb2.DownloadFileType.PLATFORM_TYPE_WINDOWS,
      }
-@@ -181,7 +183,7 @@ class DownloadFileTypeProtoGenerator(BinaryProtoGenerator):
+@@ -181,7 +184,7 @@ class DownloadFileTypeProtoGenerator(BinaryProtoGenerator):
              '-t',
              '--type',
              help='The platform type. One of android, chromeos, ' +
 -            'linux, mac, win')
-+            'linux, mac, win, openbsd, freebsd')
++            'linux, mac, win, openbsd, freebsd, netbsd')
  
      def AddExtraCommandLineArgsForVirtualEnvRun(self, opts, command):
          if opts.type is not None:
@@ -27636,15 +27617,24 @@ index ff82fd101f..830b7ce065 100644
  source_set("lib") {
    # This should be visible only to embedders of the Device Service, and the
 diff --git a/services/device/hid/BUILD.gn b/services/device/hid/BUILD.gn
-index 7421facd4c..1559ceab33 100644
+index 7421facd4c..dd8532cce2 100644
 --- a/services/device/hid/BUILD.gn
 +++ b/services/device/hid/BUILD.gn
-@@ -36,7 +36,36 @@ source_set("hid") {
+@@ -9,7 +9,7 @@ import("//testing/libfuzzer/fuzzer_test.gni")
+ source_set("hid") {
+   # HID is not implemented on Android and we want to be particularly careful
+   # about not bloating binary size by accidentially including it.
+-  assert(!is_android)
++  assert(!is_android && !is_netbsd)
+ 
+   sources = [
+     "hid_connection.cc",
+@@ -36,7 +36,35 @@ source_set("hid") {
      "//services/device/public/mojom",
    ]
  
 -  if ((is_linux || is_chromeos) && use_udev) {
-+  if (is_openbsd || is_netbsd) {
++  if (is_openbsd) {
 +    sources += [
 +      "hid_connection_fido.cc",
 +      "hid_connection_fido.h",
@@ -27663,7 +27653,6 @@ index 7421facd4c..1559ceab33 100644
 +    ]
 +  }
 +
-+# TODO: remove this files
 +#  if (is_netbsd) {
 +#    sources += [
 +#      "hid_connection_netbsd.cc",
