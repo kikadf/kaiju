@@ -32,6 +32,9 @@ _checked_files="\
         base/process/process_handle_openbsd.cc \
         base/process/process_iterator_openbsd.cc \
         base/process/process_metrics_openbsd.cc \
+        base/process/process_handle_freebsd.cc \
+        base/process/process_iterator_freebsd.cc \
+        base/process/process_metrics_freebsd.cc \
         base/system/sys_info_openbsd.cc \
         build/toolchain/openbsd/BUILD.gn \
         sandbox/policy/openbsd/sandbox_openbsd.cc \
@@ -40,6 +43,10 @@ _checked_files="\
         services/device/hid/hid_connection_freebsd.h \
         services/device/hid/hid_service_freebsd.cc \
         services/device/hid/hid_service_freebsd.h \
+        services/device/hid/hid_connection_fido.cc \
+        services/device/hid/hid_connection_fido.h \
+        services/device/hid/hid_service_fido.cc \
+        services/device/hid/hid_service_fido.h \
         "
 
 for _file in $_checked_files; do
