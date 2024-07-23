@@ -282,10 +282,10 @@ index 4b7920c1a1..d148bd1c2c 100644
  #endif
 diff --git a/base/process/process_handle_netbsd.cc b/base/process/process_handle_netbsd.cc
 new file mode 100644
-index 0000000000..3c06d42345
+index 0000000000..64f0533fb1
 --- /dev/null
 +++ b/base/process/process_handle_netbsd.cc
-@@ -0,0 +1,73 @@
+@@ -0,0 +1,55 @@
 +// Copyright 2011 The Chromium Authors
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
@@ -299,6 +299,11 @@ index 0000000000..3c06d42345
 +#include <sys/sysctl.h>
 +#include <sys/types.h>
 +#include <unistd.h>
++
++#include <optional>
++
++#include "base/files/file_path.h"
++#include "base/posix/sysctl.h"
 +
 +namespace base {
 +
@@ -329,33 +334,10 @@ index 0000000000..3c06d42345
 +}
 +
 +FilePath GetProcessExecutablePath(ProcessHandle process) {
-+  struct kinfo_proc2 *info;
-+  size_t length;
-+  char *path = NULL;
-+  int mib[] = { CTL_KERN, KERN_PROC2, KERN_PROC_PID, process,
-+                sizeof(struct kinfo_proc2), 1 };
++  std::optional<std::string> pathname =
++      base::StringSysctl({CTL_KERN, KERN_PROC_ARGS, process, KERN_PROC_PATHNAME});
 +
-+  if (sysctl(mib, std::size(mib), NULL, &length, NULL, 0) == -1)
-+    return FilePath();
-+
-+  info = (struct kinfo_proc2 *)malloc(length);
-+
-+  mib[5] = static_cast<int>((length / sizeof(struct kinfo_proc2)));
-+
-+  if (sysctl(mib, std::size(mib), info, &length, NULL, 0) < 0)
-+    goto out;
-+
-+  if ((info->p_flag & P_SYSTEM) != 0)
-+    goto out;
-+
-+  if (strcmp(info->p_comm, "chrome") == 0) {
-+    path = info->p_comm;
-+    goto out;
-+  }
-+
-+out:
-+  free(info);
-+  return FilePath(path);
++  return FilePath(pathname.value_or(std::string{}));
 +}
 +
 +}  // namespace base
