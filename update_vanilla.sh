@@ -34,6 +34,7 @@ mkdir "chromium-netbsd-${c_ver}" || die
 tar -xJf "chromium-${c_ver}.tar.xz" --strip-components=1 -C "chromium-netbsd-${c_ver}" || die extract
 sed -i'' 's/swiftshader/swiftshaderXXX/g' "chromium-netbsd-${c_ver}/third_party/.gitignore"
 sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "chromium-netbsd-${c_ver}/third_party/vulkan-deps/.gitignore"
+sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "chromium-netbsd-${c_ver}/third_party/.gitignore"
 
 # init git repo
 cd "chromium-netbsd-${c_ver}" || die
