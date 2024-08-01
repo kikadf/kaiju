@@ -2250,7 +2250,7 @@ index 7de8558d2e..7b30e099be 100644
  
  }  // namespace base
 diff --git a/base/process/process_iterator.h b/base/process/process_iterator.h
-index a819ae1327..d62d787b2f 100644
+index a819ae1327..1bcf2e60c1 100644
 --- a/base/process/process_iterator.h
 +++ b/base/process/process_iterator.h
 @@ -24,7 +24,7 @@
@@ -2258,7 +2258,7 @@ index a819ae1327..d62d787b2f 100644
  
  #include <tlhelp32.h>
 -#elif BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_OPENBSD)
-+#elif BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_OPENBSD) || defined(OS_NETBSD)
++#elif BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_OPENBSD) || BUILDFLAG(IS_NETBSD)
  #include <sys/sysctl.h>
  #elif BUILDFLAG(IS_FREEBSD)
  #include <sys/user.h>
@@ -13284,7 +13284,7 @@ index 3b4cd97291..4d53726b74 100644
  #endif
  
 diff --git a/chrome/common/chrome_paths.cc b/chrome/common/chrome_paths.cc
-index 3c569bc610..2c1daafd64 100644
+index 3c569bc610..7a33810139 100644
 --- a/chrome/common/chrome_paths.cc
 +++ b/chrome/common/chrome_paths.cc
 @@ -30,7 +30,7 @@
@@ -13363,7 +13363,7 @@ index 3c569bc610..2c1daafd64 100644
  #if BUILDFLAG(GOOGLE_CHROME_BRANDING)
        cur = base::FilePath(
            FILE_PATH_LITERAL("/etc/opt/chrome/native-messaging-hosts"));
-+#elif BUILDFLAG(IS_FREEBSD)
++#elif BUILDFLAG(IS_FREEBSD) || BUILDFLAG(IS_NETBSD)
 +      cur = base::FilePath(FILE_PATH_LITERAL(
 +          "@PREFIX@/etc/chromium/native-messaging-hosts"));
  #else
@@ -22657,7 +22657,7 @@ index 5a51b7c5ac..c3f26d1541 100644
    VideoCaptureControlSupport GetControlSupport(int fd);
    bool GetControlSupport(int fd, int control_id);
 diff --git a/media/capture/video/linux/video_capture_device_linux.cc b/media/capture/video/linux/video_capture_device_linux.cc
-index 41ab4b5346..1101d226b6 100644
+index 41ab4b5346..c534eb8cc1 100644
 --- a/media/capture/video/linux/video_capture_device_linux.cc
 +++ b/media/capture/video/linux/video_capture_device_linux.cc
 @@ -15,7 +15,7 @@
@@ -22665,7 +22665,7 @@ index 41ab4b5346..1101d226b6 100644
  #include "media/capture/video/linux/v4l2_capture_delegate.h"
  
 -#if BUILDFLAG(IS_OPENBSD)
-+#if BUILDFLAG(IS_OPENBSD) || defined(OS_NETBSD)
++#if BUILDFLAG(IS_OPENBSD) || BUILDFLAG(IS_NETBSD)
  #include <sys/videoio.h>
  #else
  #include <linux/videodev2.h>
@@ -24012,7 +24012,7 @@ index 70d5665ad7..8ca3a9e3ff 100644
      if (!config_watcher_.Watch(base::BindRepeating(&Watcher::OnConfigChanged,
                                                     base::Unretained(this)))) {
 diff --git a/net/dns/dns_reloader.cc b/net/dns/dns_reloader.cc
-index 60e2b8b369..70796560e0 100644
+index 60e2b8b369..3bd1c088d4 100644
 --- a/net/dns/dns_reloader.cc
 +++ b/net/dns/dns_reloader.cc
 @@ -10,6 +10,7 @@
@@ -24023,6 +24023,15 @@ index 60e2b8b369..70796560e0 100644
  #include <resolv.h>
  
  // This code only works on systems where the C library provides res_ninit(3) and
+@@ -31,7 +32,7 @@
+ // an old musl bug that was fixed by musl c8fdcfe5, but Fuchsia's SDK doesn't
+ // have that change.
+ #if defined(__RES) && __RES >= 19991006 && !BUILDFLAG(IS_APPLE) && \
+-    !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_FUCHSIA)
++    !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_FUCHSIA) && !BUILDFLAG(IS_NETBSD)
+ // We define this so we don't need to restate the complex condition here twice
+ // below - it would be easy for the copies below to get out of sync.
+ #define USE_RES_NINIT
 diff --git a/net/dns/dns_util.cc b/net/dns/dns_util.cc
 index cb6125d939..4c7f1a867a 100644
 --- a/net/dns/dns_util.cc

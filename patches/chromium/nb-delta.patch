@@ -342,7 +342,7 @@ index 0000000000..64f0533fb1
 +
 +}  // namespace base
 diff --git a/base/process/process_iterator.h b/base/process/process_iterator.h
-index a819ae1327..d62d787b2f 100644
+index a819ae1327..1bcf2e60c1 100644
 --- a/base/process/process_iterator.h
 +++ b/base/process/process_iterator.h
 @@ -24,7 +24,7 @@
@@ -350,7 +350,7 @@ index a819ae1327..d62d787b2f 100644
  
  #include <tlhelp32.h>
 -#elif BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_OPENBSD)
-+#elif BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_OPENBSD) || defined(OS_NETBSD)
++#elif BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_OPENBSD) || BUILDFLAG(IS_NETBSD)
  #include <sys/sysctl.h>
  #elif BUILDFLAG(IS_FREEBSD)
  #include <sys/user.h>
@@ -1101,7 +1101,7 @@ index 5baeb55f29..b6e62c3c7f 100644
    ]
  }
 diff --git a/chrome/common/chrome_paths.cc b/chrome/common/chrome_paths.cc
-index a37eeb4307..2c1daafd64 100644
+index a37eeb4307..7a33810139 100644
 --- a/chrome/common/chrome_paths.cc
 +++ b/chrome/common/chrome_paths.cc
 @@ -57,9 +57,9 @@ namespace {
@@ -1116,9 +1116,12 @@ index a37eeb4307..2c1daafd64 100644
  #endif  // BUILDFLAG(GOOGLE_CHROME_BRANDING)
  
  #endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-@@ -615,7 +615,7 @@ bool PathProvider(int key, base::FilePath* result) {
+@@ -613,9 +613,9 @@ bool PathProvider(int key, base::FilePath* result) {
+ #if BUILDFLAG(GOOGLE_CHROME_BRANDING)
+       cur = base::FilePath(
            FILE_PATH_LITERAL("/etc/opt/chrome/native-messaging-hosts"));
- #elif BUILDFLAG(IS_FREEBSD)
+-#elif BUILDFLAG(IS_FREEBSD)
++#elif BUILDFLAG(IS_FREEBSD) || BUILDFLAG(IS_NETBSD)
        cur = base::FilePath(FILE_PATH_LITERAL(
 -          "/usr/local/etc/chromium/native-messaging-hosts"));
 +          "@PREFIX@/etc/chromium/native-messaging-hosts"));
@@ -1463,7 +1466,7 @@ index 1f09b300c2..d58d587c88 100644
  #else
      const std::string file_name = ExtractFileNameFromDeviceId(device_id);
 diff --git a/media/capture/video/linux/video_capture_device_linux.cc b/media/capture/video/linux/video_capture_device_linux.cc
-index 41ab4b5346..1101d226b6 100644
+index 41ab4b5346..c534eb8cc1 100644
 --- a/media/capture/video/linux/video_capture_device_linux.cc
 +++ b/media/capture/video/linux/video_capture_device_linux.cc
 @@ -15,7 +15,7 @@
@@ -1471,7 +1474,7 @@ index 41ab4b5346..1101d226b6 100644
  #include "media/capture/video/linux/v4l2_capture_delegate.h"
  
 -#if BUILDFLAG(IS_OPENBSD)
-+#if BUILDFLAG(IS_OPENBSD) || defined(OS_NETBSD)
++#if BUILDFLAG(IS_OPENBSD) || BUILDFLAG(IS_NETBSD)
  #include <sys/videoio.h>
  #else
  #include <linux/videodev2.h>
@@ -1678,6 +1681,19 @@ index b2a41d7f2e..151a6379ac 100644
  
    public_deps = [
      ":dns_client",
+diff --git a/net/dns/dns_reloader.cc b/net/dns/dns_reloader.cc
+index 70796560e0..3bd1c088d4 100644
+--- a/net/dns/dns_reloader.cc
++++ b/net/dns/dns_reloader.cc
+@@ -32,7 +32,7 @@
+ // an old musl bug that was fixed by musl c8fdcfe5, but Fuchsia's SDK doesn't
+ // have that change.
+ #if defined(__RES) && __RES >= 19991006 && !BUILDFLAG(IS_APPLE) && \
+-    !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_FUCHSIA)
++    !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_FUCHSIA) && !BUILDFLAG(IS_NETBSD)
+ // We define this so we don't need to restate the complex condition here twice
+ // below - it would be easy for the copies below to get out of sync.
+ #define USE_RES_NINIT
 diff --git a/net/dns/public/resolv_reader.cc b/net/dns/public/resolv_reader.cc
 index e393c4ca02..a39114eee9 100644
 --- a/net/dns/public/resolv_reader.cc
