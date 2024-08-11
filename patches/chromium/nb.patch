@@ -15439,7 +15439,7 @@ index 1d8a5d2f2d..2ac8ebb0ec 100644
        chrome_version.patch() == current_chrome_version.components()[3]) {
      paint_preview_service_->GetFileMixin()->GetAXTreeUpdate(
 diff --git a/components/password_manager/core/browser/features/password_features.cc b/components/password_manager/core/browser/features/password_features.cc
-index 64097537d3..bc98c8f18b 100644
+index 3cdc9ccf2e..f27d447b17 100644
 --- a/components/password_manager/core/browser/features/password_features.cc
 +++ b/components/password_manager/core/browser/features/password_features.cc
 @@ -33,7 +33,7 @@ BASE_FEATURE(kBiometricTouchToFill,
@@ -15451,16 +15451,16 @@ index 64097537d3..bc98c8f18b 100644
               base::FEATURE_ENABLED_BY_DEFAULT);
  #else
               base::FEATURE_DISABLED_BY_DEFAULT);
-@@ -46,7 +46,7 @@ BASE_FEATURE(kClearUndecryptablePasswords,
- 
+@@ -47,7 +47,7 @@ BASE_FEATURE(kClearUndecryptablePasswords,
  BASE_FEATURE(kClearUndecryptablePasswordsOnSync,
               "ClearUndecryptablePasswordsInSync",
--#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_IOS)
-+#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_IOS) || BUILDFLAG(IS_BSD)
+ #if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_IOS) || \
+-    BUILDFLAG(IS_WIN)
++    BUILDFLAG(IS_WIN) || BUILDFLAG(IS_BSD)
               base::FEATURE_ENABLED_BY_DEFAULT
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
-@@ -108,7 +108,7 @@ BASE_FEATURE(kPasswordManualFallbackAvailable,
+@@ -109,7 +109,7 @@ BASE_FEATURE(kPasswordManualFallbackAvailable,
               "PasswordManualFallbackAvailable",
               base::FEATURE_DISABLED_BY_DEFAULT);
  
@@ -17778,7 +17778,7 @@ index e3955cead6..e5edd02a06 100644
    if (command_line->HasSwitch(switches::kSystemFontFamily)) {
      prefs->system_font_family_name =
 diff --git a/content/browser/renderer_host/render_widget_host_view_aura.cc b/content/browser/renderer_host/render_widget_host_view_aura.cc
-index a2e0720681..927b85f2a7 100644
+index 8de58b731e..d38e14f95b 100644
 --- a/content/browser/renderer_host/render_widget_host_view_aura.cc
 +++ b/content/browser/renderer_host/render_widget_host_view_aura.cc
 @@ -120,7 +120,7 @@
@@ -17799,7 +17799,7 @@ index a2e0720681..927b85f2a7 100644
    BrowserAccessibilityManager* manager =
        host()->GetOrCreateRootBrowserAccessibilityManager();
    if (manager && manager->GetBrowserAccessibilityRoot())
-@@ -1730,7 +1730,7 @@ bool RenderWidgetHostViewAura::ShouldDoLearning() {
+@@ -1731,7 +1731,7 @@ bool RenderWidgetHostViewAura::ShouldDoLearning() {
    return host() && host()->delegate() && host()->delegate()->ShouldDoLearning();
  }
  
@@ -17808,7 +17808,7 @@ index a2e0720681..927b85f2a7 100644
  bool RenderWidgetHostViewAura::SetCompositionFromExistingText(
      const gfx::Range& range,
      const std::vector<ui::ImeTextSpan>& ui_ime_text_spans) {
-@@ -2558,7 +2558,7 @@ bool RenderWidgetHostViewAura::NeedsInputGrab() {
+@@ -2559,7 +2559,7 @@ bool RenderWidgetHostViewAura::NeedsInputGrab() {
  }
  
  bool RenderWidgetHostViewAura::NeedsMouseCapture() {
@@ -17817,7 +17817,7 @@ index a2e0720681..927b85f2a7 100644
    return NeedsInputGrab();
  #else
    return false;
-@@ -2742,7 +2742,7 @@ void RenderWidgetHostViewAura::ForwardKeyboardEventWithLatencyInfo(
+@@ -2743,7 +2743,7 @@ void RenderWidgetHostViewAura::ForwardKeyboardEventWithLatencyInfo(
    if (!target_host)
      return;
  
@@ -17827,10 +17827,10 @@ index a2e0720681..927b85f2a7 100644
    std::vector<ui::TextEditCommandAuraLinux> commands;
    if (!event.skip_if_unhandled && linux_ui && event.os_event &&
 diff --git a/content/browser/renderer_host/render_widget_host_view_aura.h b/content/browser/renderer_host/render_widget_host_view_aura.h
-index 1aee557a02..1f401510ab 100644
+index efb80c61c0..f530892ec6 100644
 --- a/content/browser/renderer_host/render_widget_host_view_aura.h
 +++ b/content/browser/renderer_host/render_widget_host_view_aura.h
-@@ -260,7 +260,7 @@ class CONTENT_EXPORT RenderWidgetHostViewAura
+@@ -261,7 +261,7 @@ class CONTENT_EXPORT RenderWidgetHostViewAura
    ukm::SourceId GetClientSourceForMetrics() const override;
    bool ShouldDoLearning() override;
  
@@ -18460,7 +18460,7 @@ index 4c05c03b39..759d481730 100644
        deps += [ "//media/gpu/v4l2" ]
      }
 diff --git a/content/common/features.cc b/content/common/features.cc
-index f68ba31bd2..faaed86b80 100644
+index d5bdac2d31..5b8fcbe2a4 100644
 --- a/content/common/features.cc
 +++ b/content/common/features.cc
 @@ -173,7 +173,7 @@ BASE_FEATURE(kEnableBackForwardCacheForOngoingSubframeNavigation,
@@ -18482,7 +18482,7 @@ index f68ba31bd2..faaed86b80 100644
               "HandleChildThreadTypeChangesInBrowser",
               base::FEATURE_ENABLED_BY_DEFAULT);
 diff --git a/content/common/features.h b/content/common/features.h
-index b08297e8e8..6203f45791 100644
+index 09b08b8588..456c1257cf 100644
 --- a/content/common/features.h
 +++ b/content/common/features.h
 @@ -37,7 +37,7 @@ CONTENT_EXPORT BASE_DECLARE_FEATURE(kDocumentPolicyNegotiation);
@@ -20066,6 +20066,31 @@ index 0279aa514b..ec2e2e76bc 100644
    // Otherwise check again later.
    io_task_runner_->PostDelayedTask(
        FROM_HERE,
+diff --git a/google_apis/google_api_keys-inc.cc b/google_apis/google_api_keys-inc.cc
+index 4d13e697a5..dbb32d43b2 100644
+--- a/google_apis/google_api_keys-inc.cc
++++ b/google_apis/google_api_keys-inc.cc
+@@ -190,14 +190,18 @@ class APIKeyCache {
+         STRINGIZE_NO_EXPANSION(GOOGLE_METRICS_SIGNING_KEY), std::string(),
+         nullptr, std::string(), environment.get(), command_line, gaia_config);
+ 
++    // https://gitlab.archlinux.org/archlinux/packaging/packages/chromium/-/blob/main/use-oauth2-client-switches-as-default.patch?ref_type=heads
++    // Use the --oauth2-client-id= and --oauth2-client-secret= switches for
++    // setting GOOGLE_DEFAULT_CLIENT_ID and GOOGLE_DEFAULT_CLIENT_SECRET at
++    // runtime -- this allows signing into Chromium without baked-in values
+     std::string default_client_id = CalculateKeyValue(
+         GOOGLE_DEFAULT_CLIENT_ID,
+         STRINGIZE_NO_EXPANSION(GOOGLE_DEFAULT_CLIENT_ID), std::string(),
+-        nullptr, std::string(), environment.get(), command_line, gaia_config);
++        ::switches::kOAuth2ClientID, std::string(), environment.get(), command_line, gaia_config);
+     std::string default_client_secret = CalculateKeyValue(
+         GOOGLE_DEFAULT_CLIENT_SECRET,
+         STRINGIZE_NO_EXPANSION(GOOGLE_DEFAULT_CLIENT_SECRET), std::string(),
+-        nullptr, std::string(), environment.get(), command_line, gaia_config);
++        ::switches::kOAuth2ClientSecret, std::string(), environment.get(), command_line, gaia_config);
+ 
+     // We currently only allow overriding the baked-in values for the
+     // default OAuth2 client ID and secret using a command-line
 diff --git a/gpu/command_buffer/common/gpu_memory_buffer_support.cc b/gpu/command_buffer/common/gpu_memory_buffer_support.cc
 index 9d74cef6a1..372ffb1960 100644
 --- a/gpu/command_buffer/common/gpu_memory_buffer_support.cc
@@ -23687,7 +23712,7 @@ index 54ec7aa34a..d142899820 100644
    }
  
 diff --git a/net/base/features.cc b/net/base/features.cc
-index 85361b5394..34f8e30c3b 100644
+index 302f1a22d7..54deb43e26 100644
 --- a/net/base/features.cc
 +++ b/net/base/features.cc
 @@ -26,7 +26,7 @@ BASE_FEATURE(kCapReferrerToOriginOnCrossOrigin,
@@ -28583,7 +28608,7 @@ index 0000000000..e3557d225a
 +#endif  // SERVICES_DEVICE_HID_HID_CONNECTION_LINUX_H_
 diff --git a/services/device/hid/hid_connection_freebsd.cc b/services/device/hid/hid_connection_freebsd.cc
 new file mode 100644
-index 0000000000..4ab84bd5bc
+index 0000000000..4ca329ac29
 --- /dev/null
 +++ b/services/device/hid/hid_connection_freebsd.cc
 @@ -0,0 +1,240 @@
@@ -28672,7 +28697,7 @@ index 0000000000..4ab84bd5bc
 +        FROM_HERE, base::BlockingType::MAY_BLOCK);
 +    struct usb_gen_descriptor ugd;
 +    ugd.ugd_report_type = UHID_FEATURE_REPORT;
-+    ugd.ugd_data = buffer->data();
++    ugd.ugd_data = buffer->as_vector().data();
 +    ugd.ugd_maxlen = buffer->size();
 +    int result = HANDLE_EINTR(
 +        ioctl(fd_.get(), USB_GET_REPORT, &ugd));
@@ -28695,14 +28720,14 @@ index 0000000000..4ab84bd5bc
 +    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
 +    struct usb_gen_descriptor ugd;
 +    ugd.ugd_report_type = UHID_FEATURE_REPORT;
-+    ugd.ugd_data = buffer->data();
++    ugd.ugd_data = buffer->as_vector().data();
 +    ugd.ugd_maxlen = buffer->size();
 +    // FreeBSD does not require report id if it's not used
 +    if (buffer->data()[0] == 0) {
-+      ugd.ugd_data = buffer->data() + 1;
++      ugd.ugd_data = buffer->as_vector().data() + 1;
 +      ugd.ugd_maxlen = buffer->size() - 1;
 +    } else {
-+      ugd.ugd_data = buffer->data();
++      ugd.ugd_data = buffer->as_vector().data();
 +      ugd.ugd_maxlen = buffer->size();
 +    }
 +    int result = HANDLE_EINTR(
@@ -28722,7 +28747,7 @@ index 0000000000..4ab84bd5bc
 +    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
 +
 +    scoped_refptr<base::RefCountedBytes> buffer(new base::RefCountedBytes(report_buffer_size_));
-+    unsigned char* data = buffer->data();
++    unsigned char* data = buffer->as_vector().data();
 +    size_t length = report_buffer_size_;
 +    if (!has_report_id_) {
 +      // FreeBSD will not prefix the buffer with a report ID if report IDs are not
@@ -28806,7 +28831,7 @@ index 0000000000..4ab84bd5bc
 +  scoped_refptr<base::RefCountedBytes> buffer(
 +      new base::RefCountedBytes(device_info()->max_feature_report_size() + 1));
 +  if (report_id != 0)
-+    buffer->data()[0] = report_id;
++    buffer->as_vector().data()[0] = report_id;
 +
 +  blocking_task_runner_->PostTask(
 +      FROM_HERE,
@@ -33012,7 +33037,7 @@ index 424de5642e..7ea2e8bff3 100644
            profile.profile == media::VideoCodecProfile::H264PROFILE_BASELINE;
  #endif
 diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
-index bc7bf760a5..b9efc3f326 100644
+index 8321d6cff3..f54c0345f1 100644
 --- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
 +++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
 @@ -324,7 +324,7 @@
@@ -33024,7 +33049,7 @@ index bc7bf760a5..b9efc3f326 100644
        base_feature: "WebAppEnableAppTitle",
      },
      {
-@@ -1528,7 +1528,7 @@
+@@ -1534,7 +1534,7 @@
        status: "test",
        base_feature: "none",
        origin_trial_feature_name: "FedCmContinueOnBundle",
@@ -33033,7 +33058,7 @@ index bc7bf760a5..b9efc3f326 100644
        origin_trial_allows_third_party: true,
      },
      {
-@@ -1545,7 +1545,7 @@
+@@ -1551,7 +1551,7 @@
        status: "test",
        base_feature: "none",
        origin_trial_feature_name: "FedCmButtonMode",
@@ -33042,7 +33067,7 @@ index bc7bf760a5..b9efc3f326 100644
        origin_trial_allows_third_party: true,
      },
      {
-@@ -1590,7 +1590,7 @@
+@@ -1596,7 +1596,7 @@
        base_feature: "none",
        public: true,
        origin_trial_feature_name: "FedCmMultipleIdentityProviders",
@@ -33051,7 +33076,7 @@ index bc7bf760a5..b9efc3f326 100644
        origin_trial_allows_third_party: true,
      },
      {
-@@ -1928,7 +1928,7 @@
+@@ -1934,7 +1934,7 @@
        base_feature_status: "enabled",
        copied_from_base_feature_if: "overridden",
        origin_trial_feature_name: "FullscreenPopupWindows",
@@ -33060,7 +33085,7 @@ index bc7bf760a5..b9efc3f326 100644
      },
      {
        name: "GamepadButtonAxisEvents",
-@@ -3005,7 +3005,7 @@
+@@ -3011,7 +3011,7 @@
        // Tracking bug for the implementation: https://crbug.com/1462930
        name: "PermissionElement",
        origin_trial_feature_name: "PermissionElement",
@@ -33069,7 +33094,7 @@ index bc7bf760a5..b9efc3f326 100644
        status: "experimental",
        public: true,
        base_feature_status: "enabled",
-@@ -3140,7 +3140,7 @@
+@@ -3146,7 +3146,7 @@
      {
        name: "PrivateNetworkAccessPermissionPrompt",
        origin_trial_feature_name: "PrivateNetworkAccessPermissionPrompt",
@@ -33078,7 +33103,7 @@ index bc7bf760a5..b9efc3f326 100644
        status: "stable",
        public: true,
        base_feature: "none",
-@@ -4116,7 +4116,7 @@
+@@ -4122,7 +4122,7 @@
        name: "UnrestrictedSharedArrayBuffer",
        base_feature: "none",
        origin_trial_feature_name: "UnrestrictedSharedArrayBuffer",
@@ -33087,7 +33112,7 @@ index bc7bf760a5..b9efc3f326 100644
      },
      // Enables using policy-controlled feature "usb-unrestricted" to allow
      // isolated context to access protected USB interface classes and to
-@@ -4285,7 +4285,7 @@
+@@ -4291,7 +4291,7 @@
      {
        name: "WebAppScopeExtensions",
        origin_trial_feature_name: "WebAppScopeExtensions",
@@ -33096,7 +33121,7 @@ index bc7bf760a5..b9efc3f326 100644
        status: "experimental",
        base_feature: "none",
      },
-@@ -4328,7 +4328,7 @@
+@@ -4334,7 +4334,7 @@
        status: "experimental",
        base_feature: "none",
        origin_trial_feature_name: "WebAppUrlHandling",
@@ -34282,7 +34307,7 @@ index bfd4a14287..0991390903 100644
  
  #include <cmath>
 diff --git a/third_party/nasm/BUILD.gn b/third_party/nasm/BUILD.gn
-index 3834c64bd4..9f8ffe6e6e 100644
+index 3834c64bd4..323ba295af 100644
 --- a/third_party/nasm/BUILD.gn
 +++ b/third_party/nasm/BUILD.gn
 @@ -63,6 +63,13 @@ config("nasm_config") {
@@ -34291,7 +34316,7 @@ index 3834c64bd4..9f8ffe6e6e 100644
  
 +  _string_h_lines =
 +        read_file("/usr/include/string.h", "list lines")
-+  _mempcpy = filter_include(_string_h_lines, [ "*\*mempcpy*" ])
++  _mempcpy = filter_include(_string_h_lines, [ "*mempcpy*" ])
 +  if (_mempcpy != []) {
 +    defines += [ "HAVE_MEMPCPY=1" ]
 +  }
@@ -39970,7 +39995,7 @@ index c10b65cb6f..e5e0712acc 100644
  // virtual address space for userspace. As such, limit the sandbox to 128GB (a
  // quarter of the total available address space).
 diff --git a/v8/include/v8config.h b/v8/include/v8config.h
-index 707ec23c9c..0d882fac0d 100644
+index 707ec23c9c..dc0a278358 100644
 --- a/v8/include/v8config.h
 +++ b/v8/include/v8config.h
 @@ -193,6 +193,9 @@ path. Add it with -I<path> to the command line
@@ -40015,6 +40040,16 @@ index 707ec23c9c..0d882fac0d 100644
  #ifdef V8_OS_MACOS
  # define V8_TARGET_OS_MACOS
  #endif
+@@ -373,7 +394,8 @@ path. Add it with -I<path> to the command line
+ // preserve_most in clang >= 17 (see https://reviews.llvm.org/D143425).
+ #if (defined(_M_X64) || defined(__x86_64__)            /* x64 (everywhere) */  \
+      || ((defined(__AARCH64EL__) || defined(_M_ARM64)) /* arm64, but ... */    \
+-         && !defined(_WIN32)))                         /* not on windows */    \
++         && !defined(_WIN32)                           /* not on windows */    \
++         && !defined(__OpenBSD__)))                    /* not on OpenBSD */    \
+      && !defined(COMPONENT_BUILD)                      /* no component build */\
+      && __clang_major__ >= 17                          /* clang >= 17 */
+ # define V8_HAS_ATTRIBUTE_PRESERVE_MOST (__has_attribute(preserve_most))
 diff --git a/v8/src/api/api.cc b/v8/src/api/api.cc
 index 25ec0de2ff..08676618f2 100644
 --- a/v8/src/api/api.cc
