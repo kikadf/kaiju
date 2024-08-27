@@ -91,6 +91,7 @@ rm patches/patch-*
 # Apply all-in patch in pkgsrc workdir
 # Create patches in chromium/patches
 # Fix pkglint error: Each patch must be documented
+make makesum || die "make makesum"
 make extract || die "make extract"
 echo ">>> Apply new patchset on source"
 cd "$_objd"/chromium-* || die
