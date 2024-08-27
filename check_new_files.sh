@@ -47,6 +47,7 @@ _checked_files="\
         services/device/hid/hid_connection_fido.h \
         services/device/hid/hid_service_fido.cc \
         services/device/hid/hid_service_fido.h \
+        media/audio/sndio \
         "
 
 for _file in $_checked_files; do
