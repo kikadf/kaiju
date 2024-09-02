@@ -927,14 +927,14 @@ index 6a590b0ef2..4cb5ff43ac 100644
        ozone_platform = "x11"
        ozone_platform_wayland = true
 diff --git a/build/rust/rust_bindgen.gni b/build/rust/rust_bindgen.gni
-index 1b08ffdf09..2aaafba7c7 100644
+index 8a2fe83e91..2aaafba7c7 100644
 --- a/build/rust/rust_bindgen.gni
 +++ b/build/rust/rust_bindgen.gni
 @@ -11,14 +11,14 @@ if (is_win) {
    import("//build/toolchain/win/win_toolchain_data.gni")
  }
  
--_bindgen_path = "/usr/local/bin/bindgen"
+-_bindgen_path = "${LOCALBASE}/bin/bindgen"
 +_bindgen_path = "@PREFIX@/bin/bindgen"
  if (host_os == "win") {
    _bindgen_path = "${_bindgen_path}.exe"
@@ -942,7 +942,7 @@ index 1b08ffdf09..2aaafba7c7 100644
  
  # On Windows, the libclang.dll is beside the bindgen.exe, otherwise it is in
  # ../lib.
--_libclang_path = "/usr/local/llvm17"
+-_libclang_path = "${LOCALBASE}/llvm${MODCLANG_VERSION}"
 +_libclang_path = "@PREFIX@"
  if (host_os == "win") {
    _libclang_path += "/bin"

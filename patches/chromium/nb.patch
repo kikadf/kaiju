@@ -15455,10 +15455,10 @@ index bb72f5080f..ee07e1c0fc 100644
  #else
    return optimization_guide::proto::PLATFORM_UNDEFINED;
 diff --git a/components/os_crypt/sync/libsecret_util_linux.cc b/components/os_crypt/sync/libsecret_util_linux.cc
-index 388a917800..1e0558eb9e 100644
+index 73ac01fbb2..73c4736d15 100644
 --- a/components/os_crypt/sync/libsecret_util_linux.cc
 +++ b/components/os_crypt/sync/libsecret_util_linux.cc
-@@ -96,16 +96,22 @@ bool LibsecretLoader::EnsureLibsecretLoaded() {
+@@ -176,16 +176,22 @@ bool LibsecretLoader::EnsureLibsecretLoaded() {
  
  // static
  bool LibsecretLoader::LoadLibsecret() {
