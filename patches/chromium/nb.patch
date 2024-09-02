@@ -5671,7 +5671,7 @@ index fe0452e8bd..90b6751278 100644
      sources += [
        "dbus_memory_pressure_evaluator_linux.cc",
 diff --git a/chrome/browser/about_flags.cc b/chrome/browser/about_flags.cc
-index 96370d4ac3..0b5b4d0e04 100644
+index 96370d4ac3..8e3cb43f4b 100644
 --- a/chrome/browser/about_flags.cc
 +++ b/chrome/browser/about_flags.cc
 @@ -238,7 +238,7 @@
@@ -5719,7 +5719,7 @@ index 96370d4ac3..0b5b4d0e04 100644
  const FeatureEntry::Choice kOzonePlatformHintRuntimeChoices[] = {
      {flag_descriptions::kOzonePlatformHintChoiceDefault, "", ""},
      {flag_descriptions::kOzonePlatformHintChoiceAuto,
-@@ -893,6 +893,26 @@ const FeatureEntry::FeatureVariation
+@@ -893,6 +893,31 @@ const FeatureEntry::FeatureVariation
           std::size(kWebIdentityDigitalIdentityCredentialHighRiskDialogParam),
           nullptr}};
  
@@ -5728,6 +5728,8 @@ index 96370d4ac3..0b5b4d0e04 100644
 +        { "audio-backend", "pulseaudio" }};
 +const FeatureEntry::FeatureParam kAudioBackendSndio[] = {
 +        { "audio-backend", "sndio" }};
++const FeatureEntry::FeatureParam kAudioBackendAudioIO[] = {
++        { "audio-backend", "audioio" }};
 +const FeatureEntry::FeatureParam kAudioBackendAlsa[] = {
 +        { "audio-backend", "alsa" }};
 +const FeatureEntry::FeatureVariation
@@ -5738,6 +5740,9 @@ index 96370d4ac3..0b5b4d0e04 100644
 +        {"using sndio by default if available", kAudioBackendSndio,
 +         std::size(kAudioBackendSndio),
 +         nullptr},
++        {"using audioio by default if available", kAudioBackendAudioIO,
++         std::size(kAudioBackendAudioIO),
++         nullptr},
 +        {"using ALSA by default if available", kAudioBackendAlsa,
 +         std::size(kAudioBackendAlsa),
 +         nullptr}};
@@ -5746,7 +5751,7 @@ index 96370d4ac3..0b5b4d0e04 100644
  const FeatureEntry::FeatureParam kClipboardMaximumAge60Seconds[] = {
      {"UIClipboardMaximumAge", "60"}};
  const FeatureEntry::FeatureParam kClipboardMaximumAge90Seconds[] = {
-@@ -1306,7 +1326,7 @@ const FeatureEntry::FeatureVariation kPageContentAnnotationsVariations[] = {
+@@ -1306,7 +1331,7 @@ const FeatureEntry::FeatureVariation kPageContentAnnotationsVariations[] = {
  };
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_MAC) || \
@@ -5755,7 +5760,7 @@ index 96370d4ac3..0b5b4d0e04 100644
  const FeatureEntry::FeatureParam kHistoryEmbeddingsAtKeywordAcceleration[]{
      {"AtKeywordAcceleration", "true"},
  };
-@@ -1350,7 +1370,7 @@ const FeatureEntry::FeatureVariation
+@@ -1350,7 +1375,7 @@ const FeatureEntry::FeatureVariation
  };
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_MAC) || \
@@ -5764,7 +5769,7 @@ index 96370d4ac3..0b5b4d0e04 100644
  const FeatureEntry::FeatureParam kShortcutBoostSingleUrl[] = {
      {"ShortcutBoostSearchScore", "0"},
      {"ShortcutBoostNonTopHitThreshold", "0"},
-@@ -3779,7 +3799,7 @@ const flags_ui::FeatureEntry::FeatureVariation
+@@ -3779,7 +3804,7 @@ const flags_ui::FeatureEntry::FeatureVariation
  };
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN) || \
@@ -5773,7 +5778,7 @@ index 96370d4ac3..0b5b4d0e04 100644
  const flags_ui::FeatureEntry::FeatureParam
      kDesktopPWAsLinkCapturingDefaultOn[] = {
          {"link_capturing_state", "on_by_default"}};
-@@ -4858,7 +4878,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -4858,7 +4883,7 @@ const FeatureEntry kFeatureEntries[] = {
      },
  #endif  // BUILDFLAG(IS_ANDROID)
  
@@ -5782,7 +5787,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {
          "fluent-overlay-scrollbars",
          flag_descriptions::kFluentOverlayScrollbarsName,
-@@ -5277,7 +5297,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -5277,7 +5302,7 @@ const FeatureEntry kFeatureEntries[] = {
       flag_descriptions::kWebAppUniversalInstallDescription, kOsDesktop,
       FEATURE_VALUE_TYPE(features::kWebAppUniversalInstall)},
  #endif  // !BUILDFLAG(IS_ANDROID)
@@ -5791,7 +5796,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"shortcuts-not-apps", flag_descriptions::kShortcutsNotAppsName,
       flag_descriptions::kShortcutsNotAppsDescription,
       kOsMac | kOsWin | kOsLinux,
-@@ -5413,7 +5433,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -5413,7 +5438,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(features::kWebShare)},
  #endif  // BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC)
  
@@ -5800,7 +5805,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"pulseaudio-loopback-for-cast",
       flag_descriptions::kPulseaudioLoopbackForCastName,
       flag_descriptions::kPulseaudioLoopbackForCastDescription, kOsLinux,
-@@ -5436,9 +5456,19 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -5436,9 +5461,19 @@ const FeatureEntry kFeatureEntries[] = {
       flag_descriptions::kWaylandPerWindowScalingName,
       flag_descriptions::kWaylandPerWindowScalingDescription, kOsLinux,
       FEATURE_VALUE_TYPE(features::kWaylandPerSurfaceScale)},
@@ -5821,7 +5826,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"skip-undecryptable-passwords",
       flag_descriptions::kSkipUndecryptablePasswordsName,
       flag_descriptions::kSkipUndecryptablePasswordsDescription,
-@@ -6433,7 +6463,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -6433,7 +6468,7 @@ const FeatureEntry kFeatureEntries[] = {
                                      "MlUrlScoring")},
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_MAC) || \
@@ -5830,7 +5835,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"omnibox-domain-suggestions",
       flag_descriptions::kOmniboxDomainSuggestionsName,
       flag_descriptions::kOmniboxDomainSuggestionsDescription, kOsDesktop,
-@@ -6728,7 +6758,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -6728,7 +6763,7 @@ const FeatureEntry kFeatureEntries[] = {
                                      "OrganicRepeatableQueries")},
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_MAC) || \
@@ -5839,7 +5844,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"history-embeddings", flag_descriptions::kHistoryEmbeddingsName,
       flag_descriptions::kHistoryEmbeddingsDescription, kOsDesktop,
       FEATURE_WITH_PARAMS_VALUE_TYPE(history_embeddings::kHistoryEmbeddings,
-@@ -7397,7 +7427,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -7397,7 +7432,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(printing::features::kAddPrinterViaPrintscanmgr)},
  #endif  // BUILDFLAG(IS_CHROMEOS)
  
@@ -5848,7 +5853,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"cups-ipp-printing-backend",
       flag_descriptions::kCupsIppPrintingBackendName,
       flag_descriptions::kCupsIppPrintingBackendDescription, kOsDesktop,
-@@ -8417,7 +8447,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -8417,7 +8452,7 @@ const FeatureEntry kFeatureEntries[] = {
       flag_descriptions::kCooperativeSchedulingDescription, kOsAll,
       FEATURE_VALUE_TYPE(features::kCooperativeScheduling)},
  
@@ -5857,7 +5862,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"enable-network-service-sandbox",
       flag_descriptions::kEnableNetworkServiceSandboxName,
       flag_descriptions::kEnableNetworkServiceSandboxDescription,
-@@ -8441,7 +8471,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -8441,7 +8476,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(media::kV4L2FlatStatefulVideoDecoder)},
  #endif
  
@@ -5866,7 +5871,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"enable-family-link-extensions-permissions",
       flag_descriptions::
           kEnableExtensionsPermissionsForSupervisedUsersOnDesktopName,
-@@ -9292,7 +9322,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -9292,7 +9327,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(ash::features::kWallpaperPerDesk)},
  #endif  // BUILDFLAG(IS_CHROMEOS_ASH)
  
@@ -5875,7 +5880,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"enable-get-all-screens-media", flag_descriptions::kGetAllScreensMediaName,
       flag_descriptions::kGetAllScreensMediaDescription,
       kOsCrOS | kOsLacros | kOsLinux,
-@@ -9331,7 +9361,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -9331,7 +9366,7 @@ const FeatureEntry kFeatureEntries[] = {
  
  #if BUILDFLAG(IS_WIN) ||                                      \
      (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS_LACROS)) || \
@@ -5884,7 +5889,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {
          "ui-debug-tools",
          flag_descriptions::kUIDebugToolsName,
-@@ -9556,7 +9586,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -9556,7 +9591,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -5893,7 +5898,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"policy-indication-for-managed-default-search",
       flag_descriptions::kPolicyIndicationForManagedDefaultSearchName,
       flag_descriptions::kPolicyIndicationForManagedDefaultSearchDescription,
-@@ -9896,7 +9926,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -9896,7 +9931,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || \
@@ -5902,7 +5907,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"media-session-enter-picture-in-picture",
       flag_descriptions::kMediaSessionEnterPictureInPictureName,
       flag_descriptions::kMediaSessionEnterPictureInPictureDescription,
-@@ -10796,7 +10826,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -10796,7 +10831,7 @@ const FeatureEntry kFeatureEntries[] = {
       kOsDesktop | kOsAndroid,
       FEATURE_VALUE_TYPE(features::kProcessPerSiteUpToMainFrameThreshold)},
  
@@ -5911,7 +5916,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"camera-mic-effects", flag_descriptions::kCameraMicEffectsName,
       flag_descriptions::kCameraMicEffectsDescription,
       static_cast<unsigned short>(kOsMac | kOsWin | kOsLinux),
-@@ -10834,7 +10864,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -10834,7 +10869,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(features::kSiteInstanceGroupsForDataUrls)},
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -5920,7 +5925,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"site-search-settings-policy",
       flag_descriptions::kSiteSearchSettingsPolicyName,
       flag_descriptions::kSiteSearchSettingsPolicyDescription, kOsAll,
-@@ -10959,7 +10989,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -10959,7 +10994,7 @@ const FeatureEntry kFeatureEntries[] = {
       flag_descriptions::kHideIncognitoMediaMetadataDescription, kOsAll,
       FEATURE_VALUE_TYPE(media::kHideIncognitoMediaMetadata)},
  
@@ -5929,7 +5934,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"third-party-profile-management",
       flag_descriptions::kThirdPartyProfileManagementName,
       flag_descriptions::kThirdPartyProfileManagementDescription,
-@@ -11002,7 +11032,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -11002,7 +11037,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN) || \
@@ -5938,7 +5943,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"enable-user-link-capturing-pwa",
       flag_descriptions::kDesktopPWAsUserLinkCapturingName,
       flag_descriptions::kDesktopPWAsUserLinkCapturingDescription,
-@@ -11318,7 +11348,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -11318,7 +11353,7 @@ const FeatureEntry kFeatureEntries[] = {
           trusted_vault::kTrustedVaultFrequentDegradedRecoverabilityPolling)},
  #endif
  
@@ -5947,7 +5952,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"restart-to-gain-access-to-keychain",
       flag_descriptions::kRestartToGainAccessToKeychainName,
       flag_descriptions::kRestartToGainAccessToKeychainDescription,
-@@ -11981,7 +12011,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -11981,7 +12016,7 @@ const FeatureEntry kFeatureEntries[] = {
                              kAuthenticateUsingUserConsentVerifierInteropApi)},
  #endif
  
@@ -5956,7 +5961,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"sync-enable-bookmarks-in-transport-mode",
       flag_descriptions::kSyncEnableBookmarksInTransportModeName,
       flag_descriptions::kSyncEnableBookmarksInTransportModeDescription,
-@@ -12007,7 +12037,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12007,7 +12042,7 @@ const FeatureEntry kFeatureEntries[] = {
           "AutofillUploadCardRequestTimeout")},
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -7855,7 +7860,7 @@ index 0a0aa74972..397156aabd 100644
  // called, the decision to show the dialog or not will be made by Chrome based
  // on a number of factors (such as install type, whether it's a Chrome-branded
 diff --git a/chrome/browser/flag_descriptions.cc b/chrome/browser/flag_descriptions.cc
-index be5b3f2e79..a58c4b14f1 100644
+index be5b3f2e79..d4c53b9f83 100644
 --- a/chrome/browser/flag_descriptions.cc
 +++ b/chrome/browser/flag_descriptions.cc
 @@ -419,7 +419,7 @@ const char kIsolatedSandboxedIframesDescription[] =
@@ -7921,7 +7926,7 @@ index be5b3f2e79..a58c4b14f1 100644
  const char kOzonePlatformHintChoiceDefault[] = "Default";
  const char kOzonePlatformHintChoiceAuto[] = "Auto";
  const char kOzonePlatformHintChoiceX11[] = "X11";
-@@ -8156,6 +8156,18 @@ const char kSimplifiedTabDragUIDescription[] =
+@@ -8156,6 +8156,20 @@ const char kSimplifiedTabDragUIDescription[] =
  const char kWaylandPerWindowScalingName[] = "Wayland per-window scaling";
  const char kWaylandPerWindowScalingDescription[] =
      "Enable Wayland's per-window scaling experimental support.";
@@ -7932,7 +7937,9 @@ index be5b3f2e79..a58c4b14f1 100644
 +const char kAudioBackendDescription[] =
 +#if BUILDFLAG(IS_OPENBSD)
 +    "Select the desired audio backend to use. The default is sndio.";
-+#elif BUILDFLAG(IS_FREEBSD) || BUILDFLAG(IS_NETBSD)
++#elif BUILDFLAG(IS_NETBSD)
++    "Select the desired audio backend to use. The default is audioio.";
++#elif BUILDFLAG(IS_FREEBSD)
 +    "Select the desired audio backend to use. The default will automatically "
 +    "enumerate through the supported backends.";
 +#endif
@@ -7940,7 +7947,7 @@ index be5b3f2e79..a58c4b14f1 100644
  #endif  // BUILDFLAG(IS_LINUX)
  
  // All views-based platforms --------------------------------------------------
-@@ -8182,14 +8194,14 @@ const char kZeroCopyVideoCaptureDescription[] =
+@@ -8182,14 +8196,14 @@ const char kZeroCopyVideoCaptureDescription[] =
  #endif  // BUILDFLAG(IS_CHROMEOS_ASH) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -7957,7 +7964,7 @@ index be5b3f2e79..a58c4b14f1 100644
  const char kEnableNetworkServiceSandboxName[] =
      "Enable the network service sandbox.";
  const char kEnableNetworkServiceSandboxDescription[] =
-@@ -8221,7 +8233,7 @@ const char kWebBluetoothConfirmPairingSupportDescription[] =
+@@ -8221,7 +8235,7 @@ const char kWebBluetoothConfirmPairingSupportDescription[] =
      "Bluetooth";
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX)
  
@@ -7966,7 +7973,7 @@ index be5b3f2e79..a58c4b14f1 100644
  const char kSkipUndecryptablePasswordsName[] =
      "Skip undecryptable passwords to use the available decryptable "
      "passwords.";
-@@ -8375,7 +8387,7 @@ const char kElementCaptureDescription[] =
+@@ -8375,7 +8389,7 @@ const char kElementCaptureDescription[] =
  
  #if BUILDFLAG(IS_WIN) ||                                      \
      (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS_LACROS)) || \
@@ -7975,7 +7982,7 @@ index be5b3f2e79..a58c4b14f1 100644
  const char kUIDebugToolsName[] = "Debugging tools for UI";
  const char kUIDebugToolsDescription[] =
      "Enables additional keyboard shortcuts to help debugging.";
-@@ -8449,7 +8461,7 @@ const char kAutofillCaretExtractionDescription[] =
+@@ -8449,7 +8463,7 @@ const char kAutofillCaretExtractionDescription[] =
      "Enables passing caret position via Autofill";
  #endif  // BUILDFLAG(ENABLE_COMPOSE)
  
@@ -21001,24 +21008,27 @@ index 0c908fd7f9..4aa6e93a02 100644
  template <>
  struct ParamTraits<long> {
 diff --git a/media/BUILD.gn b/media/BUILD.gn
-index d53c9a3e10..c6ed283764 100644
+index d53c9a3e10..0225f0bfca 100644
 --- a/media/BUILD.gn
 +++ b/media/BUILD.gn
-@@ -96,6 +96,9 @@ config("media_config") {
+@@ -96,6 +96,12 @@ config("media_config") {
        defines += [ "DLOPEN_PULSEAUDIO" ]
      }
    }
 +  if (use_sndio) {
 +    defines += [ "USE_SNDIO" ]
 +  }
++#  if (use_audioio) {
++#    defines += [ "USE_AUDIOIO" ]
++#  }
    if (use_cras) {
      defines += [ "USE_CRAS" ]
    }
 diff --git a/media/audio/BUILD.gn b/media/audio/BUILD.gn
-index 90e093cd2d..93fdb676a0 100644
+index 90e093cd2d..f3e83845b4 100644
 --- a/media/audio/BUILD.gn
 +++ b/media/audio/BUILD.gn
-@@ -270,10 +270,24 @@ source_set("audio") {
+@@ -270,10 +270,35 @@ source_set("audio") {
      deps += [ "//media/base/android:media_jni_headers" ]
    }
  
@@ -21027,7 +21037,7 @@ index 90e093cd2d..93fdb676a0 100644
      sources += [ "linux/audio_manager_linux.cc" ]
    }
  
-+  if (is_bsd) {
++  if (is_bsd && !is_netbsd) {
 +    sources += [ "sndio/audio_manager_sndio.cc" ]
 +  }
 +
@@ -21038,6 +21048,17 @@ index 90e093cd2d..93fdb676a0 100644
 +      "sndio/sndio_input.h",
 +      "sndio/sndio_output.cc",
 +      "sndio/sndio_output.h"
++    ]
++   }
++
++  if (use_audioio) {
++    sources += [
++      "audioio/audio_manager_audioio.cc"
++      "audioio/audio_manager_audioio.h"
++      "audioio/audioio_input.cc",
++      "audioio/audioio_input.h",
++      "audioio/audioio_output.cc",
++      "audioio/audioio_output.h"
 +    ]
 +   }
 +
@@ -21129,6 +21150,930 @@ index 774281d64a..a9fc3a08f8 100644
  
      EXPECT_CALL(callback_, OnError(_)).Times(2);
  
+diff --git a/media/audio/audioio/audio_manager_audioio.cc b/media/audio/audioio/audio_manager_audioio.cc
+new file mode 100644
+index 0000000000..193c659de8
+--- /dev/null
++++ b/media/audio/audioio/audio_manager_audioio.cc
+@@ -0,0 +1,176 @@
++// Copyright (c) 2012 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "base/command_line.h"
++#include "base/metrics/histogram_macros.h"
++#include "base/memory/ptr_util.h"
++
++#include "media/audio/sndio/audio_manager_sndio.h"
++
++#include "media/audio/audio_device_description.h"
++#include "media/audio/audio_output_dispatcher.h"
++#include "media/audio/audioio/audioio_input.h"
++#include "media/audio/audioio/audioio_output.h"
++#include "media/audio/fake_audio_manager.h"
++#include "media/base/limits.h"
++#include "media/base/media_switches.h"
++
++namespace media {
++
++// Maximum number of output streams that can be open simultaneously.
++static const int kMaxOutputStreams = 50;
++
++// Default sample rate for input and output streams.
++static const int kDefaultSampleRate = 48000;
++
++void AddDefaultDevice(AudioDeviceNames* device_names) {
++  DCHECK(device_names->empty());
++  device_names->push_front(AudioDeviceName::CreateDefault());
++}
++
++bool AudioManagerAudioIO::HasAudioOutputDevices() {
++  return true;
++}
++
++bool AudioManagerAudioIO::HasAudioInputDevices() {
++  return true;
++}
++
++void AudioManagerAudioIO::GetAudioInputDeviceNames(
++    AudioDeviceNames* device_names) {
++  DCHECK(device_names->empty());
++  AddDefaultDevice(device_names);
++}
++
++void AudioManagerAudioIO::GetAudioOutputDeviceNames(
++    AudioDeviceNames* device_names) {
++  AddDefaultDevice(device_names);
++}
++
++const char* AudioManagerAudioIO::GetName() {
++  return "AudioIO";
++}
++
++AudioParameters AudioManagerAudioIO::GetInputStreamParameters(
++    const std::string& device_id) {
++  static const int kDefaultInputBufferSize = 1024;
++
++  int user_buffer_size = GetUserBufferSize();
++  int buffer_size = user_buffer_size ?
++      user_buffer_size : kDefaultInputBufferSize;
++
++  return AudioParameters(
++      AudioParameters::AUDIO_PCM_LOW_LATENCY, ChannelLayoutConfig::Stereo(),
++      kDefaultSampleRate, buffer_size);
++}
++
++AudioManagerAudioIO::AudioManagerAudioIO(std::unique_ptr<AudioThread> audio_thread,
++                                         AudioLogFactory* audio_log_factory)
++    : AudioManagerBase(std::move(audio_thread),
++                       audio_log_factory) {
++  DLOG(WARNING) << "AudioManagerAudioIO";
++  SetMaxOutputStreamsAllowed(kMaxOutputStreams);
++}
++
++AudioManagerAudioIO::~AudioManagerAudioIO() = default;
++
++AudioOutputStream* AudioManagerAudioIO::MakeLinearOutputStream(
++    const AudioParameters& params,
++    const LogCallback& log_callback) {
++  DCHECK_EQ(AudioParameters::AUDIO_PCM_LINEAR, params.format());
++  return MakeOutputStream(params);
++}
++
++AudioOutputStream* AudioManagerAudioIO::MakeLowLatencyOutputStream(
++    const AudioParameters& params,
++    const std::string& device_id,
++    const LogCallback& log_callback) {
++  DLOG_IF(ERROR, !device_id.empty()) << "Not implemented!";
++  DCHECK_EQ(AudioParameters::AUDIO_PCM_LOW_LATENCY, params.format());
++  return MakeOutputStream(params);
++}
++
++AudioInputStream* AudioManagerAudioIO::MakeLinearInputStream(
++    const AudioParameters& params,
++    const std::string& device_id,
++    const LogCallback& log_callback) {
++  DCHECK_EQ(AudioParameters::AUDIO_PCM_LINEAR, params.format());
++  return MakeInputStream(params);
++}
++
++AudioInputStream* AudioManagerAudioIO::MakeLowLatencyInputStream(
++    const AudioParameters& params,
++    const std::string& device_id,
++    const LogCallback& log_callback) {
++  DCHECK_EQ(AudioParameters::AUDIO_PCM_LOW_LATENCY, params.format());
++  return MakeInputStream(params);
++}
++
++AudioParameters AudioManagerAudioIO::GetPreferredOutputStreamParameters(
++    const std::string& output_device_id,
++    const AudioParameters& input_params) {
++  // TODO(tommi): Support |output_device_id|.
++  DLOG_IF(ERROR, !output_device_id.empty()) << "Not implemented!";
++  static const int kDefaultOutputBufferSize = 2048;
++
++  ChannelLayoutConfig channel_layout_config = ChannelLayoutConfig::Stereo();
++  int sample_rate = kDefaultSampleRate;
++  int buffer_size = kDefaultOutputBufferSize;
++  if (input_params.IsValid()) {
++    sample_rate = input_params.sample_rate();
++    channel_layout_config = input_params.channel_layout_config();
++    buffer_size = std::min(buffer_size, input_params.frames_per_buffer());
++  }
++
++  int user_buffer_size = GetUserBufferSize();
++  if (user_buffer_size)
++    buffer_size = user_buffer_size;
++
++  return AudioParameters(
++      AudioParameters::AUDIO_PCM_LOW_LATENCY,
++      channel_layout_config, sample_rate, buffer_size);
++}
++
++AudioInputStream* AudioManagerAudioIO::MakeInputStream(
++    const AudioParameters& params) {
++  DLOG(WARNING) << "MakeInputStream";
++  return new AudioIOAudioInputStream(this,
++             AudioDeviceDescription::kDefaultDeviceId, params);
++}
++
++AudioOutputStream* AudioManagerAudioIO::MakeOutputStream(
++    const AudioParameters& params) {
++  DLOG(WARNING) << "MakeOutputStream";
++  return new AudioIOAudioOutputStream(params, this);
++}
++#endif
++
++std::unique_ptr<media::AudioManager> CreateAudioManager(
++    std::unique_ptr<AudioThread> audio_thread,
++    AudioLogFactory* audio_log_factory) {
++  DLOG(WARNING) << "CreateAudioManager";
++
++  auto _ab = kAudioBackendParam.Get();
++
++  // For testing allow audio output to be disabled.
++  if (base::CommandLine::ForCurrentProcess()->HasSwitch(
++          switches::kDisableAudioOutput) ||
++	  !base::FeatureList::IsEnabled(media::kAudioBackend)) {
++    return std::make_unique<FakeAudioManager>(std::move(audio_thread),
++                                              audio_log_factory);
++  }
++
++  if (_ab == AudioBackend::kAudioIO) {
++    return std::make_unique<AudioManagerAudioIO>(std::move(audio_thread),
++                                              audio_log_factory);
++  } else {
++    LOG(WARNING) << "Falling back to FAKE audio output. AudioIO is not "
++                    "available or could not be initialized.";
++  }
++
++  return std::make_unique<FakeAudioManager>(std::move(audio_thread),
++                                            audio_log_factory);
++}
++
++}  // namespace media
+diff --git a/media/audio/audioio/audio_manager_audioio.h b/media/audio/audioio/audio_manager_audioio.h
+new file mode 100644
+index 0000000000..98860b73f4
+--- /dev/null
++++ b/media/audio/audioio/audio_manager_audioio.h
+@@ -0,0 +1,91 @@
++// Copyright (c) 2012 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef MEDIA_AUDIO_AUDIOIO_AUDIO_MANAGER_AUDIOIO_H_
++#define MEDIA_AUDIO_AUDIOIO_AUDIO_MANAGER_AUDIOIO_H_
++
++#include <set>
++
++#include "base/compiler_specific.h"
++#include "base/memory/ref_counted.h"
++#include "base/threading/thread.h"
++#include "media/audio/audio_manager_base.h"
++
++namespace media {
++
++class MEDIA_EXPORT AudioManagerAudioIO : public AudioManagerBase {
++ public:
++  AudioManagerAudioIO(std::unique_ptr<AudioThread> audio_thread,
++                   AudioLogFactory* audio_log_factory);
++
++  AudioManagerAudioIO(const AudioManagerAudioIO&) = delete;
++  AudioManagerAudioIO& operator=(const AudioManagerAudioIO&) = delete;
++
++  ~AudioManagerAudioIO() override;
++
++  // Implementation of AudioManager.
++  // Returns true if the OS reports existence of audio devices. This does not
++  // guarantee that the existing devices support all formats and sample rates.
++  bool HasAudioOutputDevices() override;
++  // Returns true if the OS reports existence of audio recording devices. This
++  // does not guarantee that the existing devices support all formats and
++  // sample rates.
++  bool HasAudioInputDevices() override;
++  // Appends a list of available input devices to |device_names|,
++  // which must initially be empty.
++  void GetAudioInputDeviceNames(AudioDeviceNames* device_names) override;
++  // Appends a list of available output devices to |device_names|,
++  // which must initially be empty.
++  void GetAudioOutputDeviceNames(AudioDeviceNames* device_names) override;
++  // Returns the input hardware audio parameters of the specific device
++  // for opening input streams. Each AudioManager needs to implement their own
++  // version of this interface.
++  AudioParameters GetInputStreamParameters(const std::string& device_id) override;
++  // Gets the name of the audio manager (e.g., Windows, Mac, PulseAudio).
++  const char* GetName() override;
++
++  // Implementation of AudioManagerBase.
++  // Creates the output stream for the |AUDIO_PCM_LINEAR| format. The legacy
++  // name is also from |AUDIO_PCM_LINEAR|.
++  AudioOutputStream* MakeLinearOutputStream(
++      const AudioParameters& params,
++      const LogCallback& log_callback) override;
++  // Creates the output stream for the |AUDIO_PCM_LOW_LATENCY| format.
++  AudioOutputStream* MakeLowLatencyOutputStream(
++      const AudioParameters& params,
++      const std::string& device_id,
++      const LogCallback& log_callback) override;
++  // Creates the input stream for the |AUDIO_PCM_LINEAR| format. The legacy
++  // name is also from |AUDIO_PCM_LINEAR|.
++  AudioInputStream* MakeLinearInputStream(
++      const AudioParameters& params,
++      const std::string& device_id,
++      const LogCallback& log_callback) override;
++  // Creates the input stream for the |AUDIO_PCM_LOW_LATENCY| format.
++  AudioInputStream* MakeLowLatencyInputStream(
++      const AudioParameters& params,
++      const std::string& device_id,
++      const LogCallback& log_callback) override;
++
++ protected:
++  // Returns the preferred hardware audio output parameters for opening output
++  // streams. If the users inject a valid |input_params|, each AudioManager
++  // will decide if they should return the values from |input_params| or the
++  // default hardware values. If the |input_params| is invalid, it will return
++  // the default hardware audio parameters.
++  // If |output_device_id| is empty, the implementation must treat that as
++  // a request for the default output device.
++  AudioParameters GetPreferredOutputStreamParameters(
++      const std::string& output_device_id,
++      const AudioParameters& input_params) override;
++
++ private:
++  // Called by MakeLinearOutputStream and MakeLowLatencyOutputStream.
++  AudioOutputStream* MakeOutputStream(const AudioParameters& params);
++  AudioInputStream* MakeInputStream(const AudioParameters& params);
++};
++
++}  // namespace media
++
++#endif  // MEDIA_AUDIO_AUDIOIO_AUDIO_MANAGER_AUDIOIO_H_
+diff --git a/media/audio/audioio/audioio_input.cc b/media/audio/audioio/audioio_input.cc
+new file mode 100644
+index 0000000000..dbd0f1972e
+--- /dev/null
++++ b/media/audio/audioio/audioio_input.cc
+@@ -0,0 +1,224 @@
++// Copyright 2013 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "base/logging.h"
++#include "media/base/audio_timestamp_helper.h"
++#include "media/audio/audioio/audio_manager_audioio.h"
++#include "media/audio/audio_manager.h"
++#include "media/audio/audioio/audioio_input.h"
++
++namespace media {
++
++static const SampleFormat kSampleFormat = kSampleFormatS16;
++
++void *AudioIOAudioInputStream::ThreadEntry(void *arg) {
++  AudioIOAudioInputStream* self = static_cast<AudioIOAudioInputStream*>(arg);
++
++  self->ThreadLoop();
++  return NULL;
++}
++
++AudioIOAudioInputStream::AudioIOAudioInputStream(AudioManagerBase* manager,
++                                             const std::string& device_name,
++                                             const AudioParameters& params)
++    : manager(manager),
++      params(params),
++      audio_bus(AudioBus::Create(params)),
++      state(kClosed) {
++}
++
++AudioIOAudioInputStream::~AudioIOAudioInputStream() {
++  if (state != kClosed)
++    Close();
++}
++
++// Open the stream and prepares it for recording. Call Start() to actually
++// begin recording.
++AudioInputStream::OpenOutcome AudioIOAudioInputStream::Open() {
++  struct audio_info info;
++
++  if (state != kClosed) {
++    return OpenOutcome::kFailed;
++  }
++
++  if (params.format() != AudioParameters::AUDIO_PCM_LINEAR &&
++      params.format() != AudioParameters::AUDIO_PCM_LOW_LATENCY) {
++    LOG(WARNING) << "Unsupported audio format.";
++    return OpenOutcome::kFailed;
++  }
++
++  AUDIO_INITINFO(&info);
++  info.mode = AUMODE_RECORD;
++  info.record.sample_rate = params.sample_rate();
++  info.record.channels = params.channels();
++  info.record.precision = SampleFormatToBitsPerChannel(kSampleFormat);
++  info.record.encoding = AUDIO_ENCODING_SLINEAR;
++  info.record.pause = true;
++
++  if ((fd = open("/dev/audio", O_WRONLY)) < 0) {
++    LOG(ERROR) << "Couldn't open audio device.";
++    return OpenOutcome::kFailed;
++  }
++
++  if (ioctl(fd, AUDIO_SETINFO, &info) < 0) {
++    goto error;
++  }
++
++  if (ioctl(fd, AUDIO_GETINFO, &info) < 0) {
++    goto error;
++  }
++
++  state = kStopped;
++  buffer = new char[audio_bus->frames() * params.GetBytesPerFrame(kSampleFormat)];
++  return OpenOutcome::kSuccess;
++error:
++  close(fd);
++  LOG(ERROR) << "Couldn't set audio parameters.";
++  return OpenOutcome::kFailed;
++}
++
++// Starts recording audio and generating AudioInputCallback::OnData().
++// The input stream does not take ownership of this callback.
++void AudioIOAudioInputStream::Start(AudioInputCallback* cb) {
++  struct audio_info info;
++
++  StartAgc();
++
++  (void)ioctl(fd, AUDIO_FLUSH, NULL);
++  if (ioctl(fd, AUDIO_GETINFO, &info) < 0) {
++    goto error;
++  }
++  info.record.pause = false;
++  if (ioctl(fd, AUDIO_SETINFO, &info) < 0 ) {
++    goto error;
++  }
++
++  state = kRunning;
++  hw_delay = 0;
++  callback = cb;
++
++  if (pthread_create(&thread, NULL, &ThreadEntry, this) != 0) {
++    LOG(ERROR) << "Failed to create real-time thread for recording.";
++    goto error;
++  }
++
++  return;
++error:
++  LOG(ERROR) << "Failed to start playing audio.";
++  state = kStopped
++}
++
++// Stops recording audio. Effect might not be instantaneous as there could be
++// pending audio callbacks in the queue which will be issued first before
++// recording stops.
++void AudioIOAudioInputStream::Stop() {
++  struct audio_info info;
++
++  if (state == kStopped) {
++    return;
++  }
++  pthread_join(thread, NULL);
++  (void)ioctl(fd, AUDIO_FLUSH, NULL);
++  if (ioctl(fd, AUDIO_GETINFO, &info) < 0) {
++    goto error;
++  }
++  info.record.pause = true;
++  if (ioctl(fd, AUDIO_SETINFO, &info) < 0 ) {
++    goto error;
++  }
++  state = kStopped;
++  StopAgc();
++  return;
++error:
++  LOG(ERROR) << "Failed to stop recording audio.";
++  return;
++}
++
++// Close the stream. This also generates AudioInputCallback::OnClose(). This
++// should be the last call made on this object.
++void AudioIOAudioInputStream::Close() {
++  if (state == kClosed) {
++    goto release;
++  }
++  if (state == kRunning) {
++    Stop();
++  }
++  (void)ioctl(fd, AUDIO_FLUSH, NULL);
++  close(fd);
++  state = kClosed;
++  delete [] buffer;
++
++release:
++  manager->ReleaseOutputStream(this);  // Calls the destructor
++}
++
++// Returns the maximum microphone analog volume or 0.0 if device does not
++// have volume control.
++double AudioIOAudioInputStream::GetMaxVolume() {
++  // Not supported
++  return 0.0;
++}
++
++// Sets the microphone analog volume, with range [0, max_volume] inclusive.
++void AudioIOAudioInputStream::SetVolume(double volume) {
++  // Not supported. Do nothing.
++}
++
++// Returns the microphone analog volume, with range [0, max_volume] inclusive.
++double AudioIOAudioInputStream::GetVolume() {
++  // Not supported.
++  return 0.0;
++}
++
++// Returns the current muting state for the microphone.
++bool AudioIOAudioInputStream::IsMuted() {
++  // Not supported.
++  return false;
++}
++
++// Sets the output device from which to cancel echo, if echo cancellation is
++// supported by this stream. E.g. called by WebRTC when it changes playback
++// devices.
++void AudioIOAudioInputStream::SetOutputDeviceForAec(
++    const std::string& output_device_id) {
++  // Not supported.
++}
++
++void AudioIOAudioInputStream::ThreadLoop(void) {
++  size_t todo, n;
++  char *data;
++  unsigned int nframes;
++  double normalized_volume = 0.0;
++
++  nframes = audio_bus->frames();
++
++  while (state == kRunning && !sio_eof(hdl)) {
++
++    GetAgcVolume(&normalized_volume);
++
++    // read one block
++    todo = nframes * params.GetBytesPerFrame(kSampleFormat);
++    data = buffer;
++    while (todo > 0) {
++      n = read(fd, data, todo);
++      if (n == 0)
++        return;	// unrecoverable I/O error
++      todo -= n;
++      data += n;
++    }
++    hw_delay -= nframes;
++
++    // convert frames count to TimeDelta
++    const base::TimeDelta delay = AudioTimestampHelper::FramesToTime(hw_delay,
++      params.sample_rate());
++
++    // push into bus
++    audio_bus->FromInterleaved<SignedInt16SampleTypeTraits>(reinterpret_cast<int16_t*>(buffer), nframes);
++
++    // invoke callback
++    callback->OnData(audio_bus.get(), base::TimeTicks::Now() - delay, 1., {});
++  }
++}
++
++}  // namespace media
+diff --git a/media/audio/audioio/audioio_input.h b/media/audio/audioio/audioio_input.h
+new file mode 100644
+index 0000000000..9960158dac
+--- /dev/null
++++ b/media/audio/audioio/audioio_input.h
+@@ -0,0 +1,89 @@
++// Copyright 2013 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef MEDIA_AUDIO_AUDIOIO_AUDIOIO_INPUT_H_
++#define MEDIA_AUDIO_AUDIOIO_AUDIOIO_INPUT_H_
++
++#include <stdint.h>
++#include <string>
++#include <sys/audioio.h>
++
++#include "base/compiler_specific.h"
++#include "base/memory/weak_ptr.h"
++#include "base/time/time.h"
++#include "media/audio/agc_audio_stream.h"
++#include "media/audio/audio_io.h"
++#include "media/audio/audio_device_description.h"
++#include "media/base/audio_parameters.h"
++
++namespace media {
++
++class AudioManagerBase;
++
++// Implementation of AudioOutputStream using audio(4)
++class AudioIOAudioInputStream : public AgcAudioStream<AudioInputStream> {
++ public:
++  // Pass this to the constructor if you want to attempt auto-selection
++  // of the audio recording device.
++  static const char kAutoSelectDevice[];
++
++  // Create a PCM Output stream for the SNDIO device identified by
++  // |device_name|. If unsure of what to use for |device_name|, use
++  // |kAutoSelectDevice|.
++  AudioIOAudioInputStream(AudioManagerBase* audio_manager,
++                     const std::string& device_name,
++                     const AudioParameters& params);
++
++  AudioIOAudioInputStream(const AudioIOAudioInputStream&) = delete;
++  AudioIOAudioInputStream& operator=(const AudioIOAudioInputStream&) = delete;
++
++  ~AudioIOAudioInputStream() override;
++
++  // Implementation of AudioInputStream.
++  OpenOutcome Open() override;
++  void Start(AudioInputCallback* callback) override;
++  void Stop() override;
++  void Close() override;
++  double GetMaxVolume() override;
++  void SetVolume(double volume) override;
++  double GetVolume() override;
++  bool IsMuted() override;
++  void SetOutputDeviceForAec(const std::string& output_device_id) override;
++
++ private:
++
++  enum StreamState {
++    kClosed,            // Not opened yet
++    kStopped,           // Device opened, but not started yet
++    kRunning,           // Started, device playing
++  };
++
++  // C-style call-backs
++  static void* ThreadEntry(void *arg);
++
++  // Continuously moves data from the device to the consumer
++  void ThreadLoop();
++  // Our creator, the audio manager needs to be notified when we close.
++  AudioManagerBase* manager;
++  // Parameters of the source
++  AudioParameters params;
++  // We store data here for consumer
++  std::unique_ptr<AudioBus> audio_bus;
++  // Call-back that consumes recorded data
++  AudioInputCallback* callback;  // Valid during a recording session.
++  // Handle of the audio device
++  int fd;
++  // Current state of the stream
++  enum StreamState state;
++  // High priority thread running ThreadLoop()
++  pthread_t thread;
++  // Number of frames buffered in the hardware
++  int hw_delay;
++  // Temporary buffer
++  char* buffer;
++};
++
++}  // namespace media
++
++#endif  // MEDIA_AUDIO_AUDIOIO_AUDIOIO_INPUT_H_
+diff --git a/media/audio/audioio/audioio_output.cc b/media/audio/audioio/audioio_output.cc
+new file mode 100644
+index 0000000000..4cb8598c85
+--- /dev/null
++++ b/media/audio/audioio/audioio_output.cc
+@@ -0,0 +1,227 @@
++// Copyright (c) 2012 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "base/logging.h"
++#include "base/time/time.h"
++#include "base/time/default_tick_clock.h"
++#include "media/audio/audio_manager_base.h"
++#include "media/base/audio_timestamp_helper.h"
++#include "media/audio/audioio/audioio_output.h"
++
++namespace media {
++
++static const SampleFormat kSampleFormat = kSampleFormatS16;
++
++void *AudioIOAudioOutputStream::ThreadEntry(void *arg) {
++  AudioIOAudioOutputStream* self = static_cast<AudioIOAudioOutputStream*>(arg);
++
++  self->ThreadLoop();
++  return NULL;
++}
++
++AudioIOAudioOutputStream::AudioIOAudioOutputStream(const AudioParameters& params,
++                                               AudioManagerBase* manager)
++    : manager(manager),
++      params(params),
++      audio_bus(AudioBus::Create(params)),
++      state(kClosed),
++      mutex(PTHREAD_MUTEX_INITIALIZER) {
++}
++
++AudioIOAudioOutputStream::~AudioIOAudioOutputStream() {
++  if (state != kClosed) {
++    Close();
++  }
++}
++
++// Open the stream. false is returned if the stream cannot be opened.  Open()
++// must always be followed by a call to Close() even if Open() fails
++bool AudioIOAudioOutputStream::Open() {
++  struct audio_info info;
++
++  if (params.format() != AudioParameters::AUDIO_PCM_LINEAR &&
++      params.format() != AudioParameters::AUDIO_PCM_LOW_LATENCY) {
++    LOG(WARNING) << "Unsupported audio format.";
++    return false;
++  }
++
++  AUDIO_INITINFO(&info);
++  info.mode = AUMODE_PLAY;
++  info.play.sample_rate = params.sample_rate();
++  info.play.channels = params.channels();
++  info.play.precision = SampleFormatToBitsPerChannel(kSampleFormat);
++  info.play.encoding = AUDIO_ENCODING_SLINEAR;
++  info.play.pause = true;
++
++  if ((fd = open("/dev/audio", O_WRONLY)) < 0) {
++    LOG(ERROR) << "Couldn't open audio device.";
++    return false;
++  }
++
++  if (ioctl(fd, AUDIO_SETINFO, &info) < 0) {
++    goto error;
++  }
++
++  if (ioctl(fd, AUDIO_GETINFO, &info) < 0) {
++    goto error;
++  }
++
++  state = kStopped;
++  volpending = 0;
++  vol = AUDIO_MAX_GAIN;
++  buffer = new char[audio_bus->frames() * params.GetBytesPerFrame(kSampleFormat)];
++  return true;
++
++error:
++  close(fd);
++  LOG(ERROR) << "Couldn't set audio parameters.";
++  return false;
++}
++
++// Close the stream.
++// After calling this method, the object should not be used anymore.
++// After calling this method, no further AudioSourceCallback methods
++// should be called on the callback object that was supplied to Start()
++// by the AudioOutputStream implementation.
++void AudioIOAudioOutputStream::Close() {
++  if (state == kClosed) {
++    goto release;
++  }
++  if (state == kRunning) {
++    Stop();
++  }
++  (void)ioctl(fd, AUDIO_FLUSH, NULL);
++  close(fd);
++  state = kClosed;
++  delete [] buffer;
++
++release:
++  manager->ReleaseOutputStream(this);  // Calls the destructor
++}
++
++// Starts playing audio and generating AudioSourceCallback::OnMoreData().
++// Since implementor of AudioOutputStream may have internal buffers, right
++// after calling this method initial buffers are fetched.
++//
++// The output stream does not take ownership of this callback.
++void AudioIOAudioOutputStream::Start(AudioSourceCallback* callback) {
++  struct audio_info info;
++
++  (void)ioctl(fd, AUDIO_FLUSH, NULL);
++  if (ioctl(fd, AUDIO_GETINFO, &info) < 0) {
++    goto error;
++  }
++  info.play.pause = false;
++  if (ioctl(fd, AUDIO_SETINFO, &info) < 0 ) {
++    goto error;
++  }
++
++  state = kRunning;
++  hw_delay = 0;
++  source = callback;
++  
++  if (pthread_create(&thread, NULL, &ThreadEntry, this) != 0) {
++    LOG(ERROR) << "Failed to create real-time thread.";
++    goto error;
++  }
++
++  return;
++error:
++  LOG(ERROR) << "Failed to start playing audio.";
++  state = kStopped;
++}
++
++// Stops playing audio.  The operation completes synchronously meaning that
++// once Stop() has completed executing, no further callbacks will be made to
++// the callback object that was supplied to Start() and it can be safely
++// deleted. Stop() may be called in any state, e.g. before Start() or after
++// Stop().
++void AudioIOAudioOutputStream::Stop() {
++  struct audio_info info;
++
++  if (state == kStopped) {
++    return;
++  }
++  pthread_join(thread, NULL);
++  (void)ioctl(fd, AUDIO_FLUSH, NULL);
++  if (ioctl(fd, AUDIO_GETINFO, &info) < 0) {
++    goto error;
++  }
++  info.play.pause = true;
++  if (ioctl(fd, AUDIO_SETINFO, &info) < 0 ) {
++    goto error;
++  }
++  state = kStopped;
++  return;
++error:
++  LOG(ERROR) << "Failed to stop playing audio.";
++  return;
++}
++
++// Sets the relative volume, with range [0.0, 1.0] inclusive.
++void AudioIOAudioOutputStream::SetVolume(double v) {
++  pthread_mutex_lock(&mutex);
++  vol = v * AUDIO_MAX_GAIN;
++  volpending = 1;
++  pthread_mutex_unlock(&mutex);
++}
++
++// Gets the relative volume, with range [0.0, 1.0] inclusive.
++void AudioIOAudioOutputStream::GetVolume(double* v) {
++  pthread_mutex_lock(&mutex);
++  *v = vol * (1. / AUDIO_MAX_GAIN);
++  pthread_mutex_unlock(&mutex);
++}
++
++// Flushes the stream. This should only be called if the stream is not
++// playing. (i.e. called after Stop or Open)
++
++// This stream is always used with sub second buffer sizes, where it's
++// sufficient to simply always flush upon Start().
++void AudioIOAudioOutputStream::Flush() {}
++
++void AudioIOAudioOutputStream::ThreadLoop(void) {
++  int avail, count;
++  struct audio_info info;
++
++  while (state == kRunning) {
++    // Update volume if needed
++    pthread_mutex_lock(&mutex);
++    if (volpending) {
++      volpending = 0;
++      if (ioctl(fd, AUDIO_GETINFO, &info) < 0) {
++        LOG(ERROR) << "Failed to get audio info.";
++      } else {
++        info.play.gain = vol;
++        if (ioctl(fd, AUDIO_SETINFO, &info) < 0 ) {
++          LOG(ERROR) << "Failed to set audio volume.";
++        }
++      }
++    }
++    pthread_mutex_unlock(&mutex);
++
++    // Get data to play
++    const base::TimeDelta delay = AudioTimestampHelper::FramesToTime(hw_delay,
++	                                                                   params.sample_rate());
++    count = source->OnMoreData(delay, base::TimeTicks::Now(), {}, audio_bus.get());
++    audio_bus->ToInterleaved<SignedInt16SampleTypeTraits>(count, reinterpret_cast<int16_t*>(buffer));
++    if (count == 0) {
++      // We have to submit something to the device
++      count = audio_bus->frames();
++      memset(buffer, 0, count * params.GetBytesPerFrame(kSampleFormat));
++      LOG(WARNING) << "No data to play, running empty cycle.";
++    }
++
++    // Submit data to the device
++    avail = count * params.GetBytesPerFrame(kSampleFormat);
++    if (write(fd, buffer, avail) < 0) {
++      break;
++    }
++
++    // Update hardware pointer
++    hw_delay += count;
++  }
++}
++
++}  // namespace media
+diff --git a/media/audio/audioio/audioio_output.h b/media/audio/audioio/audioio_output.h
+new file mode 100644
+index 0000000000..8d760f993e
+--- /dev/null
++++ b/media/audio/audioio/audioio_output.h
+@@ -0,0 +1,81 @@
++// Copyright (c) 2012 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef MEDIA_AUDIO_AUDIOIO_AUDIOIO_OUTPUT_H_
++#define MEDIA_AUDIO_AUDIOIO_AUDIOIO_OUTPUT_H_
++
++#include <pthread.h>
++#include <sys/audioio.h>
++
++#include "base/time/tick_clock.h"
++#include "base/time/time.h"
++#include "media/audio/audio_io.h"
++
++namespace media {
++
++class AudioManagerBase;
++
++// Implementation of AudioOutputStream using audio(4)
++class AudioIOAudioOutputStream : public AudioOutputStream {
++ public:
++  // The manager is creating this object
++  AudioIOAudioOutputStream(const AudioParameters& params,
++                         AudioManagerBase* manager);
++
++  AudioIOAudioOutputStream(const AudioIOAudioOutputStream&) = delete;
++  AudioIOAudioOutputStream& operator=(const AudioIOAudioOutputStream&) = delete;
++
++  virtual ~AudioIOAudioOutputStream();
++
++  // Implementation of AudioOutputStream.
++  bool Open() override;
++  void Close() override;
++  void Start(AudioSourceCallback* callback) override;
++  void Stop() override;
++  void SetVolume(double volume) override;
++  void GetVolume(double* volume) override;
++  void Flush() override;
++
++ private:
++  enum StreamState {
++    kClosed,            // Not opened yet
++    kStopped,           // Device opened, but not started yet
++    kRunning,           // Started, device playing
++  };
++
++  // C-style call-backs
++  static void* ThreadEntry(void *arg);
++
++  // Continuously moves data from the producer to the device
++  void ThreadLoop(void);
++
++  // Our creator, the audio manager needs to be notified when we close.
++  AudioManagerBase* manager;
++  // Parameters of the source
++  AudioParameters params;
++  // Source stores data here
++  std::unique_ptr<AudioBus> audio_bus;
++  // Call-back that produces data to play
++  AudioSourceCallback* source;
++  // Handle of the audio device
++  int fd;
++  // Current state of the stream
++  enum StreamState state;
++  // High priority thread running ThreadLoop()
++  pthread_t thread;
++  // Protects vol, volpending and hw_delay
++  pthread_mutex_t mutex;
++  // Current volume in the AUDIO_MIN_GAIN..AUDIO_MAX_GAIN range
++  int vol;
++  // Set to 1 if volumes must be refreshed in the realtime thread
++  int volpending;
++  // Number of frames buffered in the hardware
++  int hw_delay;
++  // Temporary buffer
++  char* buffer;
++};
++
++}  // namespace media
++
++#endif  // MEDIA_AUDIO_AUDIOIO_AUDIOIO_OUTPUT_H_
 diff --git a/media/audio/pulse/pulse_util.cc b/media/audio/pulse/pulse_util.cc
 index df6680ccae..2678947f81 100644
 --- a/media/audio/pulse/pulse_util.cc
@@ -22094,7 +23039,7 @@ index 5566c8e8da..ad545ee2ae 100644
  
  }  // namespace media
 diff --git a/media/base/media_switches.cc b/media/base/media_switches.cc
-index c1033de7b2..f540917e71 100644
+index c1033de7b2..fff8b8e40d 100644
 --- a/media/base/media_switches.cc
 +++ b/media/base/media_switches.cc
 @@ -21,7 +21,7 @@
@@ -22126,7 +23071,7 @@ index c1033de7b2..f540917e71 100644
  // Enables system audio mirroring using pulseaudio.
  BASE_FEATURE(kPulseaudioLoopbackForCast,
               "PulseaudioLoopbackForCast",
-@@ -379,6 +379,28 @@ BASE_FEATURE(kPulseaudioLoopbackForCast,
+@@ -379,6 +379,31 @@ BASE_FEATURE(kPulseaudioLoopbackForCast,
  BASE_FEATURE(kPulseaudioLoopbackForScreenShare,
               "PulseaudioLoopbackForScreenShare",
               base::FEATURE_DISABLED_BY_DEFAULT);
@@ -22139,6 +23084,7 @@ index c1033de7b2..f540917e71 100644
 +    kAudioBackendOptions[] = {
 +        {AudioBackend::kAuto,
 +         "auto"},
++        {AudioBackend::kAudioIO, "audioio"},
 +        {AudioBackend::kPulseAudio, "pulseaudio"},
 +        {AudioBackend::kSndio, "sndio"},
 +        {AudioBackend::kAlsa, "alsa"}};
@@ -22148,14 +23094,16 @@ index c1033de7b2..f540917e71 100644
 +        &kAudioBackend, "audio-backend",
 +#if BUILDFLAG(IS_OPENBSD)
 +        AudioBackend::kSndio,
-+#elif BUILDFLAG(IS_FREEBSD) || BUILDFLAG(IS_NETBSD)
++#elif BUILDFLAG(IS_NETBSD)
++        AudioBackend::kAudioIO,
++#elif BUILDFLAG(IS_FREEBSD)
 +        AudioBackend::kAuto,
 +#endif
 +        &kAudioBackendOptions};
  #endif  // BUILDFLAG(IS_LINUX)
  
  // When enabled, MediaCapabilities will check with GPU Video Accelerator
-@@ -676,7 +698,7 @@ BASE_FEATURE(kFeatureManagementLiveTranslateCrOS,
+@@ -676,7 +701,7 @@ BASE_FEATURE(kFeatureManagementLiveTranslateCrOS,
  // Show toolbar button that opens dialog for controlling media sessions.
  BASE_FEATURE(kGlobalMediaControls,
               "GlobalMediaControls",
@@ -22164,7 +23112,7 @@ index c1033de7b2..f540917e71 100644
               base::FEATURE_ENABLED_BY_DEFAULT
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
-@@ -704,7 +726,7 @@ BASE_FEATURE(kGlobalMediaControlsUpdatedUI,
+@@ -704,7 +729,7 @@ BASE_FEATURE(kGlobalMediaControlsUpdatedUI,
  // If enabled, users can request Media Remoting without fullscreen-in-tab.
  BASE_FEATURE(kMediaRemotingWithoutFullscreen,
               "MediaRemotingWithoutFullscreen",
@@ -22173,7 +23121,7 @@ index c1033de7b2..f540917e71 100644
               base::FEATURE_ENABLED_BY_DEFAULT
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
-@@ -716,7 +738,7 @@ BASE_FEATURE(kMediaRemotingWithoutFullscreen,
+@@ -716,7 +741,7 @@ BASE_FEATURE(kMediaRemotingWithoutFullscreen,
  BASE_FEATURE(kGlobalMediaControlsPictureInPicture,
               "GlobalMediaControlsPictureInPicture",
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -22182,7 +23130,7 @@ index c1033de7b2..f540917e71 100644
               base::FEATURE_ENABLED_BY_DEFAULT
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
-@@ -745,7 +767,7 @@ BASE_FEATURE(kUnifiedAutoplay,
+@@ -745,7 +770,7 @@ BASE_FEATURE(kUnifiedAutoplay,
               "UnifiedAutoplay",
               base::FEATURE_ENABLED_BY_DEFAULT);
  
@@ -22191,7 +23139,7 @@ index c1033de7b2..f540917e71 100644
  // Enable vaapi video decoding on linux. This is already enabled by default on
  // chromeos, but needs an experiment on linux.
  BASE_FEATURE(kVaapiVideoDecodeLinux,
-@@ -836,7 +858,7 @@ BASE_FEATURE(kVaapiVp9SModeHWEncoding,
+@@ -836,7 +861,7 @@ BASE_FEATURE(kVaapiVp9SModeHWEncoding,
               "VaapiVp9SModeHWEncoding",
               base::FEATURE_ENABLED_BY_DEFAULT);
  #endif  // defined(ARCH_CPU_X86_FAMILY) && BUILDFLAG(IS_CHROMEOS)
@@ -22200,7 +23148,7 @@ index c1033de7b2..f540917e71 100644
  // Enables the new V4L2StatefulVideoDecoder instead of V4L2VideoDecoder.
  // Owners: frkoenig@chromium.org, mcasas@chromium.org
  // Expiry: When the |V4L2FlatVideoDecoder| flag handles stateful decoding on
-@@ -963,7 +985,7 @@ BASE_FEATURE(kLiveCaptionUseWaitK,
+@@ -963,7 +988,7 @@ BASE_FEATURE(kLiveCaptionUseWaitK,
  // Live Caption can be used in multiple languages, as opposed to just English.
  BASE_FEATURE(kLiveCaptionMultiLanguage,
               "LiveCaptionMultiLanguage",
@@ -22209,7 +23157,7 @@ index c1033de7b2..f540917e71 100644
               base::FEATURE_ENABLED_BY_DEFAULT
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
-@@ -993,7 +1015,7 @@ BASE_FEATURE(kLiveCaptionWebAudio,
+@@ -993,7 +1018,7 @@ BASE_FEATURE(kLiveCaptionWebAudio,
  // Live Translate translates captions generated by Live Caption.
  BASE_FEATURE(kLiveTranslate,
               "LiveTranslate",
@@ -22218,7 +23166,7 @@ index c1033de7b2..f540917e71 100644
               base::FEATURE_ENABLED_BY_DEFAULT
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
-@@ -1468,7 +1490,7 @@ BASE_FEATURE(kUseGTFOOutOfProcessVideoDecoding,
+@@ -1468,7 +1493,7 @@ BASE_FEATURE(kUseGTFOOutOfProcessVideoDecoding,
               base::FEATURE_DISABLED_BY_DEFAULT);
  #endif  // BUILDFLAG(ALLOW_OOP_VIDEO_DECODER)
  
@@ -22227,7 +23175,7 @@ index c1033de7b2..f540917e71 100644
  // Spawn utility processes to perform hardware encode acceleration instead of
  // using the GPU process.
  BASE_FEATURE(kUseOutOfProcessVideoEncoding,
-@@ -1548,7 +1570,7 @@ BASE_FEATURE(kRecordWebAudioEngagement,
+@@ -1548,7 +1573,7 @@ BASE_FEATURE(kRecordWebAudioEngagement,
               "RecordWebAudioEngagement",
               base::FEATURE_ENABLED_BY_DEFAULT);
  
@@ -22237,7 +23185,7 @@ index c1033de7b2..f540917e71 100644
  // populate the Renderer pipeline for hardware accelerated VideoDecoder in
  // non-low latency scenarios.
 diff --git a/media/base/media_switches.h b/media/base/media_switches.h
-index e95d90d84d..7f9837be1b 100644
+index e95d90d84d..6e115b9539 100644
 --- a/media/base/media_switches.h
 +++ b/media/base/media_switches.h
 @@ -44,7 +44,7 @@ MEDIA_EXPORT extern const char kDisableBackgroundMediaSuspend[];
@@ -22249,7 +23197,7 @@ index e95d90d84d..7f9837be1b 100644
  MEDIA_EXPORT extern const char kAlsaInputDevice[];
  MEDIA_EXPORT extern const char kAlsaOutputDevice[];
  #endif
-@@ -325,13 +325,25 @@ MEDIA_EXPORT BASE_DECLARE_FEATURE(kPlatformHEVCEncoderSupport);
+@@ -325,13 +325,26 @@ MEDIA_EXPORT BASE_DECLARE_FEATURE(kPlatformHEVCEncoderSupport);
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kPlaybackSpeedButton);
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kPreloadMediaEngagementData);
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kPreloadMetadataSuspend);
@@ -22260,6 +23208,7 @@ index e95d90d84d..7f9837be1b 100644
 +
 +enum class AudioBackend {
 +  kAuto,
++  kAudioIO,
 +  kPulseAudio,
 +  kSndio,
 +  kAlsa
@@ -22277,7 +23226,7 @@ index e95d90d84d..7f9837be1b 100644
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kReduceHardwareVideoDecoderBuffers);
  #endif  // BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_LINUX)
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kResumeBackgroundVideo);
-@@ -346,7 +358,7 @@ MEDIA_EXPORT BASE_DECLARE_FEATURE(kUnifiedAutoplay);
+@@ -346,7 +359,7 @@ MEDIA_EXPORT BASE_DECLARE_FEATURE(kUnifiedAutoplay);
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kUseAndroidOverlayForSecureOnly);
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kUseDecoderStreamForWebRTC);
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kUseFakeDeviceForMediaStream);
@@ -22286,7 +23235,7 @@ index e95d90d84d..7f9837be1b 100644
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kVaapiVideoDecodeLinux);
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kVaapiVideoDecodeLinuxGL);
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kVaapiVideoEncodeLinux);
-@@ -365,7 +377,7 @@ MEDIA_EXPORT BASE_DECLARE_FEATURE(kVaapiH264TemporalLayerHWEncoding);
+@@ -365,7 +378,7 @@ MEDIA_EXPORT BASE_DECLARE_FEATURE(kVaapiH264TemporalLayerHWEncoding);
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kVaapiVp8TemporalLayerHWEncoding);
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kVaapiVp9SModeHWEncoding);
  #endif  // defined(ARCH_CPU_X86_FAMILY) && BUILDFLAG(IS_CHROMEOS)
@@ -22295,7 +23244,7 @@ index e95d90d84d..7f9837be1b 100644
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kV4L2FlatStatefulVideoDecoder);
  #endif  // BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_LINUX)
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kVideoBlitColorAccuracy);
-@@ -510,7 +522,7 @@ MEDIA_EXPORT BASE_DECLARE_FEATURE(kUseOutOfProcessVideoDecoding);
+@@ -510,7 +523,7 @@ MEDIA_EXPORT BASE_DECLARE_FEATURE(kUseOutOfProcessVideoDecoding);
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kUseGTFOOutOfProcessVideoDecoding);
  #endif  // BUILDFLAG(ALLOW_OOP_VIDEO_DECODER)
  
@@ -23426,15 +24375,18 @@ index 312bcfb5f1..d268f507e2 100644
  #include "base/strings/string_split.h"
  #endif
 diff --git a/media/media_options.gni b/media/media_options.gni
-index 7590af7c8e..5682ed6291 100644
+index 7590af7c8e..5fc1101f5e 100644
 --- a/media/media_options.gni
 +++ b/media/media_options.gni
-@@ -190,12 +190,15 @@ declare_args() {
+@@ -190,12 +190,18 @@ declare_args() {
    # Enables runtime selection of ALSA library for audio.
    use_alsa = false
  
 +  # Enable runtime selection of sndio(7)
 +  use_sndio = false
++
++  # Enable runtime selection of audio(4)
++  use_audioio = false
 +
    # Alsa should be used on all non-Android, non-Mac POSIX systems - with the
    # exception of CastOS desktop builds.
