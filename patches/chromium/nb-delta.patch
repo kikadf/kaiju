@@ -1069,14 +1069,14 @@ index ce049dc56a..12f40cb6eb 100644
      NOTREACHED_IN_MIGRATION() << "Platform not supported: " << os;
      return false;
 diff --git a/chrome/browser/flag_descriptions.cc b/chrome/browser/flag_descriptions.cc
-index f91c23b3cb..92f083bcba 100644
+index f91c23b3cb..d4c53b9f83 100644
 --- a/chrome/browser/flag_descriptions.cc
 +++ b/chrome/browser/flag_descriptions.cc
 @@ -8163,6 +8163,8 @@ const char kAudioBackendName[] =
  const char kAudioBackendDescription[] =
  #if BUILDFLAG(IS_OPENBSD)
      "Select the desired audio backend to use. The default is sndio.";
-+#if BUILDFLAG(IS_NETBSD)
++#elif BUILDFLAG(IS_NETBSD)
 +    "Select the desired audio backend to use. The default is audioio.";
  #elif BUILDFLAG(IS_FREEBSD)
      "Select the desired audio backend to use. The default will automatically "
