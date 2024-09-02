@@ -1032,6 +1032,29 @@ index 0000000000..27240dd95a
 +    current_os = "netbsd"
 +  }
 +}
+diff --git a/chrome/browser/about_flags.cc b/chrome/browser/about_flags.cc
+index 0b5b4d0e04..8e3cb43f4b 100644
+--- a/chrome/browser/about_flags.cc
++++ b/chrome/browser/about_flags.cc
+@@ -898,6 +898,8 @@ const FeatureEntry::FeatureParam kAudioBackendPulseAudio[] = {
+         { "audio-backend", "pulseaudio" }};
+ const FeatureEntry::FeatureParam kAudioBackendSndio[] = {
+         { "audio-backend", "sndio" }};
++const FeatureEntry::FeatureParam kAudioBackendAudioIO[] = {
++        { "audio-backend", "audioio" }};
+ const FeatureEntry::FeatureParam kAudioBackendAlsa[] = {
+         { "audio-backend", "alsa" }};
+ const FeatureEntry::FeatureVariation
+@@ -908,6 +910,9 @@ const FeatureEntry::FeatureVariation
+         {"using sndio by default if available", kAudioBackendSndio,
+          std::size(kAudioBackendSndio),
+          nullptr},
++        {"using audioio by default if available", kAudioBackendAudioIO,
++         std::size(kAudioBackendAudioIO),
++         nullptr},
+         {"using ALSA by default if available", kAudioBackendAlsa,
+          std::size(kAudioBackendAlsa),
+          nullptr}};
 diff --git a/chrome/browser/extensions/api/runtime/chrome_runtime_api_delegate.cc b/chrome/browser/extensions/api/runtime/chrome_runtime_api_delegate.cc
 index ce049dc56a..12f40cb6eb 100644
 --- a/chrome/browser/extensions/api/runtime/chrome_runtime_api_delegate.cc
@@ -1046,18 +1069,18 @@ index ce049dc56a..12f40cb6eb 100644
      NOTREACHED_IN_MIGRATION() << "Platform not supported: " << os;
      return false;
 diff --git a/chrome/browser/flag_descriptions.cc b/chrome/browser/flag_descriptions.cc
-index f91c23b3cb..a58c4b14f1 100644
+index f91c23b3cb..92f083bcba 100644
 --- a/chrome/browser/flag_descriptions.cc
 +++ b/chrome/browser/flag_descriptions.cc
-@@ -8163,7 +8163,7 @@ const char kAudioBackendName[] =
+@@ -8163,6 +8163,8 @@ const char kAudioBackendName[] =
  const char kAudioBackendDescription[] =
  #if BUILDFLAG(IS_OPENBSD)
      "Select the desired audio backend to use. The default is sndio.";
--#elif BUILDFLAG(IS_FREEBSD)
-+#elif BUILDFLAG(IS_FREEBSD) || BUILDFLAG(IS_NETBSD)
++#if BUILDFLAG(IS_NETBSD)
++    "Select the desired audio backend to use. The default is audioio.";
+ #elif BUILDFLAG(IS_FREEBSD)
      "Select the desired audio backend to use. The default will automatically "
      "enumerate through the supported backends.";
- #endif
 diff --git a/chrome/common/chrome_paths.cc b/chrome/common/chrome_paths.cc
 index a37eeb4307..7a33810139 100644
 --- a/chrome/common/chrome_paths.cc
@@ -1338,8 +1361,977 @@ index 4d13e697a5..dbb32d43b2 100644
  
      // We currently only allow overriding the baked-in values for the
      // default OAuth2 client ID and secret using a command-line
+diff --git a/media/BUILD.gn b/media/BUILD.gn
+index c6ed283764..0225f0bfca 100644
+--- a/media/BUILD.gn
++++ b/media/BUILD.gn
+@@ -99,6 +99,9 @@ config("media_config") {
+   if (use_sndio) {
+     defines += [ "USE_SNDIO" ]
+   }
++#  if (use_audioio) {
++#    defines += [ "USE_AUDIOIO" ]
++#  }
+   if (use_cras) {
+     defines += [ "USE_CRAS" ]
+   }
+diff --git a/media/audio/BUILD.gn b/media/audio/BUILD.gn
+index 93fdb676a0..f3e83845b4 100644
+--- a/media/audio/BUILD.gn
++++ b/media/audio/BUILD.gn
+@@ -274,7 +274,7 @@ source_set("audio") {
+     sources += [ "linux/audio_manager_linux.cc" ]
+   }
+ 
+-  if (is_bsd) {
++  if (is_bsd && !is_netbsd) {
+     sources += [ "sndio/audio_manager_sndio.cc" ]
+   }
+ 
+@@ -288,6 +288,17 @@ source_set("audio") {
+     ]
+    }
+ 
++  if (use_audioio) {
++    sources += [
++      "audioio/audio_manager_audioio.cc"
++      "audioio/audio_manager_audioio.h"
++      "audioio/audioio_input.cc",
++      "audioio/audioio_input.h",
++      "audioio/audioio_output.cc",
++      "audioio/audioio_output.h"
++    ]
++   }
++
+   if (use_alsa) {
+     libs += [ "asound" ]
+     sources += [
+diff --git a/media/audio/audioio/audio_manager_audioio.cc b/media/audio/audioio/audio_manager_audioio.cc
+new file mode 100644
+index 0000000000..193c659de8
+--- /dev/null
++++ b/media/audio/audioio/audio_manager_audioio.cc
+@@ -0,0 +1,176 @@
++// Copyright (c) 2012 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "base/command_line.h"
++#include "base/metrics/histogram_macros.h"
++#include "base/memory/ptr_util.h"
++
++#include "media/audio/sndio/audio_manager_sndio.h"
++
++#include "media/audio/audio_device_description.h"
++#include "media/audio/audio_output_dispatcher.h"
++#include "media/audio/audioio/audioio_input.h"
++#include "media/audio/audioio/audioio_output.h"
++#include "media/audio/fake_audio_manager.h"
++#include "media/base/limits.h"
++#include "media/base/media_switches.h"
++
++namespace media {
++
++// Maximum number of output streams that can be open simultaneously.
++static const int kMaxOutputStreams = 50;
++
++// Default sample rate for input and output streams.
++static const int kDefaultSampleRate = 48000;
++
++void AddDefaultDevice(AudioDeviceNames* device_names) {
++  DCHECK(device_names->empty());
++  device_names->push_front(AudioDeviceName::CreateDefault());
++}
++
++bool AudioManagerAudioIO::HasAudioOutputDevices() {
++  return true;
++}
++
++bool AudioManagerAudioIO::HasAudioInputDevices() {
++  return true;
++}
++
++void AudioManagerAudioIO::GetAudioInputDeviceNames(
++    AudioDeviceNames* device_names) {
++  DCHECK(device_names->empty());
++  AddDefaultDevice(device_names);
++}
++
++void AudioManagerAudioIO::GetAudioOutputDeviceNames(
++    AudioDeviceNames* device_names) {
++  AddDefaultDevice(device_names);
++}
++
++const char* AudioManagerAudioIO::GetName() {
++  return "AudioIO";
++}
++
++AudioParameters AudioManagerAudioIO::GetInputStreamParameters(
++    const std::string& device_id) {
++  static const int kDefaultInputBufferSize = 1024;
++
++  int user_buffer_size = GetUserBufferSize();
++  int buffer_size = user_buffer_size ?
++      user_buffer_size : kDefaultInputBufferSize;
++
++  return AudioParameters(
++      AudioParameters::AUDIO_PCM_LOW_LATENCY, ChannelLayoutConfig::Stereo(),
++      kDefaultSampleRate, buffer_size);
++}
++
++AudioManagerAudioIO::AudioManagerAudioIO(std::unique_ptr<AudioThread> audio_thread,
++                                         AudioLogFactory* audio_log_factory)
++    : AudioManagerBase(std::move(audio_thread),
++                       audio_log_factory) {
++  DLOG(WARNING) << "AudioManagerAudioIO";
++  SetMaxOutputStreamsAllowed(kMaxOutputStreams);
++}
++
++AudioManagerAudioIO::~AudioManagerAudioIO() = default;
++
++AudioOutputStream* AudioManagerAudioIO::MakeLinearOutputStream(
++    const AudioParameters& params,
++    const LogCallback& log_callback) {
++  DCHECK_EQ(AudioParameters::AUDIO_PCM_LINEAR, params.format());
++  return MakeOutputStream(params);
++}
++
++AudioOutputStream* AudioManagerAudioIO::MakeLowLatencyOutputStream(
++    const AudioParameters& params,
++    const std::string& device_id,
++    const LogCallback& log_callback) {
++  DLOG_IF(ERROR, !device_id.empty()) << "Not implemented!";
++  DCHECK_EQ(AudioParameters::AUDIO_PCM_LOW_LATENCY, params.format());
++  return MakeOutputStream(params);
++}
++
++AudioInputStream* AudioManagerAudioIO::MakeLinearInputStream(
++    const AudioParameters& params,
++    const std::string& device_id,
++    const LogCallback& log_callback) {
++  DCHECK_EQ(AudioParameters::AUDIO_PCM_LINEAR, params.format());
++  return MakeInputStream(params);
++}
++
++AudioInputStream* AudioManagerAudioIO::MakeLowLatencyInputStream(
++    const AudioParameters& params,
++    const std::string& device_id,
++    const LogCallback& log_callback) {
++  DCHECK_EQ(AudioParameters::AUDIO_PCM_LOW_LATENCY, params.format());
++  return MakeInputStream(params);
++}
++
++AudioParameters AudioManagerAudioIO::GetPreferredOutputStreamParameters(
++    const std::string& output_device_id,
++    const AudioParameters& input_params) {
++  // TODO(tommi): Support |output_device_id|.
++  DLOG_IF(ERROR, !output_device_id.empty()) << "Not implemented!";
++  static const int kDefaultOutputBufferSize = 2048;
++
++  ChannelLayoutConfig channel_layout_config = ChannelLayoutConfig::Stereo();
++  int sample_rate = kDefaultSampleRate;
++  int buffer_size = kDefaultOutputBufferSize;
++  if (input_params.IsValid()) {
++    sample_rate = input_params.sample_rate();
++    channel_layout_config = input_params.channel_layout_config();
++    buffer_size = std::min(buffer_size, input_params.frames_per_buffer());
++  }
++
++  int user_buffer_size = GetUserBufferSize();
++  if (user_buffer_size)
++    buffer_size = user_buffer_size;
++
++  return AudioParameters(
++      AudioParameters::AUDIO_PCM_LOW_LATENCY,
++      channel_layout_config, sample_rate, buffer_size);
++}
++
++AudioInputStream* AudioManagerAudioIO::MakeInputStream(
++    const AudioParameters& params) {
++  DLOG(WARNING) << "MakeInputStream";
++  return new AudioIOAudioInputStream(this,
++             AudioDeviceDescription::kDefaultDeviceId, params);
++}
++
++AudioOutputStream* AudioManagerAudioIO::MakeOutputStream(
++    const AudioParameters& params) {
++  DLOG(WARNING) << "MakeOutputStream";
++  return new AudioIOAudioOutputStream(params, this);
++}
++#endif
++
++std::unique_ptr<media::AudioManager> CreateAudioManager(
++    std::unique_ptr<AudioThread> audio_thread,
++    AudioLogFactory* audio_log_factory) {
++  DLOG(WARNING) << "CreateAudioManager";
++
++  auto _ab = kAudioBackendParam.Get();
++
++  // For testing allow audio output to be disabled.
++  if (base::CommandLine::ForCurrentProcess()->HasSwitch(
++          switches::kDisableAudioOutput) ||
++	  !base::FeatureList::IsEnabled(media::kAudioBackend)) {
++    return std::make_unique<FakeAudioManager>(std::move(audio_thread),
++                                              audio_log_factory);
++  }
++
++  if (_ab == AudioBackend::kAudioIO) {
++    return std::make_unique<AudioManagerAudioIO>(std::move(audio_thread),
++                                              audio_log_factory);
++  } else {
++    LOG(WARNING) << "Falling back to FAKE audio output. AudioIO is not "
++                    "available or could not be initialized.";
++  }
++
++  return std::make_unique<FakeAudioManager>(std::move(audio_thread),
++                                            audio_log_factory);
++}
++
++}  // namespace media
+diff --git a/media/audio/audioio/audio_manager_audioio.h b/media/audio/audioio/audio_manager_audioio.h
+new file mode 100644
+index 0000000000..98860b73f4
+--- /dev/null
++++ b/media/audio/audioio/audio_manager_audioio.h
+@@ -0,0 +1,91 @@
++// Copyright (c) 2012 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef MEDIA_AUDIO_AUDIOIO_AUDIO_MANAGER_AUDIOIO_H_
++#define MEDIA_AUDIO_AUDIOIO_AUDIO_MANAGER_AUDIOIO_H_
++
++#include <set>
++
++#include "base/compiler_specific.h"
++#include "base/memory/ref_counted.h"
++#include "base/threading/thread.h"
++#include "media/audio/audio_manager_base.h"
++
++namespace media {
++
++class MEDIA_EXPORT AudioManagerAudioIO : public AudioManagerBase {
++ public:
++  AudioManagerAudioIO(std::unique_ptr<AudioThread> audio_thread,
++                   AudioLogFactory* audio_log_factory);
++
++  AudioManagerAudioIO(const AudioManagerAudioIO&) = delete;
++  AudioManagerAudioIO& operator=(const AudioManagerAudioIO&) = delete;
++
++  ~AudioManagerAudioIO() override;
++
++  // Implementation of AudioManager.
++  // Returns true if the OS reports existence of audio devices. This does not
++  // guarantee that the existing devices support all formats and sample rates.
++  bool HasAudioOutputDevices() override;
++  // Returns true if the OS reports existence of audio recording devices. This
++  // does not guarantee that the existing devices support all formats and
++  // sample rates.
++  bool HasAudioInputDevices() override;
++  // Appends a list of available input devices to |device_names|,
++  // which must initially be empty.
++  void GetAudioInputDeviceNames(AudioDeviceNames* device_names) override;
++  // Appends a list of available output devices to |device_names|,
++  // which must initially be empty.
++  void GetAudioOutputDeviceNames(AudioDeviceNames* device_names) override;
++  // Returns the input hardware audio parameters of the specific device
++  // for opening input streams. Each AudioManager needs to implement their own
++  // version of this interface.
++  AudioParameters GetInputStreamParameters(const std::string& device_id) override;
++  // Gets the name of the audio manager (e.g., Windows, Mac, PulseAudio).
++  const char* GetName() override;
++
++  // Implementation of AudioManagerBase.
++  // Creates the output stream for the |AUDIO_PCM_LINEAR| format. The legacy
++  // name is also from |AUDIO_PCM_LINEAR|.
++  AudioOutputStream* MakeLinearOutputStream(
++      const AudioParameters& params,
++      const LogCallback& log_callback) override;
++  // Creates the output stream for the |AUDIO_PCM_LOW_LATENCY| format.
++  AudioOutputStream* MakeLowLatencyOutputStream(
++      const AudioParameters& params,
++      const std::string& device_id,
++      const LogCallback& log_callback) override;
++  // Creates the input stream for the |AUDIO_PCM_LINEAR| format. The legacy
++  // name is also from |AUDIO_PCM_LINEAR|.
++  AudioInputStream* MakeLinearInputStream(
++      const AudioParameters& params,
++      const std::string& device_id,
++      const LogCallback& log_callback) override;
++  // Creates the input stream for the |AUDIO_PCM_LOW_LATENCY| format.
++  AudioInputStream* MakeLowLatencyInputStream(
++      const AudioParameters& params,
++      const std::string& device_id,
++      const LogCallback& log_callback) override;
++
++ protected:
++  // Returns the preferred hardware audio output parameters for opening output
++  // streams. If the users inject a valid |input_params|, each AudioManager
++  // will decide if they should return the values from |input_params| or the
++  // default hardware values. If the |input_params| is invalid, it will return
++  // the default hardware audio parameters.
++  // If |output_device_id| is empty, the implementation must treat that as
++  // a request for the default output device.
++  AudioParameters GetPreferredOutputStreamParameters(
++      const std::string& output_device_id,
++      const AudioParameters& input_params) override;
++
++ private:
++  // Called by MakeLinearOutputStream and MakeLowLatencyOutputStream.
++  AudioOutputStream* MakeOutputStream(const AudioParameters& params);
++  AudioInputStream* MakeInputStream(const AudioParameters& params);
++};
++
++}  // namespace media
++
++#endif  // MEDIA_AUDIO_AUDIOIO_AUDIO_MANAGER_AUDIOIO_H_
+diff --git a/media/audio/audioio/audioio_input.cc b/media/audio/audioio/audioio_input.cc
+new file mode 100644
+index 0000000000..dbd0f1972e
+--- /dev/null
++++ b/media/audio/audioio/audioio_input.cc
+@@ -0,0 +1,224 @@
++// Copyright 2013 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "base/logging.h"
++#include "media/base/audio_timestamp_helper.h"
++#include "media/audio/audioio/audio_manager_audioio.h"
++#include "media/audio/audio_manager.h"
++#include "media/audio/audioio/audioio_input.h"
++
++namespace media {
++
++static const SampleFormat kSampleFormat = kSampleFormatS16;
++
++void *AudioIOAudioInputStream::ThreadEntry(void *arg) {
++  AudioIOAudioInputStream* self = static_cast<AudioIOAudioInputStream*>(arg);
++
++  self->ThreadLoop();
++  return NULL;
++}
++
++AudioIOAudioInputStream::AudioIOAudioInputStream(AudioManagerBase* manager,
++                                             const std::string& device_name,
++                                             const AudioParameters& params)
++    : manager(manager),
++      params(params),
++      audio_bus(AudioBus::Create(params)),
++      state(kClosed) {
++}
++
++AudioIOAudioInputStream::~AudioIOAudioInputStream() {
++  if (state != kClosed)
++    Close();
++}
++
++// Open the stream and prepares it for recording. Call Start() to actually
++// begin recording.
++AudioInputStream::OpenOutcome AudioIOAudioInputStream::Open() {
++  struct audio_info info;
++
++  if (state != kClosed) {
++    return OpenOutcome::kFailed;
++  }
++
++  if (params.format() != AudioParameters::AUDIO_PCM_LINEAR &&
++      params.format() != AudioParameters::AUDIO_PCM_LOW_LATENCY) {
++    LOG(WARNING) << "Unsupported audio format.";
++    return OpenOutcome::kFailed;
++  }
++
++  AUDIO_INITINFO(&info);
++  info.mode = AUMODE_RECORD;
++  info.record.sample_rate = params.sample_rate();
++  info.record.channels = params.channels();
++  info.record.precision = SampleFormatToBitsPerChannel(kSampleFormat);
++  info.record.encoding = AUDIO_ENCODING_SLINEAR;
++  info.record.pause = true;
++
++  if ((fd = open("/dev/audio", O_WRONLY)) < 0) {
++    LOG(ERROR) << "Couldn't open audio device.";
++    return OpenOutcome::kFailed;
++  }
++
++  if (ioctl(fd, AUDIO_SETINFO, &info) < 0) {
++    goto error;
++  }
++
++  if (ioctl(fd, AUDIO_GETINFO, &info) < 0) {
++    goto error;
++  }
++
++  state = kStopped;
++  buffer = new char[audio_bus->frames() * params.GetBytesPerFrame(kSampleFormat)];
++  return OpenOutcome::kSuccess;
++error:
++  close(fd);
++  LOG(ERROR) << "Couldn't set audio parameters.";
++  return OpenOutcome::kFailed;
++}
++
++// Starts recording audio and generating AudioInputCallback::OnData().
++// The input stream does not take ownership of this callback.
++void AudioIOAudioInputStream::Start(AudioInputCallback* cb) {
++  struct audio_info info;
++
++  StartAgc();
++
++  (void)ioctl(fd, AUDIO_FLUSH, NULL);
++  if (ioctl(fd, AUDIO_GETINFO, &info) < 0) {
++    goto error;
++  }
++  info.record.pause = false;
++  if (ioctl(fd, AUDIO_SETINFO, &info) < 0 ) {
++    goto error;
++  }
++
++  state = kRunning;
++  hw_delay = 0;
++  callback = cb;
++
++  if (pthread_create(&thread, NULL, &ThreadEntry, this) != 0) {
++    LOG(ERROR) << "Failed to create real-time thread for recording.";
++    goto error;
++  }
++
++  return;
++error:
++  LOG(ERROR) << "Failed to start playing audio.";
++  state = kStopped
++}
++
++// Stops recording audio. Effect might not be instantaneous as there could be
++// pending audio callbacks in the queue which will be issued first before
++// recording stops.
++void AudioIOAudioInputStream::Stop() {
++  struct audio_info info;
++
++  if (state == kStopped) {
++    return;
++  }
++  pthread_join(thread, NULL);
++  (void)ioctl(fd, AUDIO_FLUSH, NULL);
++  if (ioctl(fd, AUDIO_GETINFO, &info) < 0) {
++    goto error;
++  }
++  info.record.pause = true;
++  if (ioctl(fd, AUDIO_SETINFO, &info) < 0 ) {
++    goto error;
++  }
++  state = kStopped;
++  StopAgc();
++  return;
++error:
++  LOG(ERROR) << "Failed to stop recording audio.";
++  return;
++}
++
++// Close the stream. This also generates AudioInputCallback::OnClose(). This
++// should be the last call made on this object.
++void AudioIOAudioInputStream::Close() {
++  if (state == kClosed) {
++    goto release;
++  }
++  if (state == kRunning) {
++    Stop();
++  }
++  (void)ioctl(fd, AUDIO_FLUSH, NULL);
++  close(fd);
++  state = kClosed;
++  delete [] buffer;
++
++release:
++  manager->ReleaseOutputStream(this);  // Calls the destructor
++}
++
++// Returns the maximum microphone analog volume or 0.0 if device does not
++// have volume control.
++double AudioIOAudioInputStream::GetMaxVolume() {
++  // Not supported
++  return 0.0;
++}
++
++// Sets the microphone analog volume, with range [0, max_volume] inclusive.
++void AudioIOAudioInputStream::SetVolume(double volume) {
++  // Not supported. Do nothing.
++}
++
++// Returns the microphone analog volume, with range [0, max_volume] inclusive.
++double AudioIOAudioInputStream::GetVolume() {
++  // Not supported.
++  return 0.0;
++}
++
++// Returns the current muting state for the microphone.
++bool AudioIOAudioInputStream::IsMuted() {
++  // Not supported.
++  return false;
++}
++
++// Sets the output device from which to cancel echo, if echo cancellation is
++// supported by this stream. E.g. called by WebRTC when it changes playback
++// devices.
++void AudioIOAudioInputStream::SetOutputDeviceForAec(
++    const std::string& output_device_id) {
++  // Not supported.
++}
++
++void AudioIOAudioInputStream::ThreadLoop(void) {
++  size_t todo, n;
++  char *data;
++  unsigned int nframes;
++  double normalized_volume = 0.0;
++
++  nframes = audio_bus->frames();
++
++  while (state == kRunning && !sio_eof(hdl)) {
++
++    GetAgcVolume(&normalized_volume);
++
++    // read one block
++    todo = nframes * params.GetBytesPerFrame(kSampleFormat);
++    data = buffer;
++    while (todo > 0) {
++      n = read(fd, data, todo);
++      if (n == 0)
++        return;	// unrecoverable I/O error
++      todo -= n;
++      data += n;
++    }
++    hw_delay -= nframes;
++
++    // convert frames count to TimeDelta
++    const base::TimeDelta delay = AudioTimestampHelper::FramesToTime(hw_delay,
++      params.sample_rate());
++
++    // push into bus
++    audio_bus->FromInterleaved<SignedInt16SampleTypeTraits>(reinterpret_cast<int16_t*>(buffer), nframes);
++
++    // invoke callback
++    callback->OnData(audio_bus.get(), base::TimeTicks::Now() - delay, 1., {});
++  }
++}
++
++}  // namespace media
+diff --git a/media/audio/audioio/audioio_input.h b/media/audio/audioio/audioio_input.h
+new file mode 100644
+index 0000000000..9960158dac
+--- /dev/null
++++ b/media/audio/audioio/audioio_input.h
+@@ -0,0 +1,89 @@
++// Copyright 2013 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef MEDIA_AUDIO_AUDIOIO_AUDIOIO_INPUT_H_
++#define MEDIA_AUDIO_AUDIOIO_AUDIOIO_INPUT_H_
++
++#include <stdint.h>
++#include <string>
++#include <sys/audioio.h>
++
++#include "base/compiler_specific.h"
++#include "base/memory/weak_ptr.h"
++#include "base/time/time.h"
++#include "media/audio/agc_audio_stream.h"
++#include "media/audio/audio_io.h"
++#include "media/audio/audio_device_description.h"
++#include "media/base/audio_parameters.h"
++
++namespace media {
++
++class AudioManagerBase;
++
++// Implementation of AudioOutputStream using audio(4)
++class AudioIOAudioInputStream : public AgcAudioStream<AudioInputStream> {
++ public:
++  // Pass this to the constructor if you want to attempt auto-selection
++  // of the audio recording device.
++  static const char kAutoSelectDevice[];
++
++  // Create a PCM Output stream for the SNDIO device identified by
++  // |device_name|. If unsure of what to use for |device_name|, use
++  // |kAutoSelectDevice|.
++  AudioIOAudioInputStream(AudioManagerBase* audio_manager,
++                     const std::string& device_name,
++                     const AudioParameters& params);
++
++  AudioIOAudioInputStream(const AudioIOAudioInputStream&) = delete;
++  AudioIOAudioInputStream& operator=(const AudioIOAudioInputStream&) = delete;
++
++  ~AudioIOAudioInputStream() override;
++
++  // Implementation of AudioInputStream.
++  OpenOutcome Open() override;
++  void Start(AudioInputCallback* callback) override;
++  void Stop() override;
++  void Close() override;
++  double GetMaxVolume() override;
++  void SetVolume(double volume) override;
++  double GetVolume() override;
++  bool IsMuted() override;
++  void SetOutputDeviceForAec(const std::string& output_device_id) override;
++
++ private:
++
++  enum StreamState {
++    kClosed,            // Not opened yet
++    kStopped,           // Device opened, but not started yet
++    kRunning,           // Started, device playing
++  };
++
++  // C-style call-backs
++  static void* ThreadEntry(void *arg);
++
++  // Continuously moves data from the device to the consumer
++  void ThreadLoop();
++  // Our creator, the audio manager needs to be notified when we close.
++  AudioManagerBase* manager;
++  // Parameters of the source
++  AudioParameters params;
++  // We store data here for consumer
++  std::unique_ptr<AudioBus> audio_bus;
++  // Call-back that consumes recorded data
++  AudioInputCallback* callback;  // Valid during a recording session.
++  // Handle of the audio device
++  int fd;
++  // Current state of the stream
++  enum StreamState state;
++  // High priority thread running ThreadLoop()
++  pthread_t thread;
++  // Number of frames buffered in the hardware
++  int hw_delay;
++  // Temporary buffer
++  char* buffer;
++};
++
++}  // namespace media
++
++#endif  // MEDIA_AUDIO_AUDIOIO_AUDIOIO_INPUT_H_
+diff --git a/media/audio/audioio/audioio_output.cc b/media/audio/audioio/audioio_output.cc
+new file mode 100644
+index 0000000000..4cb8598c85
+--- /dev/null
++++ b/media/audio/audioio/audioio_output.cc
+@@ -0,0 +1,227 @@
++// Copyright (c) 2012 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "base/logging.h"
++#include "base/time/time.h"
++#include "base/time/default_tick_clock.h"
++#include "media/audio/audio_manager_base.h"
++#include "media/base/audio_timestamp_helper.h"
++#include "media/audio/audioio/audioio_output.h"
++
++namespace media {
++
++static const SampleFormat kSampleFormat = kSampleFormatS16;
++
++void *AudioIOAudioOutputStream::ThreadEntry(void *arg) {
++  AudioIOAudioOutputStream* self = static_cast<AudioIOAudioOutputStream*>(arg);
++
++  self->ThreadLoop();
++  return NULL;
++}
++
++AudioIOAudioOutputStream::AudioIOAudioOutputStream(const AudioParameters& params,
++                                               AudioManagerBase* manager)
++    : manager(manager),
++      params(params),
++      audio_bus(AudioBus::Create(params)),
++      state(kClosed),
++      mutex(PTHREAD_MUTEX_INITIALIZER) {
++}
++
++AudioIOAudioOutputStream::~AudioIOAudioOutputStream() {
++  if (state != kClosed) {
++    Close();
++  }
++}
++
++// Open the stream. false is returned if the stream cannot be opened.  Open()
++// must always be followed by a call to Close() even if Open() fails
++bool AudioIOAudioOutputStream::Open() {
++  struct audio_info info;
++
++  if (params.format() != AudioParameters::AUDIO_PCM_LINEAR &&
++      params.format() != AudioParameters::AUDIO_PCM_LOW_LATENCY) {
++    LOG(WARNING) << "Unsupported audio format.";
++    return false;
++  }
++
++  AUDIO_INITINFO(&info);
++  info.mode = AUMODE_PLAY;
++  info.play.sample_rate = params.sample_rate();
++  info.play.channels = params.channels();
++  info.play.precision = SampleFormatToBitsPerChannel(kSampleFormat);
++  info.play.encoding = AUDIO_ENCODING_SLINEAR;
++  info.play.pause = true;
++
++  if ((fd = open("/dev/audio", O_WRONLY)) < 0) {
++    LOG(ERROR) << "Couldn't open audio device.";
++    return false;
++  }
++
++  if (ioctl(fd, AUDIO_SETINFO, &info) < 0) {
++    goto error;
++  }
++
++  if (ioctl(fd, AUDIO_GETINFO, &info) < 0) {
++    goto error;
++  }
++
++  state = kStopped;
++  volpending = 0;
++  vol = AUDIO_MAX_GAIN;
++  buffer = new char[audio_bus->frames() * params.GetBytesPerFrame(kSampleFormat)];
++  return true;
++
++error:
++  close(fd);
++  LOG(ERROR) << "Couldn't set audio parameters.";
++  return false;
++}
++
++// Close the stream.
++// After calling this method, the object should not be used anymore.
++// After calling this method, no further AudioSourceCallback methods
++// should be called on the callback object that was supplied to Start()
++// by the AudioOutputStream implementation.
++void AudioIOAudioOutputStream::Close() {
++  if (state == kClosed) {
++    goto release;
++  }
++  if (state == kRunning) {
++    Stop();
++  }
++  (void)ioctl(fd, AUDIO_FLUSH, NULL);
++  close(fd);
++  state = kClosed;
++  delete [] buffer;
++
++release:
++  manager->ReleaseOutputStream(this);  // Calls the destructor
++}
++
++// Starts playing audio and generating AudioSourceCallback::OnMoreData().
++// Since implementor of AudioOutputStream may have internal buffers, right
++// after calling this method initial buffers are fetched.
++//
++// The output stream does not take ownership of this callback.
++void AudioIOAudioOutputStream::Start(AudioSourceCallback* callback) {
++  struct audio_info info;
++
++  (void)ioctl(fd, AUDIO_FLUSH, NULL);
++  if (ioctl(fd, AUDIO_GETINFO, &info) < 0) {
++    goto error;
++  }
++  info.play.pause = false;
++  if (ioctl(fd, AUDIO_SETINFO, &info) < 0 ) {
++    goto error;
++  }
++
++  state = kRunning;
++  hw_delay = 0;
++  source = callback;
++  
++  if (pthread_create(&thread, NULL, &ThreadEntry, this) != 0) {
++    LOG(ERROR) << "Failed to create real-time thread.";
++    goto error;
++  }
++
++  return;
++error:
++  LOG(ERROR) << "Failed to start playing audio.";
++  state = kStopped;
++}
++
++// Stops playing audio.  The operation completes synchronously meaning that
++// once Stop() has completed executing, no further callbacks will be made to
++// the callback object that was supplied to Start() and it can be safely
++// deleted. Stop() may be called in any state, e.g. before Start() or after
++// Stop().
++void AudioIOAudioOutputStream::Stop() {
++  struct audio_info info;
++
++  if (state == kStopped) {
++    return;
++  }
++  pthread_join(thread, NULL);
++  (void)ioctl(fd, AUDIO_FLUSH, NULL);
++  if (ioctl(fd, AUDIO_GETINFO, &info) < 0) {
++    goto error;
++  }
++  info.play.pause = true;
++  if (ioctl(fd, AUDIO_SETINFO, &info) < 0 ) {
++    goto error;
++  }
++  state = kStopped;
++  return;
++error:
++  LOG(ERROR) << "Failed to stop playing audio.";
++  return;
++}
++
++// Sets the relative volume, with range [0.0, 1.0] inclusive.
++void AudioIOAudioOutputStream::SetVolume(double v) {
++  pthread_mutex_lock(&mutex);
++  vol = v * AUDIO_MAX_GAIN;
++  volpending = 1;
++  pthread_mutex_unlock(&mutex);
++}
++
++// Gets the relative volume, with range [0.0, 1.0] inclusive.
++void AudioIOAudioOutputStream::GetVolume(double* v) {
++  pthread_mutex_lock(&mutex);
++  *v = vol * (1. / AUDIO_MAX_GAIN);
++  pthread_mutex_unlock(&mutex);
++}
++
++// Flushes the stream. This should only be called if the stream is not
++// playing. (i.e. called after Stop or Open)
++
++// This stream is always used with sub second buffer sizes, where it's
++// sufficient to simply always flush upon Start().
++void AudioIOAudioOutputStream::Flush() {}
++
++void AudioIOAudioOutputStream::ThreadLoop(void) {
++  int avail, count;
++  struct audio_info info;
++
++  while (state == kRunning) {
++    // Update volume if needed
++    pthread_mutex_lock(&mutex);
++    if (volpending) {
++      volpending = 0;
++      if (ioctl(fd, AUDIO_GETINFO, &info) < 0) {
++        LOG(ERROR) << "Failed to get audio info.";
++      } else {
++        info.play.gain = vol;
++        if (ioctl(fd, AUDIO_SETINFO, &info) < 0 ) {
++          LOG(ERROR) << "Failed to set audio volume.";
++        }
++      }
++    }
++    pthread_mutex_unlock(&mutex);
++
++    // Get data to play
++    const base::TimeDelta delay = AudioTimestampHelper::FramesToTime(hw_delay,
++	                                                                   params.sample_rate());
++    count = source->OnMoreData(delay, base::TimeTicks::Now(), {}, audio_bus.get());
++    audio_bus->ToInterleaved<SignedInt16SampleTypeTraits>(count, reinterpret_cast<int16_t*>(buffer));
++    if (count == 0) {
++      // We have to submit something to the device
++      count = audio_bus->frames();
++      memset(buffer, 0, count * params.GetBytesPerFrame(kSampleFormat));
++      LOG(WARNING) << "No data to play, running empty cycle.";
++    }
++
++    // Submit data to the device
++    avail = count * params.GetBytesPerFrame(kSampleFormat);
++    if (write(fd, buffer, avail) < 0) {
++      break;
++    }
++
++    // Update hardware pointer
++    hw_delay += count;
++  }
++}
++
++}  // namespace media
+diff --git a/media/audio/audioio/audioio_output.h b/media/audio/audioio/audioio_output.h
+new file mode 100644
+index 0000000000..8d760f993e
+--- /dev/null
++++ b/media/audio/audioio/audioio_output.h
+@@ -0,0 +1,81 @@
++// Copyright (c) 2012 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef MEDIA_AUDIO_AUDIOIO_AUDIOIO_OUTPUT_H_
++#define MEDIA_AUDIO_AUDIOIO_AUDIOIO_OUTPUT_H_
++
++#include <pthread.h>
++#include <sys/audioio.h>
++
++#include "base/time/tick_clock.h"
++#include "base/time/time.h"
++#include "media/audio/audio_io.h"
++
++namespace media {
++
++class AudioManagerBase;
++
++// Implementation of AudioOutputStream using audio(4)
++class AudioIOAudioOutputStream : public AudioOutputStream {
++ public:
++  // The manager is creating this object
++  AudioIOAudioOutputStream(const AudioParameters& params,
++                         AudioManagerBase* manager);
++
++  AudioIOAudioOutputStream(const AudioIOAudioOutputStream&) = delete;
++  AudioIOAudioOutputStream& operator=(const AudioIOAudioOutputStream&) = delete;
++
++  virtual ~AudioIOAudioOutputStream();
++
++  // Implementation of AudioOutputStream.
++  bool Open() override;
++  void Close() override;
++  void Start(AudioSourceCallback* callback) override;
++  void Stop() override;
++  void SetVolume(double volume) override;
++  void GetVolume(double* volume) override;
++  void Flush() override;
++
++ private:
++  enum StreamState {
++    kClosed,            // Not opened yet
++    kStopped,           // Device opened, but not started yet
++    kRunning,           // Started, device playing
++  };
++
++  // C-style call-backs
++  static void* ThreadEntry(void *arg);
++
++  // Continuously moves data from the producer to the device
++  void ThreadLoop(void);
++
++  // Our creator, the audio manager needs to be notified when we close.
++  AudioManagerBase* manager;
++  // Parameters of the source
++  AudioParameters params;
++  // Source stores data here
++  std::unique_ptr<AudioBus> audio_bus;
++  // Call-back that produces data to play
++  AudioSourceCallback* source;
++  // Handle of the audio device
++  int fd;
++  // Current state of the stream
++  enum StreamState state;
++  // High priority thread running ThreadLoop()
++  pthread_t thread;
++  // Protects vol, volpending and hw_delay
++  pthread_mutex_t mutex;
++  // Current volume in the AUDIO_MIN_GAIN..AUDIO_MAX_GAIN range
++  int vol;
++  // Set to 1 if volumes must be refreshed in the realtime thread
++  int volpending;
++  // Number of frames buffered in the hardware
++  int hw_delay;
++  // Temporary buffer
++  char* buffer;
++};
++
++}  // namespace media
++
++#endif  // MEDIA_AUDIO_AUDIOIO_AUDIOIO_OUTPUT_H_
 diff --git a/media/base/media_switches.cc b/media/base/media_switches.cc
-index 075957b79b..f540917e71 100644
+index 075957b79b..fff8b8e40d 100644
 --- a/media/base/media_switches.cc
 +++ b/media/base/media_switches.cc
 @@ -61,7 +61,7 @@ const char kReportVp9AsAnUnsupportedMimeType[] =
@@ -1351,17 +2343,25 @@ index 075957b79b..f540917e71 100644
  // The Alsa device to use when opening an audio input stream.
  const char kAlsaInputDevice[] = "alsa-input-device";
  // The Alsa device to use when opening an audio stream.
-@@ -397,7 +397,7 @@ const base::FeatureParam<AudioBackend>
+@@ -388,6 +388,7 @@ constexpr base::FeatureParam<AudioBackend>::Option
+     kAudioBackendOptions[] = {
+         {AudioBackend::kAuto,
+          "auto"},
++        {AudioBackend::kAudioIO, "audioio"},
+         {AudioBackend::kPulseAudio, "pulseaudio"},
+         {AudioBackend::kSndio, "sndio"},
+         {AudioBackend::kAlsa, "alsa"}};
+@@ -397,6 +398,8 @@ const base::FeatureParam<AudioBackend>
          &kAudioBackend, "audio-backend",
  #if BUILDFLAG(IS_OPENBSD)
          AudioBackend::kSndio,
--#elif BUILDFLAG(IS_FREEBSD)
-+#elif BUILDFLAG(IS_FREEBSD) || BUILDFLAG(IS_NETBSD)
++#elif BUILDFLAG(IS_NETBSD)
++        AudioBackend::kAudioIO,
+ #elif BUILDFLAG(IS_FREEBSD)
          AudioBackend::kAuto,
  #endif
-         &kAudioBackendOptions};
 diff --git a/media/base/media_switches.h b/media/base/media_switches.h
-index 206d0adaf7..7f9837be1b 100644
+index 206d0adaf7..6e115b9539 100644
 --- a/media/base/media_switches.h
 +++ b/media/base/media_switches.h
 @@ -44,7 +44,7 @@ MEDIA_EXPORT extern const char kDisableBackgroundMediaSuspend[];
@@ -1373,6 +2373,14 @@ index 206d0adaf7..7f9837be1b 100644
  MEDIA_EXPORT extern const char kAlsaInputDevice[];
  MEDIA_EXPORT extern const char kAlsaOutputDevice[];
  #endif
+@@ -331,6 +331,7 @@ MEDIA_EXPORT BASE_DECLARE_FEATURE(kPulseaudioLoopbackForScreenShare);
+ 
+ enum class AudioBackend {
+   kAuto,
++  kAudioIO,
+   kPulseAudio,
+   kSndio,
+   kAlsa
 diff --git a/media/capture/video/linux/fake_v4l2_impl.h b/media/capture/video/linux/fake_v4l2_impl.h
 index 8dc249424d..4adfa0cfb8 100644
 --- a/media/capture/video/linux/fake_v4l2_impl.h
@@ -1531,6 +2539,20 @@ index 84f5b3d38f..65b0f75fbe 100644
          else:
              raise ValueError(f"Unsupported platform: {platform.system()}")
  
+diff --git a/media/media_options.gni b/media/media_options.gni
+index 5682ed6291..5fc1101f5e 100644
+--- a/media/media_options.gni
++++ b/media/media_options.gni
+@@ -193,6 +193,9 @@ declare_args() {
+   # Enable runtime selection of sndio(7)
+   use_sndio = false
+ 
++  # Enable runtime selection of audio(4)
++  use_audioio = false
++
+   # Alsa should be used on all non-Android, non-Mac POSIX systems - with the
+   # exception of CastOS desktop builds.
+   #
 diff --git a/media/mojo/mojom/stable/BUILD.gn b/media/mojo/mojom/stable/BUILD.gn
 index 8c3d3bb7f6..f27c311fac 100644
 --- a/media/mojo/mojom/stable/BUILD.gn
