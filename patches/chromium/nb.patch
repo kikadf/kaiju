@@ -21025,7 +21025,7 @@ index d53c9a3e10..0225f0bfca 100644
      defines += [ "USE_CRAS" ]
    }
 diff --git a/media/audio/BUILD.gn b/media/audio/BUILD.gn
-index 90e093cd2d..f3e83845b4 100644
+index 90e093cd2d..1b388e24c3 100644
 --- a/media/audio/BUILD.gn
 +++ b/media/audio/BUILD.gn
 @@ -270,10 +270,35 @@ source_set("audio") {
@@ -21037,7 +21037,7 @@ index 90e093cd2d..f3e83845b4 100644
      sources += [ "linux/audio_manager_linux.cc" ]
    }
  
-+  if (is_bsd && !is_netbsd) {
++  if (is_bsd && !use_audioio) {
 +    sources += [ "sndio/audio_manager_sndio.cc" ]
 +  }
 +
