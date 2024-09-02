@@ -1376,7 +1376,7 @@ index c6ed283764..0225f0bfca 100644
      defines += [ "USE_CRAS" ]
    }
 diff --git a/media/audio/BUILD.gn b/media/audio/BUILD.gn
-index 93fdb676a0..1b388e24c3 100644
+index 93fdb676a0..e90e0091d4 100644
 --- a/media/audio/BUILD.gn
 +++ b/media/audio/BUILD.gn
 @@ -274,7 +274,7 @@ source_set("audio") {
@@ -1394,8 +1394,8 @@ index 93fdb676a0..1b388e24c3 100644
  
 +  if (use_audioio) {
 +    sources += [
-+      "audioio/audio_manager_audioio.cc"
-+      "audioio/audio_manager_audioio.h"
++      "audioio/audio_manager_audioio.cc",
++      "audioio/audio_manager_audioio.h",
 +      "audioio/audioio_input.cc",
 +      "audioio/audioio_input.h",
 +      "audioio/audioio_output.cc",
@@ -1408,10 +1408,10 @@ index 93fdb676a0..1b388e24c3 100644
      sources += [
 diff --git a/media/audio/audioio/audio_manager_audioio.cc b/media/audio/audioio/audio_manager_audioio.cc
 new file mode 100644
-index 0000000000..193c659de8
+index 0000000000..65cc567c76
 --- /dev/null
 +++ b/media/audio/audioio/audio_manager_audioio.cc
-@@ -0,0 +1,176 @@
+@@ -0,0 +1,175 @@
 +// Copyright (c) 2012 The Chromium Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
@@ -1420,7 +1420,7 @@ index 0000000000..193c659de8
 +#include "base/metrics/histogram_macros.h"
 +#include "base/memory/ptr_util.h"
 +
-+#include "media/audio/sndio/audio_manager_sndio.h"
++#include "media/audio/audioio/audio_manager_audioio.h"
 +
 +#include "media/audio/audio_device_description.h"
 +#include "media/audio/audio_output_dispatcher.h"
@@ -1558,7 +1558,6 @@ index 0000000000..193c659de8
 +  DLOG(WARNING) << "MakeOutputStream";
 +  return new AudioIOAudioOutputStream(params, this);
 +}
-+#endif
 +
 +std::unique_ptr<media::AudioManager> CreateAudioManager(
 +    std::unique_ptr<AudioThread> audio_thread,
@@ -1687,13 +1686,16 @@ index 0000000000..98860b73f4
 +#endif  // MEDIA_AUDIO_AUDIOIO_AUDIO_MANAGER_AUDIOIO_H_
 diff --git a/media/audio/audioio/audioio_input.cc b/media/audio/audioio/audioio_input.cc
 new file mode 100644
-index 0000000000..dbd0f1972e
+index 0000000000..bb531bac18
 --- /dev/null
 +++ b/media/audio/audioio/audioio_input.cc
-@@ -0,0 +1,224 @@
+@@ -0,0 +1,227 @@
 +// Copyright 2013 The Chromium Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
++
++#include <fcntl.h>
++#include <sys/ioctl.h>
 +
 +#include "base/logging.h"
 +#include "media/base/audio_timestamp_helper.h"
@@ -1799,7 +1801,7 @@ index 0000000000..dbd0f1972e
 +  return;
 +error:
 +  LOG(ERROR) << "Failed to start playing audio.";
-+  state = kStopped
++  state = kStopped;
 +}
 +
 +// Stops recording audio. Effect might not be instantaneous as there could be
@@ -1843,7 +1845,7 @@ index 0000000000..dbd0f1972e
 +  delete [] buffer;
 +
 +release:
-+  manager->ReleaseOutputStream(this);  // Calls the destructor
++  manager->ReleaseInputStream(this);  // Calls the destructor
 +}
 +
 +// Returns the maximum microphone analog volume or 0.0 if device does not
@@ -1886,7 +1888,7 @@ index 0000000000..dbd0f1972e
 +
 +  nframes = audio_bus->frames();
 +
-+  while (state == kRunning && !sio_eof(hdl)) {
++  while (state == kRunning) {
 +
 +    GetAgcVolume(&normalized_volume);
 +
@@ -2012,13 +2014,16 @@ index 0000000000..9960158dac
 +#endif  // MEDIA_AUDIO_AUDIOIO_AUDIOIO_INPUT_H_
 diff --git a/media/audio/audioio/audioio_output.cc b/media/audio/audioio/audioio_output.cc
 new file mode 100644
-index 0000000000..4cb8598c85
+index 0000000000..2f96923e5b
 --- /dev/null
 +++ b/media/audio/audioio/audioio_output.cc
-@@ -0,0 +1,227 @@
+@@ -0,0 +1,230 @@
 +// Copyright (c) 2012 The Chromium Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
++
++#include <fcntl.h>
++#include <sys/ioctl.h>
 +
 +#include "base/logging.h"
 +#include "base/time/time.h"
