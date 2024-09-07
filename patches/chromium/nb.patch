@@ -21430,7 +21430,7 @@ index 0000000000..98860b73f4
 +#endif  // MEDIA_AUDIO_AUDIOIO_AUDIO_MANAGER_AUDIOIO_H_
 diff --git a/media/audio/audioio/audioio_input.cc b/media/audio/audioio/audioio_input.cc
 new file mode 100644
-index 0000000000..9257bee6ec
+index 0000000000..f7f43e6d40
 --- /dev/null
 +++ b/media/audio/audioio/audioio_input.cc
 @@ -0,0 +1,273 @@
@@ -21459,7 +21459,7 @@ index 0000000000..9257bee6ec
 +  return NULL;
 +}
 +
-+void *AudioIOAudioInputStream::ThreadEntryPos(void *arg) {
++void *AudioIOAudioInputStream::ThreadPosEntry(void *arg) {
 +  AudioIOAudioInputStream* self = static_cast<AudioIOAudioInputStream*>(arg);
 +
 +  self->ThreadLoopPos();
@@ -21552,7 +21552,7 @@ index 0000000000..9257bee6ec
 +    goto error;
 +  }
 +
-+  if (pthread_create(&threadpos, NULL, &ThreadEntryPos, this) != 0) {
++  if (pthread_create(&threadpos, NULL, &ThreadPosEntry, this) != 0) {
 +    LOG(ERROR) << "[AUDIOIO] Failed to create real-time threadpos for recording.";
 +    goto error;
 +  }
@@ -21682,7 +21682,7 @@ index 0000000000..9257bee6ec
 +  LOG(INFO) << "[AUDIOIO] Input:ThreadLoop() stopped.";
 +}
 +
-+void AudioIOAudioOutputStream::ThreadLoopPos(void) {
++void AudioIOAudioInputStream::ThreadLoopPos(void) {
 +  int ret;
 +  struct audio_offset offset;
 +  struct pollfd pfd;
@@ -21811,7 +21811,7 @@ index 0000000000..d1b2bbc1cf
 +#endif  // MEDIA_AUDIO_AUDIOIO_AUDIOIO_INPUT_H_
 diff --git a/media/audio/audioio/audioio_output.cc b/media/audio/audioio/audioio_output.cc
 new file mode 100644
-index 0000000000..fb778a2760
+index 0000000000..edb8d50a08
 --- /dev/null
 +++ b/media/audio/audioio/audioio_output.cc
 @@ -0,0 +1,276 @@
@@ -21841,7 +21841,7 @@ index 0000000000..fb778a2760
 +  return NULL;
 +}
 +
-+void *AudioIOAudioOutputStream::ThreadEntryPos(void *arg) {
++void *AudioIOAudioOutputStream::ThreadPosEntry(void *arg) {
 +  AudioIOAudioOutputStream* self = static_cast<AudioIOAudioOutputStream*>(arg);
 +
 +  self->ThreadLoopPos();
@@ -21957,7 +21957,7 @@ index 0000000000..fb778a2760
 +    goto error;
 +  }
 +
-+  if (pthread_create(&threadpos, NULL, &ThreadEntryPos, this) != 0) {
++  if (pthread_create(&threadpos, NULL, &ThreadPosEntry, this) != 0) {
 +    LOG(ERROR) << "[AUDIOIO] Failed to create real-time threadpos for playing.";
 +    goto error;
 +  }
