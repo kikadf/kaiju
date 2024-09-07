@@ -1408,7 +1408,7 @@ index 93fdb676a0..e90e0091d4 100644
      sources += [
 diff --git a/media/audio/audioio/audio_manager_audioio.cc b/media/audio/audioio/audio_manager_audioio.cc
 new file mode 100644
-index 0000000000..65cc567c76
+index 0000000000..882e954693
 --- /dev/null
 +++ b/media/audio/audioio/audio_manager_audioio.cc
 @@ -0,0 +1,175 @@
@@ -1483,7 +1483,7 @@ index 0000000000..65cc567c76
 +                                         AudioLogFactory* audio_log_factory)
 +    : AudioManagerBase(std::move(audio_thread),
 +                       audio_log_factory) {
-+  DLOG(WARNING) << "AudioManagerAudioIO";
++  DLOG(WARNING) << "[AUDIOIO] AudioManagerAudioIO";
 +  SetMaxOutputStreamsAllowed(kMaxOutputStreams);
 +}
 +
@@ -1500,7 +1500,7 @@ index 0000000000..65cc567c76
 +    const AudioParameters& params,
 +    const std::string& device_id,
 +    const LogCallback& log_callback) {
-+  DLOG_IF(ERROR, !device_id.empty()) << "Not implemented!";
++  DLOG_IF(ERROR, !device_id.empty()) << "[AUDIOIO] MakeLowLatencyOutputStream: Not implemented!";
 +  DCHECK_EQ(AudioParameters::AUDIO_PCM_LOW_LATENCY, params.format());
 +  return MakeOutputStream(params);
 +}
@@ -1525,7 +1525,7 @@ index 0000000000..65cc567c76
 +    const std::string& output_device_id,
 +    const AudioParameters& input_params) {
 +  // TODO(tommi): Support |output_device_id|.
-+  DLOG_IF(ERROR, !output_device_id.empty()) << "Not implemented!";
++  DLOG_IF(ERROR, !output_device_id.empty()) << "[AUDIOIO] GetPreferredOutputStreamParameters: Not implemented!";
 +  static const int kDefaultOutputBufferSize = 2048;
 +
 +  ChannelLayoutConfig channel_layout_config = ChannelLayoutConfig::Stereo();
@@ -1548,21 +1548,21 @@ index 0000000000..65cc567c76
 +
 +AudioInputStream* AudioManagerAudioIO::MakeInputStream(
 +    const AudioParameters& params) {
-+  DLOG(WARNING) << "MakeInputStream";
++  DLOG(WARNING) << "[AUDIOIO] MakeInputStream";
 +  return new AudioIOAudioInputStream(this,
 +             AudioDeviceDescription::kDefaultDeviceId, params);
 +}
 +
 +AudioOutputStream* AudioManagerAudioIO::MakeOutputStream(
 +    const AudioParameters& params) {
-+  DLOG(WARNING) << "MakeOutputStream";
++  DLOG(WARNING) << "[AUDIOIO] MakeOutputStream";
 +  return new AudioIOAudioOutputStream(params, this);
 +}
 +
 +std::unique_ptr<media::AudioManager> CreateAudioManager(
 +    std::unique_ptr<AudioThread> audio_thread,
 +    AudioLogFactory* audio_log_factory) {
-+  DLOG(WARNING) << "CreateAudioManager";
++  DLOG(WARNING) << "[AUDIOIO] CreateAudioManager";
 +
 +  auto _ab = kAudioBackendParam.Get();
 +
@@ -1578,7 +1578,7 @@ index 0000000000..65cc567c76
 +    return std::make_unique<AudioManagerAudioIO>(std::move(audio_thread),
 +                                              audio_log_factory);
 +  } else {
-+    LOG(WARNING) << "Falling back to FAKE audio output. AudioIO is not "
++    LOG(WARNING) << "[AUDIOIO] Falling back to FAKE audio output. AudioIO is not "
 +                    "available or could not be initialized.";
 +  }
 +
@@ -1686,15 +1686,16 @@ index 0000000000..98860b73f4
 +#endif  // MEDIA_AUDIO_AUDIOIO_AUDIO_MANAGER_AUDIOIO_H_
 diff --git a/media/audio/audioio/audioio_input.cc b/media/audio/audioio/audioio_input.cc
 new file mode 100644
-index 0000000000..bb531bac18
+index 0000000000..9257bee6ec
 --- /dev/null
 +++ b/media/audio/audioio/audioio_input.cc
-@@ -0,0 +1,227 @@
+@@ -0,0 +1,273 @@
 +// Copyright 2013 The Chromium Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
 +
 +#include <fcntl.h>
++#include <poll.h>
 +#include <sys/ioctl.h>
 +
 +#include "base/logging.h"
@@ -1714,13 +1715,21 @@ index 0000000000..bb531bac18
 +  return NULL;
 +}
 +
++void *AudioIOAudioInputStream::ThreadEntryPos(void *arg) {
++  AudioIOAudioInputStream* self = static_cast<AudioIOAudioInputStream*>(arg);
++
++  self->ThreadLoopPos();
++  return NULL;
++}
++
 +AudioIOAudioInputStream::AudioIOAudioInputStream(AudioManagerBase* manager,
 +                                             const std::string& device_name,
 +                                             const AudioParameters& params)
 +    : manager(manager),
 +      params(params),
 +      audio_bus(AudioBus::Create(params)),
-+      state(kClosed) {
++      state(kClosed),
++      mutex(PTHREAD_MUTEX_INITIALIZER) {
 +}
 +
 +AudioIOAudioInputStream::~AudioIOAudioInputStream() {
@@ -1739,7 +1748,7 @@ index 0000000000..bb531bac18
 +
 +  if (params.format() != AudioParameters::AUDIO_PCM_LINEAR &&
 +      params.format() != AudioParameters::AUDIO_PCM_LOW_LATENCY) {
-+    LOG(WARNING) << "Unsupported audio format.";
++    LOG(WARNING) << "[AUDIOIO] Unsupported audio format.";
 +    return OpenOutcome::kFailed;
 +  }
 +
@@ -1751,8 +1760,8 @@ index 0000000000..bb531bac18
 +  info.record.encoding = AUDIO_ENCODING_SLINEAR;
 +  info.record.pause = true;
 +
-+  if ((fd = open("/dev/audio", O_WRONLY)) < 0) {
-+    LOG(ERROR) << "Couldn't open audio device.";
++  if ((fd = open("/dev/audio", O_RDONLY)) < 0) {
++    LOG(ERROR) << "[AUDIOIO] Couldn't open audio device.";
 +    return OpenOutcome::kFailed;
 +  }
 +
@@ -1766,10 +1775,11 @@ index 0000000000..bb531bac18
 +
 +  state = kStopped;
 +  buffer = new char[audio_bus->frames() * params.GetBytesPerFrame(kSampleFormat)];
++  LOG(INFO) << "[AUDIOIO] InputStream opened.";
 +  return OpenOutcome::kSuccess;
 +error:
 +  close(fd);
-+  LOG(ERROR) << "Couldn't set audio parameters.";
++  LOG(ERROR) << "[AUDIOIO] Couldn't set audio parameters.";
 +  return OpenOutcome::kFailed;
 +}
 +
@@ -1794,13 +1804,19 @@ index 0000000000..bb531bac18
 +  callback = cb;
 +
 +  if (pthread_create(&thread, NULL, &ThreadEntry, this) != 0) {
-+    LOG(ERROR) << "Failed to create real-time thread for recording.";
++    LOG(ERROR) << "[AUDIOIO] Failed to create real-time thread for recording.";
 +    goto error;
 +  }
 +
++  if (pthread_create(&threadpos, NULL, &ThreadEntryPos, this) != 0) {
++    LOG(ERROR) << "[AUDIOIO] Failed to create real-time threadpos for recording.";
++    goto error;
++  }
++
++  LOG(INFO) << "[AUDIOIO] Recording started.";
 +  return;
 +error:
-+  LOG(ERROR) << "Failed to start playing audio.";
++  LOG(ERROR) << "[AUDIOIO] Failed to start playing audio.";
 +  state = kStopped;
 +}
 +
@@ -1814,6 +1830,7 @@ index 0000000000..bb531bac18
 +    return;
 +  }
 +  pthread_join(thread, NULL);
++  pthread_join(threadpos, NULL);
 +  (void)ioctl(fd, AUDIO_FLUSH, NULL);
 +  if (ioctl(fd, AUDIO_GETINFO, &info) < 0) {
 +    goto error;
@@ -1824,9 +1841,10 @@ index 0000000000..bb531bac18
 +  }
 +  state = kStopped;
 +  StopAgc();
++  LOG(INFO) << "[AUDIOIO] Recording stopped.";
 +  return;
 +error:
-+  LOG(ERROR) << "Failed to stop recording audio.";
++  LOG(ERROR) << "[AUDIOIO] Failed to stop recording audio.";
 +  return;
 +}
 +
@@ -1846,6 +1864,7 @@ index 0000000000..bb531bac18
 +
 +release:
 +  manager->ReleaseInputStream(this);  // Calls the destructor
++  LOG(INFO) << "[AUDIOIO] InputStream closed.";
 +}
 +
 +// Returns the maximum microphone analog volume or 0.0 if device does not
@@ -1902,27 +1921,54 @@ index 0000000000..bb531bac18
 +      todo -= n;
 +      data += n;
 +    }
++    pthread_mutex_lock(&mutex);
 +    hw_delay -= nframes;
++    pthread_mutex_unlock(&mutex);
 +
 +    // convert frames count to TimeDelta
-+    const base::TimeDelta delay = AudioTimestampHelper::FramesToTime(hw_delay,
-+      params.sample_rate());
++    const base::TimeDelta delay = AudioTimestampHelper::FramesToTime(hw_delay, params.sample_rate());
 +
 +    // push into bus
 +    audio_bus->FromInterleaved<SignedInt16SampleTypeTraits>(reinterpret_cast<int16_t*>(buffer), nframes);
 +
 +    // invoke callback
 +    callback->OnData(audio_bus.get(), base::TimeTicks::Now() - delay, 1., {});
++    LOG(INFO) << "[AUDIOIO] Input:ThreadLoop() running.";
++  }
++  LOG(INFO) << "[AUDIOIO] Input:ThreadLoop() stopped.";
++}
++
++void AudioIOAudioOutputStream::ThreadLoopPos(void) {
++  int ret;
++  struct audio_offset offset;
++  struct pollfd pfd;
++  pfd.fd = fd;
++  pfd.events = POLLIN;
++
++  LOG(INFO) << "[AUDIOIO] Input:ThreadLoopPos() started.";
++
++  while (state == kRunning) {
++    ret = poll(&pfd, 1, -1);
++    if (ret > 0 && (pfd.revents & POLLIN)) {
++      if (ioctl(fd, AUDIO_GETIOFFS, &offset) < 0) {
++        LOG(ERROR) << "[AUDIOIO] Input:ThreadLoopPos: Failed to get transfered blocks.";
++      }
++      pthread_mutex_lock(&mutex);
++      hw_delay += offset.deltablks;
++      pthread_mutex_unlock(&mutex);
++    } else {
++      LOG(ERROR) << "[AUDIOIO] Input:ThreadLoopPos: poll error.";
++    }
 +  }
 +}
 +
 +}  // namespace media
 diff --git a/media/audio/audioio/audioio_input.h b/media/audio/audioio/audioio_input.h
 new file mode 100644
-index 0000000000..9960158dac
+index 0000000000..d1b2bbc1cf
 --- /dev/null
 +++ b/media/audio/audioio/audioio_input.h
-@@ -0,0 +1,89 @@
+@@ -0,0 +1,96 @@
 +// Copyright 2013 The Chromium Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
@@ -1986,9 +2032,12 @@ index 0000000000..9960158dac
 +
 +  // C-style call-backs
 +  static void* ThreadEntry(void *arg);
++  static void* ThreadPosEntry(void *arg);
 +
 +  // Continuously moves data from the device to the consumer
 +  void ThreadLoop();
++  // Continuously check position
++  void ThreadLoopPos(void);
 +  // Our creator, the audio manager needs to be notified when we close.
 +  AudioManagerBase* manager;
 +  // Parameters of the source
@@ -2003,6 +2052,10 @@ index 0000000000..9960158dac
 +  enum StreamState state;
 +  // High priority thread running ThreadLoop()
 +  pthread_t thread;
++  // High priority thread running ThreadLoopPos()
++  pthread_t threadpos;
++  // Protects vol, volpending and hw_delay
++  pthread_mutex_t mutex;
 +  // Number of frames buffered in the hardware
 +  int hw_delay;
 +  // Temporary buffer
@@ -2014,15 +2067,16 @@ index 0000000000..9960158dac
 +#endif  // MEDIA_AUDIO_AUDIOIO_AUDIOIO_INPUT_H_
 diff --git a/media/audio/audioio/audioio_output.cc b/media/audio/audioio/audioio_output.cc
 new file mode 100644
-index 0000000000..2f96923e5b
+index 0000000000..fb778a2760
 --- /dev/null
 +++ b/media/audio/audioio/audioio_output.cc
-@@ -0,0 +1,230 @@
+@@ -0,0 +1,276 @@
 +// Copyright (c) 2012 The Chromium Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
 +
 +#include <fcntl.h>
++#include <poll.h>
 +#include <sys/ioctl.h>
 +
 +#include "base/logging.h"
@@ -2042,6 +2096,14 @@ index 0000000000..2f96923e5b
 +  self->ThreadLoop();
 +  return NULL;
 +}
++
++void *AudioIOAudioOutputStream::ThreadEntryPos(void *arg) {
++  AudioIOAudioOutputStream* self = static_cast<AudioIOAudioOutputStream*>(arg);
++
++  self->ThreadLoopPos();
++  return NULL;
++}
++
 +
 +AudioIOAudioOutputStream::AudioIOAudioOutputStream(const AudioParameters& params,
 +                                               AudioManagerBase* manager)
@@ -2065,7 +2127,7 @@ index 0000000000..2f96923e5b
 +
 +  if (params.format() != AudioParameters::AUDIO_PCM_LINEAR &&
 +      params.format() != AudioParameters::AUDIO_PCM_LOW_LATENCY) {
-+    LOG(WARNING) << "Unsupported audio format.";
++    LOG(WARNING) << "[AUDIOIO] Unsupported audio format.";
 +    return false;
 +  }
 +
@@ -2078,7 +2140,7 @@ index 0000000000..2f96923e5b
 +  info.play.pause = true;
 +
 +  if ((fd = open("/dev/audio", O_WRONLY)) < 0) {
-+    LOG(ERROR) << "Couldn't open audio device.";
++    LOG(ERROR) << "[AUDIOIO] Couldn't open audio device.";
 +    return false;
 +  }
 +
@@ -2094,11 +2156,12 @@ index 0000000000..2f96923e5b
 +  volpending = 0;
 +  vol = AUDIO_MAX_GAIN;
 +  buffer = new char[audio_bus->frames() * params.GetBytesPerFrame(kSampleFormat)];
++  LOG(INFO) << "[AUDIOIO] OutputStream opened.";
 +  return true;
 +
 +error:
 +  close(fd);
-+  LOG(ERROR) << "Couldn't set audio parameters.";
++  LOG(ERROR) << "[AUDIOIO] Couldn't set audio parameters.";
 +  return false;
 +}
 +
@@ -2121,6 +2184,7 @@ index 0000000000..2f96923e5b
 +
 +release:
 +  manager->ReleaseOutputStream(this);  // Calls the destructor
++  LOG(INFO) << "[AUDIOIO] OutputStream closed.";
 +}
 +
 +// Starts playing audio and generating AudioSourceCallback::OnMoreData().
@@ -2145,13 +2209,19 @@ index 0000000000..2f96923e5b
 +  source = callback;
 +  
 +  if (pthread_create(&thread, NULL, &ThreadEntry, this) != 0) {
-+    LOG(ERROR) << "Failed to create real-time thread.";
++    LOG(ERROR) << "[AUDIOIO] Failed to create real-time thread for playing.";
 +    goto error;
 +  }
 +
++  if (pthread_create(&threadpos, NULL, &ThreadEntryPos, this) != 0) {
++    LOG(ERROR) << "[AUDIOIO] Failed to create real-time threadpos for playing.";
++    goto error;
++  }
++
++  LOG(INFO) << "[AUDIOIO] Playing started.";
 +  return;
 +error:
-+  LOG(ERROR) << "Failed to start playing audio.";
++  LOG(ERROR) << "[AUDIOIO] Failed to start playing audio.";
 +  state = kStopped;
 +}
 +
@@ -2167,6 +2237,7 @@ index 0000000000..2f96923e5b
 +    return;
 +  }
 +  pthread_join(thread, NULL);
++  pthread_join(threadpos, NULL);
 +  (void)ioctl(fd, AUDIO_FLUSH, NULL);
 +  if (ioctl(fd, AUDIO_GETINFO, &info) < 0) {
 +    goto error;
@@ -2176,9 +2247,10 @@ index 0000000000..2f96923e5b
 +    goto error;
 +  }
 +  state = kStopped;
++  LOG(INFO) << "[AUDIOIO] Playing stopped.";
 +  return;
 +error:
-+  LOG(ERROR) << "Failed to stop playing audio.";
++  LOG(ERROR) << "[AUDIOIO] Failed to stop playing audio.";
 +  return;
 +}
 +
@@ -2214,26 +2286,25 @@ index 0000000000..2f96923e5b
 +    if (volpending) {
 +      volpending = 0;
 +      if (ioctl(fd, AUDIO_GETINFO, &info) < 0) {
-+        LOG(ERROR) << "Failed to get audio info.";
++        LOG(ERROR) << "[AUDIOIO] Failed to get audio info.";
 +      } else {
 +        info.play.gain = vol;
 +        if (ioctl(fd, AUDIO_SETINFO, &info) < 0 ) {
-+          LOG(ERROR) << "Failed to set audio volume.";
++          LOG(ERROR) << "[AUDIOIO] Failed to set audio volume.";
 +        }
 +      }
 +    }
 +    pthread_mutex_unlock(&mutex);
 +
 +    // Get data to play
-+    const base::TimeDelta delay = AudioTimestampHelper::FramesToTime(hw_delay,
-+	                                                                   params.sample_rate());
++    const base::TimeDelta delay = AudioTimestampHelper::FramesToTime(hw_delay, params.sample_rate());
 +    count = source->OnMoreData(delay, base::TimeTicks::Now(), {}, audio_bus.get());
 +    audio_bus->ToInterleaved<SignedInt16SampleTypeTraits>(count, reinterpret_cast<int16_t*>(buffer));
 +    if (count == 0) {
 +      // We have to submit something to the device
 +      count = audio_bus->frames();
 +      memset(buffer, 0, count * params.GetBytesPerFrame(kSampleFormat));
-+      LOG(WARNING) << "No data to play, running empty cycle.";
++      LOG(WARNING) << "[AUDIOIO] No data to play, running empty cycle.";
 +    }
 +
 +    // Submit data to the device
@@ -2243,17 +2314,45 @@ index 0000000000..2f96923e5b
 +    }
 +
 +    // Update hardware pointer
++    pthread_mutex_lock(&mutex);
 +    hw_delay += count;
++    pthread_mutex_unlock(&mutex);
++    LOG(INFO) << "[AUDIOIO] Output:ThreadLoop() running.";
++  }
++  LOG(INFO) << "[AUDIOIO] Output:ThreadLoop() stopped.";
++}
++
++void AudioIOAudioOutputStream::ThreadLoopPos(void) {
++  int ret;
++  struct audio_offset offset;
++  struct pollfd pfd;
++  pfd.fd = fd;
++  pfd.events = POLLOUT;
++
++  LOG(INFO) << "[AUDIOIO] Output:ThreadLoopPos() started.";
++
++  while (state == kRunning) {
++    ret = poll(&pfd, 1, -1);
++    if (ret > 0 && (pfd.revents & POLLOUT)) {
++      if (ioctl(fd, AUDIO_GETOOFFS, &offset) < 0) {
++        LOG(ERROR) << "[AUDIOIO] Output:ThreadLoopPos: Failed to get transfered blocks.";
++      }
++      pthread_mutex_lock(&mutex);
++      hw_delay -= offset.deltablks;
++      pthread_mutex_unlock(&mutex);
++    } else {
++      LOG(ERROR) << "[AUDIOIO] Output:ThreadLoopPos: poll error.";
++    }
 +  }
 +}
 +
 +}  // namespace media
 diff --git a/media/audio/audioio/audioio_output.h b/media/audio/audioio/audioio_output.h
 new file mode 100644
-index 0000000000..8d760f993e
+index 0000000000..aae716c963
 --- /dev/null
 +++ b/media/audio/audioio/audioio_output.h
-@@ -0,0 +1,81 @@
+@@ -0,0 +1,85 @@
 +// Copyright (c) 2012 The Chromium Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
@@ -2302,10 +2401,12 @@ index 0000000000..8d760f993e
 +
 +  // C-style call-backs
 +  static void* ThreadEntry(void *arg);
++  static void* ThreadPosEntry(void *arg);
 +
 +  // Continuously moves data from the producer to the device
 +  void ThreadLoop(void);
-+
++  // Continuously check position
++  void ThreadLoopPos(void);
 +  // Our creator, the audio manager needs to be notified when we close.
 +  AudioManagerBase* manager;
 +  // Parameters of the source
@@ -2320,6 +2421,8 @@ index 0000000000..8d760f993e
 +  enum StreamState state;
 +  // High priority thread running ThreadLoop()
 +  pthread_t thread;
++  // High priority thread running ThreadLoopPos()
++  pthread_t threadpos;
 +  // Protects vol, volpending and hw_delay
 +  pthread_mutex_t mutex;
 +  // Current volume in the AUDIO_MIN_GAIN..AUDIO_MAX_GAIN range
