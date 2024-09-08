@@ -21430,10 +21430,10 @@ index 0000000000..98860b73f4
 +#endif  // MEDIA_AUDIO_AUDIOIO_AUDIO_MANAGER_AUDIOIO_H_
 diff --git a/media/audio/audioio/audioio_input.cc b/media/audio/audioio/audioio_input.cc
 new file mode 100644
-index 0000000000..f7f43e6d40
+index 0000000000..8c7fff3602
 --- /dev/null
 +++ b/media/audio/audioio/audioio_input.cc
-@@ -0,0 +1,273 @@
+@@ -0,0 +1,275 @@
 +// Copyright 2013 The Chromium Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
@@ -21573,6 +21573,7 @@ index 0000000000..f7f43e6d40
 +  if (state == kStopped) {
 +    return;
 +  }
++  state = kRunning;
 +  pthread_join(thread, NULL);
 +  pthread_join(threadpos, NULL);
 +  (void)ioctl(fd, AUDIO_FLUSH, NULL);
@@ -21650,6 +21651,7 @@ index 0000000000..f7f43e6d40
 +  double normalized_volume = 0.0;
 +
 +  nframes = audio_bus->frames();
++  LOG(INFO) << "[AUDIOIO] Input:ThreadLoop() started.";
 +
 +  while (state == kRunning) {
 +
@@ -21677,7 +21679,6 @@ index 0000000000..f7f43e6d40
 +
 +    // invoke callback
 +    callback->OnData(audio_bus.get(), base::TimeTicks::Now() - delay, 1., {});
-+    LOG(INFO) << "[AUDIOIO] Input:ThreadLoop() running.";
 +  }
 +  LOG(INFO) << "[AUDIOIO] Input:ThreadLoop() stopped.";
 +}
@@ -21704,15 +21705,16 @@ index 0000000000..f7f43e6d40
 +      LOG(ERROR) << "[AUDIOIO] Input:ThreadLoopPos: poll error.";
 +    }
 +  }
++  LOG(INFO) << "[AUDIOIO] Input:ThreadLoopPos() stopped.";
 +}
 +
 +}  // namespace media
 diff --git a/media/audio/audioio/audioio_input.h b/media/audio/audioio/audioio_input.h
 new file mode 100644
-index 0000000000..d1b2bbc1cf
+index 0000000000..8a9e0d0ecf
 --- /dev/null
 +++ b/media/audio/audioio/audioio_input.h
-@@ -0,0 +1,96 @@
+@@ -0,0 +1,97 @@
 +// Copyright 2013 The Chromium Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
@@ -21772,6 +21774,7 @@ index 0000000000..d1b2bbc1cf
 +    kClosed,            // Not opened yet
 +    kStopped,           // Device opened, but not started yet
 +    kRunning,           // Started, device playing
++    kStopWait           // Stopping, waiting for the real-time thread to exit
 +  };
 +
 +  // C-style call-backs
@@ -21811,10 +21814,10 @@ index 0000000000..d1b2bbc1cf
 +#endif  // MEDIA_AUDIO_AUDIOIO_AUDIOIO_INPUT_H_
 diff --git a/media/audio/audioio/audioio_output.cc b/media/audio/audioio/audioio_output.cc
 new file mode 100644
-index 0000000000..edb8d50a08
+index 0000000000..3116f54ed2
 --- /dev/null
 +++ b/media/audio/audioio/audioio_output.cc
-@@ -0,0 +1,276 @@
+@@ -0,0 +1,279 @@
 +// Copyright (c) 2012 The Chromium Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
@@ -21980,6 +21983,7 @@ index 0000000000..edb8d50a08
 +  if (state == kStopped) {
 +    return;
 +  }
++  state = kStopWait;
 +  pthread_join(thread, NULL);
 +  pthread_join(threadpos, NULL);
 +  (void)ioctl(fd, AUDIO_FLUSH, NULL);
@@ -22024,6 +22028,8 @@ index 0000000000..edb8d50a08
 +  int avail, count;
 +  struct audio_info info;
 +
++  LOG(INFO) << "[AUDIOIO] Output:ThreadLoop() started.";
++
 +  while (state == kRunning) {
 +    // Update volume if needed
 +    pthread_mutex_lock(&mutex);
@@ -22061,7 +22067,6 @@ index 0000000000..edb8d50a08
 +    pthread_mutex_lock(&mutex);
 +    hw_delay += count;
 +    pthread_mutex_unlock(&mutex);
-+    LOG(INFO) << "[AUDIOIO] Output:ThreadLoop() running.";
 +  }
 +  LOG(INFO) << "[AUDIOIO] Output:ThreadLoop() stopped.";
 +}
@@ -22088,15 +22093,16 @@ index 0000000000..edb8d50a08
 +      LOG(ERROR) << "[AUDIOIO] Output:ThreadLoopPos: poll error.";
 +    }
 +  }
++  LOG(INFO) << "[AUDIOIO] Output:ThreadLoopPos() stopped.";
 +}
 +
 +}  // namespace media
 diff --git a/media/audio/audioio/audioio_output.h b/media/audio/audioio/audioio_output.h
 new file mode 100644
-index 0000000000..aae716c963
+index 0000000000..4284768686
 --- /dev/null
 +++ b/media/audio/audioio/audioio_output.h
-@@ -0,0 +1,85 @@
+@@ -0,0 +1,86 @@
 +// Copyright (c) 2012 The Chromium Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
@@ -22141,6 +22147,7 @@ index 0000000000..aae716c963
 +    kClosed,            // Not opened yet
 +    kStopped,           // Device opened, but not started yet
 +    kRunning,           // Started, device playing
++    kStopWait           // Stopping, waiting for the real-time thread to exit
 +  };
 +
 +  // C-style call-backs
