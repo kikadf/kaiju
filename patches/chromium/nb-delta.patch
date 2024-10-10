@@ -220,27 +220,37 @@ index 667561d2cf..35c0b1016f 100644
  #else  // OS_*
    ucontext_t* context = reinterpret_cast<ucontext_t*>(context_ptr);
 diff --git a/base/message_loop/message_pump_glib.cc b/base/message_loop/message_pump_glib.cc
-index e07537d654..81a741e68d 100644
+index e07537d654..f0b0c954aa 100644
 --- a/base/message_loop/message_pump_glib.cc
 +++ b/base/message_loop/message_pump_glib.cc
-@@ -8,7 +8,7 @@
- #include <glib.h>
+@@ -9,9 +9,13 @@
  #include <math.h>
  
--#if BUILDFLAG(IS_BSD)
-+#if BUILDFLAG(IS_BSD) && !BUILDFLAG(IS_NETBSD)
+ #if BUILDFLAG(IS_BSD)
++#if BUILDFLAG(IS_NETBSD)
++#include <lwp.h>
++#else
  #include <pthread.h>
  #include <pthread_np.h>
  #endif
-@@ -56,7 +56,7 @@ int GetTimeIntervalMilliseconds(TimeTicks next_task_time) {
- }
++#endif
+ 
+ #include "base/logging.h"
+ #include "base/memory/raw_ptr.h"
+@@ -57,7 +61,13 @@ int GetTimeIntervalMilliseconds(TimeTicks next_task_time) {
  
  bool RunningOnMainThread() {
--#if BUILDFLAG(IS_BSD)
-+#if BUILDFLAG(IS_BSD) && !BUILDFLAG(IS_NETBSD)
+ #if BUILDFLAG(IS_BSD)
++#if BUILDFLAG(IS_NETBSD)
++  auto pid = getpid();
++  auto tid = _lwp_self();
++  return pid > 0 && tid > 0 && pid == tid;
++#else
    return pthread_main_np();
++#endif
  #else
    auto pid = getpid();
+   auto tid = PlatformThread::CurrentId();
 diff --git a/base/posix/sysctl.cc b/base/posix/sysctl.cc
 index d0b07c2acc..29365bbe1b 100644
 --- a/base/posix/sysctl.cc

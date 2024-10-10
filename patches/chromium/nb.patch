@@ -1734,27 +1734,37 @@ index c2913a5c7f..ede33aba7f 100644
  #else
            false /* executable */,
 diff --git a/base/message_loop/message_pump_glib.cc b/base/message_loop/message_pump_glib.cc
-index a835d08628..81a741e68d 100644
+index a835d08628..f0b0c954aa 100644
 --- a/base/message_loop/message_pump_glib.cc
 +++ b/base/message_loop/message_pump_glib.cc
-@@ -8,6 +8,11 @@
+@@ -8,6 +8,15 @@
  #include <glib.h>
  #include <math.h>
  
-+#if BUILDFLAG(IS_BSD) && !BUILDFLAG(IS_NETBSD)
++#if BUILDFLAG(IS_BSD)
++#if BUILDFLAG(IS_NETBSD)
++#include <lwp.h>
++#else
 +#include <pthread.h>
 +#include <pthread_np.h>
++#endif
 +#endif
 +
  #include "base/logging.h"
  #include "base/memory/raw_ptr.h"
  #include "base/notreached.h"
-@@ -51,9 +56,13 @@ int GetTimeIntervalMilliseconds(TimeTicks next_task_time) {
+@@ -51,9 +60,19 @@ int GetTimeIntervalMilliseconds(TimeTicks next_task_time) {
  }
  
  bool RunningOnMainThread() {
-+#if BUILDFLAG(IS_BSD) && !BUILDFLAG(IS_NETBSD)
++#if BUILDFLAG(IS_BSD)
++#if BUILDFLAG(IS_NETBSD)
++  auto pid = getpid();
++  auto tid = _lwp_self();
++  return pid > 0 && tid > 0 && pid == tid;
++#else
 +  return pthread_main_np();
++#endif
 +#else
    auto pid = getpid();
    auto tid = PlatformThread::CurrentId();
