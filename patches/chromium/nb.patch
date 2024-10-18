@@ -28665,10 +28665,10 @@ index 8543c48a97..f9d3d781e5 100644
    provider_manager_mode_ = kNetworkOnly;
  #else
 diff --git a/services/device/hid/BUILD.gn b/services/device/hid/BUILD.gn
-index 7421facd4c..38e1e14aca 100644
+index 7421facd4c..e824475bda 100644
 --- a/services/device/hid/BUILD.gn
 +++ b/services/device/hid/BUILD.gn
-@@ -36,7 +36,35 @@ source_set("hid") {
+@@ -36,7 +36,33 @@ source_set("hid") {
      "//services/device/public/mojom",
    ]
  
@@ -28692,14 +28692,12 @@ index 7421facd4c..38e1e14aca 100644
 +    ]
 +  }
 +
-+#  if (is_netbsd) {
-+#    sources += [
-+#      "hid_connection_netbsd.cc",
-+#      "hid_connection_netbsd.h",
-+#      "hid_service_netbsd.cc",
-+#      "hid_service_netbsd.h",
-+#    ]
-+#  }
++  if (is_netbsd) {
++    sources += [
++      "hid_service_netbsd.cc",
++      "hid_service_netbsd.h",
++    ]
++  }
 +
 +  if ((is_linux || is_chromeos) && !is_bsd && use_udev) {
      sources += [
@@ -29313,10 +29311,10 @@ index 0000000000..3a4e3b8580
 +
 +#endif  // DEVICE_HID_HID_CONNECTION_FREEBSD_H_
 diff --git a/services/device/hid/hid_service.cc b/services/device/hid/hid_service.cc
-index a1b322c44b..0eda048353 100644
+index a1b322c44b..e0ee0c8837 100644
 --- a/services/device/hid/hid_service.cc
 +++ b/services/device/hid/hid_service.cc
-@@ -20,6 +20,10 @@
+@@ -20,12 +20,18 @@
  
  #if (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)) && defined(USE_UDEV)
  #include "services/device/hid/hid_service_linux.h"
@@ -29327,7 +29325,15 @@ index a1b322c44b..0eda048353 100644
  #elif BUILDFLAG(IS_MAC)
  #include "services/device/hid/hid_service_mac.h"
  #elif BUILDFLAG(IS_WIN)
-@@ -68,6 +72,10 @@ constexpr base::TaskTraits HidService::kBlockingTaskTraits;
+ #include "services/device/hid/hid_service_win.h"
+ #elif BUILDFLAG(IS_FUCHSIA)
+ #include "services/device/hid/hid_service_fuchsia.h"
++#elif BUILDFLAG(IS_NETBSD)
++#include "services/device/hid/hid_service_netbsd.h"
+ #endif
+ 
+ namespace device {
+@@ -68,12 +74,18 @@ constexpr base::TaskTraits HidService::kBlockingTaskTraits;
  std::unique_ptr<HidService> HidService::Create() {
  #if (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)) && defined(USE_UDEV)
    return std::make_unique<HidServiceLinux>();
@@ -29338,6 +29344,14 @@ index a1b322c44b..0eda048353 100644
  #elif BUILDFLAG(IS_MAC)
    return std::make_unique<HidServiceMac>();
  #elif BUILDFLAG(IS_WIN)
+   return std::make_unique<HidServiceWin>();
+ #elif BUILDFLAG(IS_FUCHSIA)
+   return std::make_unique<HidServiceFuchsia>();
++#elif BUILDFLAG(IS_NETBSD)
++  return std::make_unique<HidServiceNetBSD>();
+ #else
+   return nullptr;
+ #endif
 diff --git a/services/device/hid/hid_service_fido.cc b/services/device/hid/hid_service_fido.cc
 new file mode 100644
 index 0000000000..afa9c32486
@@ -30267,6 +30281,78 @@ index 0000000000..9f5d405a84
 +}  // namespace device
 +
 +#endif  // DEVICE_HID_HID_SERVICE_FREEBSD_H_
+diff --git a/services/device/hid/hid_service_netbsd.cc b/services/device/hid/hid_service_netbsd.cc
+new file mode 100644
+index 0000000000..628957f185
+--- /dev/null
++++ b/services/device/hid/hid_service_netbsd.cc
+@@ -0,0 +1,27 @@
++// Copyright 2022 The Chromium Authors
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "services/device/hid/hid_service_netbsd.h"
++
++#include "base/notreached.h"
++#include "services/device/hid/hid_connection.h"
++
++namespace device {
++
++HidServiceNetBSD::HidServiceNetBSD() = default;
++HidServiceNetBSD::~HidServiceNetBSD() = default;
++
++void HidServiceNetBSD::Connect(const std::string& device_id,
++                                bool allow_protected_reports,
++                                bool allow_fido_reports,
++                                ConnectCallback callback) {
++  NOTIMPLEMENTED_LOG_ONCE();
++  std::move(callback).Run(nullptr);
++}
++
++base::WeakPtr<HidService> HidServiceNetBSD::GetWeakPtr() {
++  return weak_factory_.GetWeakPtr();
++}
++
++}  // namespace device
+diff --git a/services/device/hid/hid_service_netbsd.h b/services/device/hid/hid_service_netbsd.h
+new file mode 100644
+index 0000000000..37599f80c0
+--- /dev/null
++++ b/services/device/hid/hid_service_netbsd.h
+@@ -0,0 +1,33 @@
++// Copyright 2022 The Chromium Authors
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef SERVICES_DEVICE_HID_HID_SERVICE_NETBSD_H_
++#define SERVICES_DEVICE_HID_HID_SERVICE_NETBSD_H_
++
++#include "services/device/hid/hid_service.h"
++
++namespace device {
++
++class HidServiceNetBSD : public HidService {
++ public:
++  HidServiceNetBSD();
++  ~HidServiceNetBSD() override;
++
++  HidServiceNetBSD(const HidServiceNetBSD&) = delete;
++  HidServiceNetBSD& operator=(const HidServiceNetBSD&) = delete;
++
++ private:
++  // HidService implementation.
++  void Connect(const std::string& device_id,
++               bool allow_protected_reports,
++               bool allow_fido_reports,
++               ConnectCallback callback) override;
++  base::WeakPtr<HidService> GetWeakPtr() override;
++
++  base::WeakPtrFactory<HidServiceNetBSD> weak_factory_{this};
++};
++
++}  // namespace device
++
++#endif  // SERVICES_DEVICE_HID_HID_SERVICE_NETBSD_H_
 diff --git a/services/device/public/cpp/generic_sensor/sensor_reading.h b/services/device/public/cpp/generic_sensor/sensor_reading.h
 index c653bec632..13a0820773 100644
 --- a/services/device/public/cpp/generic_sensor/sensor_reading.h

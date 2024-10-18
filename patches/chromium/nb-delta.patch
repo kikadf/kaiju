@@ -2570,25 +2570,45 @@ index 44f331a70f..4a27162638 100644
  #include "sandbox/policy/freebsd/sandbox_freebsd.h"
  #endif
 diff --git a/services/device/hid/BUILD.gn b/services/device/hid/BUILD.gn
-index 1215615a54..38e1e14aca 100644
+index 1215615a54..e824475bda 100644
 --- a/services/device/hid/BUILD.gn
 +++ b/services/device/hid/BUILD.gn
-@@ -55,6 +55,15 @@ source_set("hid") {
+@@ -55,6 +55,13 @@ source_set("hid") {
      ]
    }
  
-+#  if (is_netbsd) {
-+#    sources += [
-+#      "hid_connection_netbsd.cc",
-+#      "hid_connection_netbsd.h",
-+#      "hid_service_netbsd.cc",
-+#      "hid_service_netbsd.h",
-+#    ]
-+#  }
++  if (is_netbsd) {
++    sources += [
++      "hid_service_netbsd.cc",
++      "hid_service_netbsd.h",
++    ]
++  }
 +
    if ((is_linux || is_chromeos) && !is_bsd && use_udev) {
      sources += [
        "hid_connection_linux.cc",
+diff --git a/services/device/hid/hid_service.cc b/services/device/hid/hid_service.cc
+index 0eda048353..e0ee0c8837 100644
+--- a/services/device/hid/hid_service.cc
++++ b/services/device/hid/hid_service.cc
+@@ -30,6 +30,8 @@
+ #include "services/device/hid/hid_service_win.h"
+ #elif BUILDFLAG(IS_FUCHSIA)
+ #include "services/device/hid/hid_service_fuchsia.h"
++#elif BUILDFLAG(IS_NETBSD)
++#include "services/device/hid/hid_service_netbsd.h"
+ #endif
+ 
+ namespace device {
+@@ -82,6 +84,8 @@ std::unique_ptr<HidService> HidService::Create() {
+   return std::make_unique<HidServiceWin>();
+ #elif BUILDFLAG(IS_FUCHSIA)
+   return std::make_unique<HidServiceFuchsia>();
++#elif BUILDFLAG(IS_NETBSD)
++  return std::make_unique<HidServiceNetBSD>();
+ #else
+   return nullptr;
+ #endif
 diff --git a/services/device/hid/hid_service_freebsd.cc b/services/device/hid/hid_service_freebsd.cc
 index 0b6bf3b4ce..d7a6ee97af 100644
 --- a/services/device/hid/hid_service_freebsd.cc
@@ -2602,6 +2622,78 @@ index 0b6bf3b4ce..d7a6ee97af 100644
      if (connect(devd_fd, (struct sockaddr *) &sa, sizeof(sa)) < 0) {
        close(devd_fd);
        return;
+diff --git a/services/device/hid/hid_service_netbsd.cc b/services/device/hid/hid_service_netbsd.cc
+new file mode 100644
+index 0000000000..628957f185
+--- /dev/null
++++ b/services/device/hid/hid_service_netbsd.cc
+@@ -0,0 +1,27 @@
++// Copyright 2022 The Chromium Authors
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "services/device/hid/hid_service_netbsd.h"
++
++#include "base/notreached.h"
++#include "services/device/hid/hid_connection.h"
++
++namespace device {
++
++HidServiceNetBSD::HidServiceNetBSD() = default;
++HidServiceNetBSD::~HidServiceNetBSD() = default;
++
++void HidServiceNetBSD::Connect(const std::string& device_id,
++                                bool allow_protected_reports,
++                                bool allow_fido_reports,
++                                ConnectCallback callback) {
++  NOTIMPLEMENTED_LOG_ONCE();
++  std::move(callback).Run(nullptr);
++}
++
++base::WeakPtr<HidService> HidServiceNetBSD::GetWeakPtr() {
++  return weak_factory_.GetWeakPtr();
++}
++
++}  // namespace device
+diff --git a/services/device/hid/hid_service_netbsd.h b/services/device/hid/hid_service_netbsd.h
+new file mode 100644
+index 0000000000..37599f80c0
+--- /dev/null
++++ b/services/device/hid/hid_service_netbsd.h
+@@ -0,0 +1,33 @@
++// Copyright 2022 The Chromium Authors
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef SERVICES_DEVICE_HID_HID_SERVICE_NETBSD_H_
++#define SERVICES_DEVICE_HID_HID_SERVICE_NETBSD_H_
++
++#include "services/device/hid/hid_service.h"
++
++namespace device {
++
++class HidServiceNetBSD : public HidService {
++ public:
++  HidServiceNetBSD();
++  ~HidServiceNetBSD() override;
++
++  HidServiceNetBSD(const HidServiceNetBSD&) = delete;
++  HidServiceNetBSD& operator=(const HidServiceNetBSD&) = delete;
++
++ private:
++  // HidService implementation.
++  void Connect(const std::string& device_id,
++               bool allow_protected_reports,
++               bool allow_fido_reports,
++               ConnectCallback callback) override;
++  base::WeakPtr<HidService> GetWeakPtr() override;
++
++  base::WeakPtrFactory<HidServiceNetBSD> weak_factory_{this};
++};
++
++}  // namespace device
++
++#endif  // SERVICES_DEVICE_HID_HID_SERVICE_NETBSD_H_
 diff --git a/services/device/time_zone_monitor/time_zone_monitor_linux.cc b/services/device/time_zone_monitor/time_zone_monitor_linux.cc
 index 467564dbbb..fa6cf06f1b 100644
 --- a/services/device/time_zone_monitor/time_zone_monitor_linux.cc
