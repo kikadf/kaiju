@@ -277,6 +277,24 @@ index d0b07c2acc..29365bbe1b 100644
    if (result < 0) {
      return std::nullopt;
    }
+diff --git a/base/process/launch.h b/base/process/launch.h
+index 5937c146d3..39afa4ecde 100644
+--- a/base/process/launch.h
++++ b/base/process/launch.h
+@@ -7,6 +7,13 @@
+ #ifndef BASE_PROCESS_LAUNCH_H_
+ #define BASE_PROCESS_LAUNCH_H_
+ 
++#if defined(__NetBSD__)
++#define _NETBSD_SOURCE 1
++#ifndef PTHREAD_STACK_MIN
++#define PTHREAD_STACK_MIN 4096
++#endif
++#endif
++
+ #include <limits.h>
+ #include <stddef.h>
+ 
 diff --git a/base/process/launch_posix.cc b/base/process/launch_posix.cc
 index 894224fc4c..6fc3eaa568 100644
 --- a/base/process/launch_posix.cc

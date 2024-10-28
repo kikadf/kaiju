@@ -2045,10 +2045,24 @@ index 88bb190287..a6ce647a7f 100644
    DCHECK(!process.is_current());
  
 diff --git a/base/process/launch.h b/base/process/launch.h
-index edd2bd6fad..5937c146d3 100644
+index edd2bd6fad..39afa4ecde 100644
 --- a/base/process/launch.h
 +++ b/base/process/launch.h
-@@ -237,7 +237,7 @@ struct BASE_EXPORT LaunchOptions {
+@@ -7,6 +7,13 @@
+ #ifndef BASE_PROCESS_LAUNCH_H_
+ #define BASE_PROCESS_LAUNCH_H_
+ 
++#if defined(__NetBSD__)
++#define _NETBSD_SOURCE 1
++#ifndef PTHREAD_STACK_MIN
++#define PTHREAD_STACK_MIN 4096
++#endif
++#endif
++
+ #include <limits.h>
+ #include <stddef.h>
+ 
+@@ -237,7 +244,7 @@ struct BASE_EXPORT LaunchOptions {
    bool clear_environment = false;
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
  
