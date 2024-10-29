@@ -1444,6 +1444,27 @@ index 6a787ed62f..7781ae1ab5 100644
    if (use_alsa) {
      libs += [ "asound" ]
      sources += [
+diff --git a/media/base/libvpx_thread_wrapper.cc b/media/base/libvpx_thread_wrapper.cc
+index ad545ee2ae..d43ed6bb60 100644
+--- a/media/base/libvpx_thread_wrapper.cc
++++ b/media/base/libvpx_thread_wrapper.cc
+@@ -5,14 +5,14 @@
+ #include "media/base/libvpx_thread_wrapper.h"
+ 
+ #include "media/base/codec_worker_impl.h"
+-#if !BUILDFLAG(IS_OPENBSD)
++#if !BUILDFLAG(IS_OPENBSD) && !BUILDFLAG(IS_NETBSD)
+ #include "third_party/libvpx/source/libvpx/vpx_util/vpx_thread.h"
+ #endif
+ 
+ namespace media {
+ 
+ void InitLibVpxThreadWrapper() {
+-#if !BUILDFLAG(IS_OPENBSD)
++#if !BUILDFLAG(IS_OPENBSD) && !BUILDFLAG(IS_NETBSD)
+   const VPxWorkerInterface interface =
+       CodecWorkerImpl<VPxWorkerInterface, VPxWorkerImpl, VPxWorker,
+                       VPxWorkerStatus, VPX_WORKER_STATUS_NOT_OK,
 diff --git a/media/base/media_switches.cc b/media/base/media_switches.cc
 index 51ce298338..6f07d30f2f 100644
 --- a/media/base/media_switches.cc
