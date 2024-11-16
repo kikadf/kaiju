@@ -16,6 +16,8 @@ die () {
     exit $_errc
 }
 
+_startdir=$(pwd)
+
 if [ "$1" != "" ]; then
 	c_ver="$1"
 else
@@ -25,52 +27,74 @@ else
 fi
 
 # get chromium
-curl "${c_tarball_url}/chromium-${c_ver}.tar.xz" -o "../chromium-${c_ver}.tar.xz" || die "curl chromium"
-curl "${c_tarball_url}/chrome-gn-${c_ver}-src.tar.xz" -o "../chrome-gn-${c_ver}-src.tar.xz" || die "curl chrome-gn"
-#curl "${c_tarball_url}/chromium-${c_ver}.tar.xz.hashes" -o "../chromium-${c_ver}.tar.xz.hashes" || die "curl hashes"
-cd .. || die
-#sed -n 's|sha256 *\(.*\)|\1|p' "chromium-${c_ver}.tar.xz.hashes" | sha256sum -c || die checksum
-
-# extract tarballs
-mkdir "chromium-netbsd-${c_ver}" || die
-tar -xJf "chromium-${c_ver}.tar.xz" --strip-components=1 -C "chromium-netbsd-${c_ver}" || die "extract chromium"
-tar -xJf "chrome-gn-${c_ver}-src.tar.xz" --strip-components=1 -C "chromium-netbsd-${c_ver}" || die "extract chrome-gn"
-sed -i'' 's/swiftshader/swiftshaderXXX/g' "chromium-netbsd-${c_ver}/third_party/.gitignore"
-sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "chromium-netbsd-${c_ver}/third_party/vulkan-deps/.gitignore"
-sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "chromium-netbsd-${c_ver}/third_party/.gitignore"
-
-# init git repo
-cd "chromium-netbsd-${c_ver}" || die
-git init || die
-git add . || die
-git commit -m "Chromium-${c_ver}" || die
-
-# clean distfiles
-rm "../chromium-${c_ver}.tar.xz" || die
-rm "../chrome-gn-${c_ver}-src.tar.xz" || die
-#rm "../chromium-${c_ver}.tar.xz.hashes" || die
-
-# Apply openbsd patchset in wip branch
-if [ -d "../openbsd-ports/www/chromium/patches" ]; then
-    p_dir="../openbsd-ports/www/chromium/patches"
-elif [ -d "../ports/www/chromium/patches" ]; then
-    p_dir="../ports/www/chromium/patches"
-else
-    echo "Error: not found openbsd ports tree"
-    exit 1
+if [ ! -f "../chromium-${c_ver}-download_done" ]; then
+    curl "${c_tarball_url}/chromium-${c_ver}.tar.xz" -o "../chromium-${c_ver}.tar.xz" || die "curl chromium"
+    curl "${c_tarball_url}/chrome-gn-${c_ver}-src.tar.xz" -o "../chrome-gn-${c_ver}-src.tar.xz" || die "curl chrome-gn"
+    #curl "${c_tarball_url}/chromium-${c_ver}.tar.xz.hashes" -o "../chromium-${c_ver}.tar.xz.hashes" || die "curl hashes"
+    #sed -n 's|sha256 *\(.*\)|\1|p' "chromium-${c_ver}.tar.xz.hashes" | sha256sum -c || die checksum
+    touch "../chromium-${c_ver}-download_done"
 fi
 
-for _patch in "$p_dir"/patch-*; do
-    if [ -e "$_patch" ]; then
-        patch -Np0 -i "$_patch" || die "Apply OpenBSD patches"
-    fi
-done
+# extract tarballs
+if [ ! -f "../chromium-${c_ver}-extract_done" ]; then
+    cd .. || die
+    mkdir "chromium-netbsd-${c_ver}" || die
+    tar -xJf "chromium-${c_ver}.tar.xz" --strip-components=1 -C "chromium-netbsd-${c_ver}" || die "extract chromium"
+    tar -xJf "chrome-gn-${c_ver}-src.tar.xz" --strip-components=1 -C "chromium-netbsd-${c_ver}" || die "extract chrome-gn"
+    sed -i'' 's/swiftshader/swiftshaderXXX/g' "chromium-netbsd-${c_ver}/third_party/.gitignore"
+    sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "chromium-netbsd-${c_ver}/third_party/vulkan-deps/.gitignore"
+    sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "chromium-netbsd-${c_ver}/third_party/.gitignore"
+    cd "$_startdir" || die
+    touch "../chromium-${c_ver}-extract_done"
+fi
 
-git add . || die
-git commit -m "Apply OpenBSD patchset" || die
+# init git repo
+if [ ! -f "../chromium-${c_ver}-init_done" ]; then
+    cd "../chromium-netbsd-${c_ver}" || die
+    git init || die
+    git add . || die
+    git commit -m "Chromium-${c_ver}" || die
+    cd "$_startdir" || die
+    touch "../chromium-${c_ver}-init_done"
+fi
+
+# Apply openbsd patchset in wip branch
+if [ ! -f "../chromium-${c_ver}-obpatches_done" ]; then
+    if [ -d "../openbsd-ports/www/chromium/patches" ]; then
+        p_dir="../openbsd-ports/www/chromium/patches"
+    elif [ -d "../ports/www/chromium/patches" ]; then
+        p_dir="../ports/www/chromium/patches"
+    else
+        echo "Error: not found openbsd ports tree"
+        exit 1
+    fi
+
+    cd "../chromium-netbsd-${c_ver}" || die
+    for _patch in "$p_dir"/patch-*; do
+        if [ -e "$_patch" ]; then
+            patch -Np0 -i "$_patch" || die "Apply OpenBSD patches"
+        fi
+    done
+
+    git add . || die
+    git commit -m "Apply OpenBSD patchset" || die
+    cd "$_startdir" || die
+    touch "../chromium-${c_ver}-obpatches_done"
+fi
 
 # Apply NetBSD delta patch
+cd "../chromium-netbsd-${c_ver}" || die
 if [ -e "../kaiju/patches/chromium/nb-delta.patch" ]; then
+
+    # clean distfiles, status files
+    rm "../chromium-${c_ver}.tar.xz" || die
+    rm "../chrome-gn-${c_ver}-src.tar.xz" || die
+    #rm "../chromium-${c_ver}.tar.xz.hashes" || die
+    rm "../chromium-${c_ver}-download_done"
+    rm "../chromium-${c_ver}-extract_done"
+    rm "../chromium-${c_ver}-init_done"
+    rm "../chromium-${c_ver}-obpatches_done"
+
     git apply --reject ../kaiju/patches/chromium/nb-delta.patch || die "Apply NetBSD delta patch"
 fi
 
