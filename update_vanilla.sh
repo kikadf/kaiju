@@ -3,7 +3,8 @@
 # Usage: ./update_vanila.sh <chromium version>
 # Example: ./update_vanilla.sh 120.6099.216
 
-c_tarball_url="https://commondatastorage.googleapis.com/chromium-browser-official"
+#c_tarball_url="https://commondatastorage.googleapis.com/chromium-browser-official"
+c_tarball_url="https://nerd.hu/distfiles"
 
 # func
 # die [what]
@@ -25,13 +26,15 @@ fi
 
 # get chromium
 curl "${c_tarball_url}/chromium-${c_ver}.tar.xz" -o "../chromium-${c_ver}.tar.xz" || die "curl chromium"
-curl "${c_tarball_url}/chromium-${c_ver}.tar.xz.hashes" -o "../chromium-${c_ver}.tar.xz.hashes" || die "curl hashes"
+curl "${c_tarball_url}/chrome-gn-${c_ver}-src.tar.xz" -o "../chrome-gn-${c_ver}-src.tar.xz" || die "curl chrome-gn"
+#curl "${c_tarball_url}/chromium-${c_ver}.tar.xz.hashes" -o "../chromium-${c_ver}.tar.xz.hashes" || die "curl hashes"
 cd .. || die
-sed -n 's|sha256 *\(.*\)|\1|p' "chromium-${c_ver}.tar.xz.hashes" | sha256sum -c || die checksum
+#sed -n 's|sha256 *\(.*\)|\1|p' "chromium-${c_ver}.tar.xz.hashes" | sha256sum -c || die checksum
 
-# extract tarball
+# extract tarballs
 mkdir "chromium-netbsd-${c_ver}" || die
-tar -xJf "chromium-${c_ver}.tar.xz" --strip-components=1 -C "chromium-netbsd-${c_ver}" || die extract
+tar -xJf "chromium-${c_ver}.tar.xz" --strip-components=1 -C "chromium-netbsd-${c_ver}" || die "extract chromium"
+tar -xJf "chrome-gn-${c_ver}-src.tar.xz" --strip-components=1 -C "chromium-netbsd-${c_ver}" || die "extract chrome-gn"
 sed -i'' 's/swiftshader/swiftshaderXXX/g' "chromium-netbsd-${c_ver}/third_party/.gitignore"
 sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "chromium-netbsd-${c_ver}/third_party/vulkan-deps/.gitignore"
 sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "chromium-netbsd-${c_ver}/third_party/.gitignore"
@@ -44,7 +47,8 @@ git commit -m "Chromium-${c_ver}" || die
 
 # clean distfiles
 rm "../chromium-${c_ver}.tar.xz" || die
-rm "../chromium-${c_ver}.tar.xz.hashes" || die
+rm "../chrome-gn-${c_ver}-src.tar.xz" || die
+#rm "../chromium-${c_ver}.tar.xz.hashes" || die
 
 # Apply openbsd patchset in wip branch
 if [ -d "../openbsd-ports/www/chromium/patches" ]; then
