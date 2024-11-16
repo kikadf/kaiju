@@ -39,6 +39,8 @@ _checked_files="\
         build/toolchain/openbsd/BUILD.gn \
         sandbox/policy/openbsd/sandbox_openbsd.cc \
         sandbox/policy/openbsd/sandbox_openbsd.h \
+        sandbox/policy/freebsd/sandbox_freebsd.cc \
+        sandbox/policy/freebsd/sandbox_freebsd.h \
         services/device/hid/hid_connection_freebsd.cc \
         services/device/hid/hid_connection_freebsd.h \
         services/device/hid/hid_service_freebsd.cc \
