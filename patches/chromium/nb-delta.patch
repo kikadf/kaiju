@@ -1512,6 +1512,31 @@ index 8dc249424d..4adfa0cfb8 100644
  #include <sys/videoio.h>
  typedef __uint32_t __u32;
  #else
+diff --git a/media/capture/video/linux/v4l2_capture_delegate.cc b/media/capture/video/linux/v4l2_capture_delegate.cc
+index 7a5f089949..0233b714a7 100644
+--- a/media/capture/video/linux/v4l2_capture_delegate.cc
++++ b/media/capture/video/linux/v4l2_capture_delegate.cc
+@@ -1067,6 +1067,12 @@ void V4L2CaptureDelegate::DoCapture() {
+       // in older kernels, and stopping and starting the stream gets the camera
+       // out of this bad state. Upgrading the kernel is difficult so this is our
+       // way out for now.
++#if BUILDFLAG(IS_NETBSD)
++      // On NetBSD cause: StartStream@media/capture/video/linux/v4l2_capture_delegate.cc:1017,
++      // Error requesting MMAP buffers from V4L2, OS message: Device busy (16)
++      // so do nothing, just wait for timeout_count_ >= kContinuousTimeoutLimit
++      DLOG(WARNING) << "DoCapture: poll timeout";
++#else
+       DLOG(WARNING) << "Restarting camera stream";
+       if (!StopStream() || !StartStream())
+         return;
+@@ -1074,6 +1080,7 @@ void V4L2CaptureDelegate::DoCapture() {
+           FROM_HERE,
+           base::BindOnce(&V4L2CaptureDelegate::DoCapture, GetWeakPtr()));
+       return;
++#endif
+     } else if (timeout_count_ >= kContinuousTimeoutLimit) {
+       SetErrorState(
+           VideoCaptureError::kV4L2MultipleContinuousTimeoutsWhileReadPolling,
 diff --git a/media/capture/video/linux/v4l2_capture_delegate.h b/media/capture/video/linux/v4l2_capture_delegate.h
 index fd69cf9115..c15cc9e654 100644
 --- a/media/capture/video/linux/v4l2_capture_delegate.h
@@ -1526,7 +1551,7 @@ index fd69cf9115..c15cc9e654 100644
  #else
  #include <linux/videodev2.h>
 diff --git a/media/capture/video/linux/video_capture_device_factory_v4l2.cc b/media/capture/video/linux/video_capture_device_factory_v4l2.cc
-index 1f09b300c2..d58d587c88 100644
+index 1f09b300c2..bbd488ddf7 100644
 --- a/media/capture/video/linux/video_capture_device_factory_v4l2.cc
 +++ b/media/capture/video/linux/video_capture_device_factory_v4l2.cc
 @@ -23,7 +23,7 @@
@@ -1547,15 +1572,6 @@ index 1f09b300c2..d58d587c88 100644
  // USB VID and PID are both 4 bytes long.
  const size_t kVidPidSize = 4;
  const size_t kMaxInterfaceNameSize = 256;
-@@ -77,7 +77,7 @@ class DevVideoFilePathsDeviceProvider
-     : public VideoCaptureDeviceFactoryV4L2::DeviceProvider {
-  public:
-   void GetDeviceIds(std::vector<std::string>* target_container) override {
--#if BUILDFLAG(IS_OPENBSD)
-+#if BUILDFLAG(IS_OPENBSD) || BUILDFLAG(IS_NETBSD)
-     target_container->emplace_back("/dev/video");
- #else
-     const base::FilePath path("/dev/");
 @@ -91,7 +91,7 @@ class DevVideoFilePathsDeviceProvider
    }
  
@@ -1574,6 +1590,18 @@ index 1f09b300c2..d58d587c88 100644
      return std::string();
  #else
      const std::string file_name = ExtractFileNameFromDeviceId(device_id);
+@@ -293,6 +293,11 @@ std::vector<float> VideoCaptureDeviceFactoryV4L2::GetFrameRateList(
+         frame_rates.push_back(
+             frame_interval.discrete.denominator /
+             static_cast<float>(frame_interval.discrete.numerator));
++#if BUILDFLAG(IS_NETBSD)
++        // On NetBSD VIDIOC_ENUM_FRAMEINTERVALS(video_enum_frameival) always return the same values
++        // and not handle index, what is cause infinity loop. One round is enough.
++        break;
++#endif
+       }
+     } else if (frame_interval.type == V4L2_FRMIVAL_TYPE_CONTINUOUS ||
+                frame_interval.type == V4L2_FRMIVAL_TYPE_STEPWISE) {
 diff --git a/media/capture/video/linux/video_capture_device_linux.cc b/media/capture/video/linux/video_capture_device_linux.cc
 index 41ab4b5346..c534eb8cc1 100644
 --- a/media/capture/video/linux/video_capture_device_linux.cc
