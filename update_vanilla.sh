@@ -69,6 +69,9 @@ if [ ! -f "../chromium-${c_ver}-obpatches_done" ]; then
         exit 1
     fi
 
+    cd "../${p_dir}/../../.." || die
+    git pull || die "OpenBSD-ports update: "
+
     cd "../chromium-netbsd-${c_ver}" || die
     for _patch in "$p_dir"/patch-*; do
         if [ -e "$_patch" ]; then
