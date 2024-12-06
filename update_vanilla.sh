@@ -42,7 +42,7 @@ if [ ! -f "../chromium-${c_ver}-extract_done" ]; then
     cd .. || die
     mkdir "chromium-netbsd-${c_ver}" || die
     tar -xJf "chromium-${c_ver}.tar.xz" --strip-components=1 -C "chromium-netbsd-${c_ver}" || die "extract chromium"
-    tar -xJf "chrome-gn-${c_ver}-src.tar.xz" --strip-components=1 -C "chromium-netbsd-${c_ver}" || die "extract chrome-gn"
+    #tar -xJf "chrome-gn-${c_ver}-src.tar.xz" --strip-components=1 -C "chromium-netbsd-${c_ver}" || die "extract chrome-gn"
     sed -i'' 's/swiftshader/swiftshaderXXX/g' "chromium-netbsd-${c_ver}/third_party/.gitignore"
     sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "chromium-netbsd-${c_ver}/third_party/vulkan-deps/.gitignore"
     sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "chromium-netbsd-${c_ver}/third_party/.gitignore"
@@ -71,7 +71,7 @@ if [ ! -f "../chromium-${c_ver}-obpatches_done" ]; then
         exit 1
     fi
 
-    cd "../${p_dir}/../../.." || die
+    cd "${p_dir}/../../.." || die
     git pull || die "OpenBSD-ports update: "
 
     cd "../chromium-netbsd-${c_ver}" || die
@@ -93,7 +93,7 @@ if [ -e "../kaiju/patches/chromium/nb-delta.patch" ]; then
 
     # clean distfiles, status files
     rm "../chromium-${c_ver}.tar.xz" || die
-    rm "../chrome-gn-${c_ver}-src.tar.xz" || die
+    #rm "../chrome-gn-${c_ver}-src.tar.xz" || die
     rm "../chromium-${c_ver}.tar.xz.hashes" || die
     rm "../chromium-${c_ver}-download_done"
     rm "../chromium-${c_ver}-extract_done"

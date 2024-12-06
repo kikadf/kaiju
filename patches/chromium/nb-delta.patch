@@ -3018,7 +3018,7 @@ index cdbf6cb89a..bb75cb06f5 100644
          exe_suffix = ""
      elif sys.platform.startswith("darwin"):
 diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
-index 13da4aa427..78f96d8392 100644
+index eb1624ba5c..86d209941f 100644
 --- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
 +++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
 @@ -388,7 +388,7 @@
@@ -3136,20 +3136,6 @@ index 827436e5e2..b7618d68a2 100644
    pthread_attr_destroy(&attr);
  #endif
  #if defined(__GLIBC__)
-diff --git a/third_party/blink/renderer/platform/wtf/thread_specific.h b/third_party/blink/renderer/platform/wtf/thread_specific.h
-index ac632db59f..51a0e11132 100644
---- a/third_party/blink/renderer/platform/wtf/thread_specific.h
-+++ b/third_party/blink/renderer/platform/wtf/thread_specific.h
-@@ -104,7 +104,8 @@ inline bool ThreadSpecific<T>::IsSet() {
- template <typename T>
- inline ThreadSpecific<T>::operator T*() {
-   T* off_thread_ptr;
--#if defined(__GLIBC__) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_FREEBSD)
-+#if defined(__GLIBC__) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_FREEBSD) || \
-+    BUILDFLAG(IS_NETBSD)
-   // TLS is fast on these platforms.
-   // TODO(csharrison): Qualify this statement for Android.
-   const bool kMainThreadAlwaysChecksTLS = true;
 diff --git a/third_party/crashpad/crashpad/minidump/minidump_misc_info_writer.cc b/third_party/crashpad/crashpad/minidump/minidump_misc_info_writer.cc
 index 420fe059fd..742616f562 100644
 --- a/third_party/crashpad/crashpad/minidump/minidump_misc_info_writer.cc
@@ -3814,6 +3800,18 @@ index 96f6071344..0e08b8002e 100644
  
  #include <dlfcn.h>
  
+diff --git a/third_party/widevine/cdm/widevine.gni b/third_party/widevine/cdm/widevine.gni
+index 2d8493a461..ea5553a331 100644
+--- a/third_party/widevine/cdm/widevine.gni
++++ b/third_party/widevine/cdm/widevine.gni
+@@ -30,6 +30,7 @@ library_widevine_cdm_available =
+     (target_os == "linux" && target_cpu == "x64") ||
+     (target_os == "openbsd" && target_cpu == "x64") ||
+     (target_os == "freebsd" && target_cpu == "x64") ||
++    (target_os == "netbsd" && target_cpu == "x64") ||
+     (target_os == "mac" && (target_cpu == "x64" || target_cpu == "arm64")) ||
+     (target_os == "win" &&
+      (target_cpu == "x86" || target_cpu == "x64" || target_cpu == "arm64"))
 diff --git a/tools/json_schema_compiler/feature_compiler.py b/tools/json_schema_compiler/feature_compiler.py
 index d57b1c495f..7b9f5ccc05 100644
 --- a/tools/json_schema_compiler/feature_compiler.py

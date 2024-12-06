@@ -10364,10 +10364,10 @@ index efbca13157..7dc6f6b3f4 100644
    // Check if the CPU has the required instruction set to run the Screen AI
    // library.
 diff --git a/chrome/browser/screen_ai/screen_ai_service_router.cc b/chrome/browser/screen_ai/screen_ai_service_router.cc
-index 21bc8572c8..2e941c9ec3 100644
+index d5f139f96e..a339c97ff4 100644
 --- a/chrome/browser/screen_ai/screen_ai_service_router.cc
 +++ b/chrome/browser/screen_ai/screen_ai_service_router.cc
-@@ -324,7 +324,7 @@ void ScreenAIServiceRouter::LaunchIfNotRunning() {
+@@ -318,7 +318,7 @@ void ScreenAIServiceRouter::LaunchIfNotRunning() {
    base::FilePath binary_path = state_instance->get_component_binary_path();
  #if BUILDFLAG(IS_WIN)
    std::vector<base::FilePath> preload_libraries = {binary_path};
@@ -10376,7 +10376,7 @@ index 21bc8572c8..2e941c9ec3 100644
    std::vector<std::string> extra_switches = {
        base::StringPrintf("--%s=%s", screen_ai::GetBinaryPathSwitch(),
                           binary_path.MaybeAsASCII().c_str())};
-@@ -338,7 +338,7 @@ void ScreenAIServiceRouter::LaunchIfNotRunning() {
+@@ -332,7 +332,7 @@ void ScreenAIServiceRouter::LaunchIfNotRunning() {
            .WithPreloadedLibraries(
                preload_libraries,
                content::ServiceProcessHostPreloadLibraries::GetPassKey())
@@ -13390,7 +13390,7 @@ index d55d51f86a..2a66dae738 100644
        "useGtkTheme",
        base::BindRepeating(&AppearanceHandler::HandleUseTheme,
 diff --git a/chrome/browser/ui/webui/settings/settings_localized_strings_provider.cc b/chrome/browser/ui/webui/settings/settings_localized_strings_provider.cc
-index 5ca07162b7..cb14c79a5d 100644
+index 7c7f1b161a..262e4ca27a 100644
 --- a/chrome/browser/ui/webui/settings/settings_localized_strings_provider.cc
 +++ b/chrome/browser/ui/webui/settings/settings_localized_strings_provider.cc
 @@ -148,7 +148,7 @@
@@ -33472,7 +33472,7 @@ index 56dbbd6399..f7c1753f41 100644
            profile.profile == media::VideoCodecProfile::H264PROFILE_BASELINE;
  #endif
 diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
-index 021b4d87e7..78f96d8392 100644
+index b058b1cefd..86d209941f 100644
 --- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
 +++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
 @@ -388,7 +388,7 @@
@@ -33718,20 +33718,6 @@ index 6d80ad7530..b63bbbcaaf 100644
  #endif  // USING_SYSTEM_ICU
  
  static void NotReachedEntityCallback(const void* context,
-diff --git a/third_party/blink/renderer/platform/wtf/thread_specific.h b/third_party/blink/renderer/platform/wtf/thread_specific.h
-index ac632db59f..51a0e11132 100644
---- a/third_party/blink/renderer/platform/wtf/thread_specific.h
-+++ b/third_party/blink/renderer/platform/wtf/thread_specific.h
-@@ -104,7 +104,8 @@ inline bool ThreadSpecific<T>::IsSet() {
- template <typename T>
- inline ThreadSpecific<T>::operator T*() {
-   T* off_thread_ptr;
--#if defined(__GLIBC__) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_FREEBSD)
-+#if defined(__GLIBC__) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_FREEBSD) || \
-+    BUILDFLAG(IS_NETBSD)
-   // TLS is fast on these platforms.
-   // TODO(csharrison): Qualify this statement for Android.
-   const bool kMainThreadAlwaysChecksTLS = true;
 diff --git a/third_party/brotli/common/platform.h b/third_party/brotli/common/platform.h
 index 0e0e8aa49e..4e470b6e28 100644
 --- a/third_party/brotli/common/platform.h
@@ -36777,15 +36763,16 @@ index 5e66d4b0ef..8ef575be31 100644
  
    if (is_win) {
 diff --git a/third_party/widevine/cdm/widevine.gni b/third_party/widevine/cdm/widevine.gni
-index 8b97b7a574..2d8493a461 100644
+index 8b97b7a574..ea5553a331 100644
 --- a/third_party/widevine/cdm/widevine.gni
 +++ b/third_party/widevine/cdm/widevine.gni
-@@ -28,6 +28,8 @@ library_widevine_cdm_available =
+@@ -28,6 +28,9 @@ library_widevine_cdm_available =
      (is_chromeos &&
       (target_cpu == "x64" || target_cpu == "arm" || target_cpu == "arm64")) ||
      (target_os == "linux" && target_cpu == "x64") ||
 +    (target_os == "openbsd" && target_cpu == "x64") ||
 +    (target_os == "freebsd" && target_cpu == "x64") ||
++    (target_os == "netbsd" && target_cpu == "x64") ||
      (target_os == "mac" && (target_cpu == "x64" || target_cpu == "arm64")) ||
      (target_os == "win" &&
       (target_cpu == "x86" || target_cpu == "x64" || target_cpu == "arm64"))
@@ -39472,10 +39459,10 @@ index 77b5a3f2c0..23e651e0be 100644
        display_scale_factor_observer_{this};
  #endif
 diff --git a/ui/ozone/platform/x11/x11_window.cc b/ui/ozone/platform/x11/x11_window.cc
-index c21f3aa2e6..7423950172 100644
+index e237b24eeb..3d0864097a 100644
 --- a/ui/ozone/platform/x11/x11_window.cc
 +++ b/ui/ozone/platform/x11/x11_window.cc
-@@ -1488,7 +1488,7 @@ void X11Window::OnXWindowStateChanged() {
+@@ -1504,7 +1504,7 @@ void X11Window::OnXWindowStateChanged() {
    WindowTiledEdges tiled_state = GetTiledState();
    if (tiled_state != tiled_state_) {
      tiled_state_ = tiled_state;
@@ -40584,7 +40571,7 @@ index 294c0cd32d..f7ab8dc3d9 100644
  #include "src/logging/log.h"
  
 diff --git a/v8/src/execution/isolate.cc b/v8/src/execution/isolate.cc
-index 5e9fcf3795..742edd6baa 100644
+index 15a635519b..7b2340a89b 100644
 --- a/v8/src/execution/isolate.cc
 +++ b/v8/src/execution/isolate.cc
 @@ -168,6 +168,10 @@
@@ -40598,7 +40585,7 @@ index 5e9fcf3795..742edd6baa 100644
  extern "C" const uint8_t v8_Default_embedded_blob_code_[];
  extern "C" uint32_t v8_Default_embedded_blob_code_size_;
  extern "C" const uint8_t v8_Default_embedded_blob_data_[];
-@@ -4995,6 +4999,13 @@ void Isolate::InitializeDefaultEmbeddedBlob() {
+@@ -4996,6 +5000,13 @@ void Isolate::InitializeDefaultEmbeddedBlob() {
    const uint8_t* data = DefaultEmbeddedBlobData();
    uint32_t data_size = DefaultEmbeddedBlobDataSize();
  
