@@ -3,6 +3,9 @@
 # Usage: ./update_pkgsrc_patches.sh [-d <pkgsrc/chromium/path> -o <pkgsrc/workobj/dir>]
 # Example: ./update_pkgsrc_patches.sh -d /usr/pkgsrc/wip/chromium -o /mnt/wrkobjdir
 
+# Unwanted modifications:
+_unwanted=" third_party/rust-src/src/tools/enzyme/enzyme/benchmarks/ReverseMode/lstm/data/lstm_full.txt"
+
 # func
 # pkgsrcpath <path>
 ppath() {
@@ -95,6 +98,12 @@ make makesum || die "make makesum"
 make extract || die "make extract"
 echo ">>> Apply new patchset on source"
 cd "$_objd"/chromium-* || die
+for _unwant in $_unwanted; do
+    if [ -f "$_unwant" ]; then
+        # rename vanilla files from *.orig to *.origy to avoid match by mkpatches
+        mv "$_unwant".orig "$_unwant".origy
+    fi
+done
 patch -p1 -s -i "$_kaiju_repo"/patches/chromium/nb.patch || die patch
 echo ">>> Generate new patches with mkpatches"
 cd "$_path" || die
