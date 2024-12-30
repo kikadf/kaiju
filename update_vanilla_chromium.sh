@@ -1,7 +1,7 @@
 #!/bin/sh
 
-# Usage: ./update_vanila.sh <chromium version>
-# Example: ./update_vanilla.sh 120.6099.216
+# Usage: ./update_vanila_chromium.sh <chromium version>
+# Example: ./update_vanilla_chromium.sh 120.6099.216
 
 c_tarball_url="https://commondatastorage.googleapis.com/chromium-browser-official"
 #c_tarball_url="https://nerd.hu/distfiles"
