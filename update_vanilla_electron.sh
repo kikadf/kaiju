@@ -14,6 +14,7 @@ die () {
 }
 
 _startdir=$(pwd)
+_isend="0"
 
 if [ "$1" != "" ]; then
 	e_ver="$1"
@@ -39,6 +40,32 @@ _eng_ver=$(getver 8)
 _c_rver=$(getver 9)
 
 c_tarball_url="https://github.com/tagattie/FreeBSD-Electron/releases/download/v${_c_rver}/"
+
+hasrej() {
+    _hasrej=0
+    _sd=$(pwd)
+    _emsg=""
+    if [ "$1" ]; then
+        cd "$1"
+    fi
+    # shellcheck disable=SC2044
+    for _rej in $(find . -type f -name "*.rej"); do
+        if [ -e "$_rej" ]; then
+            _hasrej=1
+            echo "$_rej"
+        fi
+    done
+    cd "$_sd"
+    if [ "$_hasrej" = "1" ]; then
+        if [ "$_isend" = "1" ]; then
+       	    _emsg=", after run again script"
+	fi
+        echo ">>> Fix rejected patches and git commit them$_emsg"
+        return true
+    else
+        return false
+    fi
+}
 
 # get sources
 if [ ! -f "../electron${_e_main}-${e_ver}-download_done" ]; then
@@ -84,16 +111,6 @@ if [ ! -f "../electron${_e_main}-${e_ver}-extract_done" ]; then
     touch "../electron${_e_main}-${e_ver}-extract_done"
 fi
 
-# init git repo
-if [ ! -f "../electron${_e_main}-${e_ver}-init_done" ]; then
-    cd "../electron${_e_main}-netbsd-${e_ver}" || die
-    git init || die
-    git add . || die
-    git commit -m "Electron-${e_ver}" || die
-    cd "$_startdir" || die
-    touch "../electron${_e_main}-${e_ver}-init_done"
-fi
-
 # Apply electron shipped patchset
 if [ ! -f "../electron${_e_main}-${e_ver}-electronpatches_done" ]; then
     cd "../electron${_e_main}-netbsd-${e_ver}" || die
@@ -105,34 +122,57 @@ if [ ! -f "../electron${_e_main}-${e_ver}-electronpatches_done" ]; then
         _rd=$(echo "${_prp}" | awk -F: '{print $2}' | sed -e 's/src/./')
         cd "$_rd" || die
         for _patch in "${_bd}/${_pd}/"*; do
-            git apply --reject --directory="$(git rev-parse --show-prefix)" "${_patch}"
+	    patch -Np0 -i "$_patch"
+            #git apply --reject --directory="$(git rev-parse --show-prefix)" "${_patch}"
         done
         cd "$_bd" || die
     done
 
-    git add . || die
-    git commit -m "Apply Electron patchset" || die
     cd "$_startdir" || die
     touch "../electron${_e_main}-${e_ver}-electronpatches_done"
+    hasrej "$_bd" && exit 1
+fi
 
-    _hasrej=0
-    # shellcheck disable=SC2044
-    for _rej in $(find "../electron${_e_main}-netbsd-${e_ver}" -type f -name "*.rej"); do
-        if [ -e "$_rej" ]; then
-            _hasrej=1
-            echo "$_rej"
-        fi
-    done
-    if [ "$_hasrej" = "1" ]; then
-        echo ">>> Fix rejected patches, git commit them, after run again script"
+# init git repo
+if [ ! -f "../electron${_e_main}-${e_ver}-init_done" ]; then
+    cd "../electron${_e_main}-netbsd-${e_ver}" || die
+    git init || die
+    git add . || die
+    git commit -m "Electron-${e_ver}" || die
+    cd "$_startdir" || die
+    touch "../electron${_e_main}-${e_ver}-init_done"
+fi
+
+# Apply freebsd patchset in wip branch
+if [ ! -f "../electron${_e_main}-${e_ver}-fbpatches_done" ]; then
+    if [ -d "../freebsd-ports/devel/electron${_e_main}/files" ]; then
+        p_dir="../freebsd-ports/devel/electron${_e_main}/files"
+    else
+        echo "Error: not found freebsd ports tree"
         exit 1
     fi
+
+    cd "${p_dir}/../../.." || die
+    git pull || die "FreeBSD-ports update: "
+
+    cd "../electron${_e_main}-netbsd-${e_ver}" || die
+    for _patch in "$p_dir"/patch-*; do
+        if [ -e "$_patch" ]; then
+            patch -Np0 -i "$_patch"
+        fi
+    done
+
+    git add . || die
+    git commit -m "Apply FreeBSD patchset" || die
+    cd "$_startdir" || die
+    touch "../electron${_e_main}-${e_ver}-fbpatches_done"
+    hasrej "../electron${_e_main}-netbsd-${e_ver}" && exit 1
 fi
 
 # Apply NetBSD delta patch
 cd "../electron${_e_main}-netbsd-${e_ver}" || die
 if [ -e "../kaiju/patches/electron${_e_main}/nb-delta.patch" ]; then
-
+    _isend="1"
     # clean distfiles, status files
     rm "../chromium-${_c_ver}.tar.xz"* || die
     rm "../node-${_node_ver}.tar.gz" || die
@@ -144,10 +184,12 @@ if [ -e "../kaiju/patches/electron${_e_main}/nb-delta.patch" ]; then
     rm "../electron-${e_ver}.tar.gz" || die
     rm "../electron${_e_main}-${e_ver}-download_done"
     rm "../electron${_e_main}-${e_ver}-extract_done"
-    rm "../electron${_e_main}-${e_ver}-init_done"
     rm "../electron${_e_main}-${e_ver}-electronpatches_done"
+    rm "../electron${_e_main}-${e_ver}-init_done"
+    rm "../electron${_e_main}-${e_ver}-fbpatches_done"
 
-    git apply --reject "../kaiju/patches/electron${_e_main}/nb-delta.patch" || die "Apply NetBSD delta patch"
+    git apply --reject "../kaiju/patches/electron${_e_main}/nb-delta.patch"
+    hasrej && exit 1
 fi
 
 exit 0
