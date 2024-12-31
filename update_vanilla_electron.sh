@@ -46,7 +46,7 @@ hasrej() {
     _sd=$(pwd)
     _emsg=""
     if [ "$1" ]; then
-        cd "$1"
+        cd "$1" || die
     fi
     # shellcheck disable=SC2044
     for _rej in $(find . -type f -name "*.rej"); do
@@ -55,15 +55,15 @@ hasrej() {
             echo "$_rej"
         fi
     done
-    cd "$_sd"
+    cd "$_sd" || die
     if [ "$_hasrej" = "1" ]; then
         if [ "$_isend" = "1" ]; then
        	    _emsg=", after run again script"
 	fi
         echo ">>> Fix rejected patches and git commit them$_emsg"
-        return true
+        return 0
     else
-        return false
+        return 1
     fi
 }
 
@@ -117,13 +117,11 @@ if [ ! -f "../electron${_e_main}-${e_ver}-electronpatches_done" ]; then
     _bd=$(pwd)
 
     for _prp in $(jq -r '.[] | .patch_dir + ":" + .repo' electron/patches/config.json); do
-        echo "DEBUG: _prp: $_prp"
         _pd=$(echo "${_prp}" | awk -F: '{print $1}' | sed -e 's/src/./')
         _rd=$(echo "${_prp}" | awk -F: '{print $2}' | sed -e 's/src/./')
         cd "$_rd" || die
         for _patch in "${_bd}/${_pd}/"*; do
-	    patch -Np0 -i "$_patch"
-            #git apply --reject --directory="$(git rev-parse --show-prefix)" "${_patch}"
+	        git apply --reject --directory="$(git rev-parse --show-prefix)" "${_patch}"
         done
         cd "$_bd" || die
     done
@@ -184,8 +182,8 @@ if [ -e "../kaiju/patches/electron${_e_main}/nb-delta.patch" ]; then
     rm "../electron-${e_ver}.tar.gz" || die
     rm "../electron${_e_main}-${e_ver}-download_done"
     rm "../electron${_e_main}-${e_ver}-extract_done"
-    rm "../electron${_e_main}-${e_ver}-electronpatches_done"
     rm "../electron${_e_main}-${e_ver}-init_done"
+    rm "../electron${_e_main}-${e_ver}-electronpatches_done"
     rm "../electron${_e_main}-${e_ver}-fbpatches_done"
 
     git apply --reject "../kaiju/patches/electron${_e_main}/nb-delta.patch"
