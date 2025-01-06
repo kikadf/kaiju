@@ -111,26 +111,6 @@ if [ ! -f "../electron${_e_main}-${e_ver}-extract_done" ]; then
     touch "../electron${_e_main}-${e_ver}-extract_done"
 fi
 
-# Apply electron shipped patchset
-if [ ! -f "../electron${_e_main}-${e_ver}-electronpatches_done" ]; then
-    cd "../electron${_e_main}-netbsd-${e_ver}" || die
-    _bd=$(pwd)
-
-    for _prp in $(jq -r '.[] | .patch_dir + ":" + .repo' electron/patches/config.json); do
-        _pd=$(echo "${_prp}" | awk -F: '{print $1}' | sed -e 's/src/./')
-        _rd=$(echo "${_prp}" | awk -F: '{print $2}' | sed -e 's/src/./')
-        cd "$_rd" || die
-        for _patch in "${_bd}/${_pd}/"*; do
-	        git apply --reject --directory="$(git rev-parse --show-prefix)" "${_patch}"
-        done
-        cd "$_bd" || die
-    done
-
-    cd "$_startdir" || die
-    touch "../electron${_e_main}-${e_ver}-electronpatches_done"
-    hasrej "$_bd" && exit 1
-fi
-
 # init git repo
 if [ ! -f "../electron${_e_main}-${e_ver}-init_done" ]; then
     cd "../electron${_e_main}-netbsd-${e_ver}" || die
@@ -139,6 +119,25 @@ if [ ! -f "../electron${_e_main}-${e_ver}-init_done" ]; then
     git commit -m "Electron-${e_ver}" || die
     cd "$_startdir" || die
     touch "../electron${_e_main}-${e_ver}-init_done"
+fi
+
+# Apply electron shipped patchset
+if [ ! -f "../electron${_e_main}-${e_ver}-electronpatches_done" ]; then
+    cd "../electron${_e_main}-netbsd-${e_ver}" || die
+    _bd=$(pwd)
+
+    for _dirs in $(sed -n 's|.*patch_dir": "src\(.*\)", "repo": "src\(.*\)".*|.\1:.\2|p' < "$_bd"/electron/patches/config.json); do
+        _patchdir=$(echo "$_dirs" | cut -d: -f1)
+        _srcdir=$(echo "$_dirs" | cut -d: -f2)
+        cd "$_bd"/"$_srcdir" || die
+        for _patch in "$_bd/$_patchdir"/*; do
+            git apply --reject --directory="$(git rev-parse --show-prefix)" "${_patch}"
+        done
+    done
+
+    cd "$_startdir" || die
+    touch "../electron${_e_main}-${e_ver}-electronpatches_done"
+    hasrej "$_bd" && exit 1
 fi
 
 # Apply freebsd patchset in wip branch
