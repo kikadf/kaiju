@@ -59,7 +59,10 @@ else
 fi
 
 _ppath=$(ppath "$_path")
-echo ">>> Used $_pkgname pkgrsc path: $_path"
+echo "$_ppath" | grep electron >/dev/null && _pkg="electron"
+echo "$_ppath" | grep chromium >/dev/null && _pkg="chromium"
+_pkgd=$(basename "$_ppath")
+echo ">>> Used $_pkg pkgrsc path: $_path"
 
 # Set pkgsrc's workobjdir path
 if [ -n "$_obj" ]; then
@@ -92,21 +95,21 @@ rm patches/patch-*
 make makesum || die "make makesum"
 make extract || die "make extract"
 echo ">>> Apply new patchset on source"
-cd "$_objd"/"$_pkgname"-* || die
+cd "$_objd"/"$_pkg"-* || die
 for _unwant in $_unwanted; do
     if [ -f "$_unwant" ]; then
         # rename vanilla files from *.orig to *.origy to avoid match by mkpatches
         mv "$_unwant".orig "$_unwant".origy
     fi
 done
-patch -p1 -s -i "$_kaiju_repo"/patches/"$_pkgname"/nb.patch || die patch
+patch -p1 -s -i "$_kaiju_repo"/patches/"$_pkgd"/nb.patch || die patch
 echo ">>> Generate new patches with mkpatches"
 cd "$_path" || die
 mkpatches || die mkpatches
 rm patches/*.orig
 rm patches/*Cargo.toml
 for _patch in patches/patch-*; do
-    if [ "$_pkgname" = "chromium" ]; then
+    if [ "$_pkg" = "chromium" ]; then
         # shellcheck disable=SC3003
         sed -i'' \
             -e $'3i\\\n* Part of patchset to build chromium on NetBSD\n' \
