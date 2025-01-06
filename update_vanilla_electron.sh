@@ -160,6 +160,7 @@ fi
 # Apply freebsd patchset in wip branch
 if [ ! -f "../electron${_e_main}-${e_ver}-fbpatches_done" ]; then
     # First commit the official electron patches
+    cd "../electron${_e_main}-netbsd-${e_ver}" || die
     git add . || die
     git commit -m "Apply Electron fix patchset" || die
 
@@ -200,6 +201,7 @@ if [ -e "../kaiju/patches/electron${_e_main}/nb-delta.patch" ]; then
     rm "../Mantle-${_m_ver}.tar.gz" || die
     rm "../reclient-configs-${_eng_ver}.tar.gz" || die
     rm "../electron-${e_ver}.tar.gz" || die
+    rm "../*.rej" || die
     rm "../electron${_e_main}-${e_ver}-download_done"
     rm "../electron${_e_main}-${e_ver}-extract_done"
     rm "../electron${_e_main}-${e_ver}-init_done"
