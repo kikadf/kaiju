@@ -59,7 +59,7 @@ hasrej() {
     if [ "$_hasrej" = "1" ]; then
         if [ "$_isend" = "1" ]; then
        	    _emsg=", after run again script"
-	fi
+	    fi
         echo ">>> Fix rejected patches and git commit them$_emsg"
         return 0
     else
@@ -135,6 +135,17 @@ if [ ! -f "../electron${_e_main}-${e_ver}-electronpatches_done" ]; then
         done
     done
 
+    cd "$_bd" || die
+    if hasrej >/dev/null; then 
+        find . -type f -name "*.rej" -exec mv -t ../ {} +
+        _broken=1
+    fi
+    git add . || die
+    git commit -m "Apply Electron patchset" || die
+
+    if [ "$_broken" = "1" ] && [ -e "../kaiju/patches/electron${_e_main}/nb-efix.patch" ]; then
+        git apply --reject "../kaiju/patches/electron${_e_main}/nb-efix.patch"
+    fi
     cd "$_startdir" || die
     touch "../electron${_e_main}-${e_ver}-electronpatches_done"
     hasrej "$_bd" && exit 1
@@ -142,6 +153,10 @@ fi
 
 # Apply freebsd patchset in wip branch
 if [ ! -f "../electron${_e_main}-${e_ver}-fbpatches_done" ]; then
+    # First commit the official electron patches
+    git add . || die
+    git commit -m "Apply Electron fix patchset" || die
+
     if [ -d "../freebsd-ports/devel/electron${_e_main}/files" ]; then
         p_dir="../freebsd-ports/devel/electron${_e_main}/files"
     else
