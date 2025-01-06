@@ -1068,6 +1068,19 @@ index ce049dc56a..12f40cb6eb 100644
    } else {
      NOTREACHED_IN_MIGRATION() << "Platform not supported: " << os;
      return false;
+diff --git a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
+index 40f1022cae..741037bc40 100644
+--- a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
++++ b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
+@@ -440,7 +440,7 @@ class ChromeFileSystemAccessPermissionContext
+       {kNoBasePathKey, FILE_PATH_LITERAL("/sys"), kBlockAllChildren},
+       // And system files in /boot and /etc.
+       {kNoBasePathKey, FILE_PATH_LITERAL("/boot"), kBlockAllChildren},
+-      {kNoBasePathKey, FILE_PATH_LITERAL("/etc"), kBlockAllChildren},
++      {kNoBasePathKey, FILE_PATH_LITERAL("@PKG_SYSCONFBASE@"), kBlockAllChildren},
+       // And block all of ~/.config, matching the similar restrictions on mac
+       // and windows.
+       {base::DIR_HOME, FILE_PATH_LITERAL(".config"), kBlockAllChildren},
 diff --git a/chrome/browser/flag_descriptions.cc b/chrome/browser/flag_descriptions.cc
 index f91c23b3cb..a58c4b14f1 100644
 --- a/chrome/browser/flag_descriptions.cc
