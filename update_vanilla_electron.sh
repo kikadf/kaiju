@@ -145,9 +145,15 @@ if [ ! -f "../electron${_e_main}-${e_ver}-electronpatches_done" ]; then
 
     if [ "$_broken" = "1" ] && [ -e "../kaiju/patches/electron${_e_main}/nb-efix.patch" ]; then
         git apply --reject "../kaiju/patches/electron${_e_main}/nb-efix.patch"
+        _broken=0
     fi
     cd "$_startdir" || die
     touch "../electron${_e_main}-${e_ver}-electronpatches_done"
+    if [ "$_broken" = "1" ]; then
+        echo "Error to fix rejected patches:"
+        find ../ -type f -name "*.rej"
+        exit 1
+    fi
     hasrej "$_bd" && exit 1
 fi
 

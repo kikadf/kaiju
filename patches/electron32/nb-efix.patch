@@ -1,0 +1,208 @@
+commit aa3e0dcde41c56d043ed9fdc0c29a4202035bbc7
+Author: kikadf <kikadf.01@gmail.com>
+Date:   Mon Jan 6 11:35:49 2025 +0100
+
+    Fix electron patches
+
+diff --git a/chrome/browser/process_singleton.h b/chrome/browser/process_singleton.h
+index ed932ca58e..8dbc5ac458 100644
+--- a/chrome/browser/process_singleton.h
++++ b/chrome/browser/process_singleton.h
+@@ -101,21 +101,24 @@ class ProcessSingleton {
+   // should handle it (i.e., because the current process is shutting down).
+   using NotificationCallback =
+       base::RepeatingCallback<bool(base::CommandLine command_line,
+-                                   const base::FilePath& current_directory)>;
++                                   const base::FilePath& current_directory,
++                                   const std::vector<uint8_t> additional_data)>;
+ 
+ #if BUILDFLAG(IS_WIN)
+   ProcessSingleton(const std::string& program_name,
+                    const base::FilePath& user_data_dir,
++                   const base::span<const uint8_t> additional_data,
+                    bool is_sandboxed,
+                    const NotificationCallback& notification_callback);
+ #else
+   ProcessSingleton(const base::FilePath& user_data_dir,
++                   const base::span<const uint8_t> additional_data,
+                    const NotificationCallback& notification_callback);
++#endif
+ 
+   ProcessSingleton(const ProcessSingleton&) = delete;
+   ProcessSingleton& operator=(const ProcessSingleton&) = delete;
+ 
+-#endif
+   ~ProcessSingleton();
+ 
+   // Notify another process, if available. Otherwise sets ourselves as the
+diff --git a/chrome/browser/process_singleton_win.cc b/chrome/browser/process_singleton_win.cc
+index c39f19a60f..27da17eed8 100644
+--- a/chrome/browser/process_singleton_win.cc
++++ b/chrome/browser/process_singleton_win.cc
+@@ -299,9 +299,11 @@ bool ProcessSingleton::EscapeVirtualization(
+ ProcessSingleton::ProcessSingleton(
+     const std::string& program_name,
+     const base::FilePath& user_data_dir,
++    const base::span<const uint8_t> additional_data,
+     bool is_app_sandboxed,
+     const NotificationCallback& notification_callback)
+     : notification_callback_(notification_callback),
++      additional_data_(additional_data),
+       program_name_(program_name),
+       is_app_sandboxed_(is_app_sandboxed),
+       is_virtualized_(false),
+diff --git a/content/browser/media/capture/screen_capture_kit_device_mac.mm b/content/browser/media/capture/screen_capture_kit_device_mac.mm
+index 27b7edd2e9..30b3c896d5 100644
+--- a/content/browser/media/capture/screen_capture_kit_device_mac.mm
++++ b/content/browser/media/capture/screen_capture_kit_device_mac.mm
+@@ -503,7 +503,9 @@ class API_AVAILABLE(macos(12.3)) ScreenCaptureKitDeviceMac
+ 
+     if (@available(macOS 15.0, *)) {
+       constexpr bool DefaultUseNativePicker = true;
+-      if (use_native_picker.value_or(DefaultUseNativePicker) && source_.id < 0 && source_.window_id == 0) {
++      if (use_native_picker.value_or(DefaultUseNativePicker) &&
++          source_.id == DesktopMediaID::kMacOsNativePickerId &&
++          source_.window_id < 0) {
+         auto* picker = [SCContentSharingPicker sharedPicker];
+         ScreenCaptureKitDeviceMac::active_streams_++;
+         picker.maximumStreamCount = @(ScreenCaptureKitDeviceMac::active_streams_);
+diff --git a/third_party/blink/renderer/core/editing/ime/edit_context.cc b/third_party/blink/renderer/core/editing/ime/edit_context.cc
+index 350801e5c8..b41b6c4a51 100644
+--- a/third_party/blink/renderer/core/editing/ime/edit_context.cc
++++ b/third_party/blink/renderer/core/editing/ime/edit_context.cc
+@@ -775,47 +775,52 @@ bool EditContext::FirstRectForCharacterRange(uint32_t location,
+       if (length == 0) {
+         if (start_in_composition == character_bounds_.size()) {
+           // Zero-width rect after the last character in the composition range
+-          rect_in_viewport =
++          rect_in_css_pixels =
+               gfx::Rect(character_bounds_[start_in_composition - 1].right(),
+                         character_bounds_[start_in_composition - 1].y(), 0,
+                         character_bounds_[start_in_composition - 1].height());
+         } else {
+           // Zero-width rect before the next character in the composition range
+-          rect_in_viewport =
++          rect_in_css_pixels =
+               gfx::Rect(character_bounds_[start_in_composition].x(),
+                         character_bounds_[start_in_composition].y(), 0,
+                         character_bounds_[start_in_composition].height());
+         }
+       } else {
+-        gfx::Rect rect = character_bounds_[start_in_composition];
++        rect_in_css_pixels = character_bounds_[start_in_composition];
+         for (size_t i = start_in_composition + 1; i < end_in_composition; ++i) {
+-          rect.Union(character_bounds_[i]);
++          rect_in_css_pixels.Union(character_bounds_[i]);
+         }
+-
+-        rect_in_viewport = rect;
+       }
+-      return true;
++      found_rect = true;
+     }
+   }
+ 
+   // If we couldn't get a result from the composition bounds then we'll fall
+   // back to using the selection bounds, since these will generally be close to
+   // where the composition is happening.
+-  if (selection_bounds_ != gfx::Rect()) {
+-    rect_in_viewport = selection_bounds_;
+-    return true;
++  if (!found_rect && selection_bounds_ != gfx::Rect()) {
++    rect_in_css_pixels = selection_bounds_;
++    found_rect = true;
+   }
+ 
+   // If we have neither composition bounds nor selection bounds, we'll fall back
+   // to using the control bounds. In this case the IME might not be drawn
+   // exactly in the right spot, but will at least be adjacent to the editable
+   // region rather than in the corner of the screen.
+-  if (control_bounds_ != gfx::Rect()) {
+-    rect_in_viewport = control_bounds_;
+-    return true;
++  if (!found_rect && control_bounds_ != gfx::Rect()) {
++    rect_in_css_pixels = control_bounds_;
++    found_rect = true;
++  }
++
++  if (found_rect) {
++    // EditContext's coordinates are in CSS pixels, which need to be converted
++    // to physical pixels before return.
++    rect_in_viewport = gfx::ScaleToEnclosingRect(
++        rect_in_css_pixels, DomWindow()->GetFrame()->DevicePixelRatio());
+   }
+ 
+-  return false;
++  return found_rect;
+ }
+ 
+ bool EditContext::HasValidCompositionBounds() const {
+diff --git a/third_party/electron_node/common.gypi b/third_party/electron_node/common.gypi
+index 42246c20d2..3ec08ee144 100644
+--- a/third_party/electron_node/common.gypi
++++ b/third_party/electron_node/common.gypi
+@@ -86,6 +86,8 @@
+     'v8_use_perfetto': 0,
+     'tsan%': 0,
+ 
++    'using_electron_config_gypi%': 0,
++
+     ##### end V8 defaults #####
+ 
+     # When building native modules using 'npm install' with the system npm,
+diff --git a/third_party/electron_node/src/node_contextify.cc b/third_party/electron_node/src/node_contextify.cc
+index 27aa73d17d..0401b96891 100644
+--- a/third_party/electron_node/src/node_contextify.cc
++++ b/third_party/electron_node/src/node_contextify.cc
+@@ -485,14 +485,15 @@ bool ContextifyContext::IsStillInitializing(const ContextifyContext* ctx) {
+ }
+ 
+ // static
+-void ContextifyContext::PropertyGetterCallback(
+-    Local<Name> property,
+-    const PropertyCallbackInfo<Value>& args) {
++Intercepted ContextifyContext::PropertyGetterCallback(
++    Local<Name> property, const PropertyCallbackInfo<Value>& args) {
+   Environment* env = Environment::GetCurrent(args);
+   ContextifyContext* ctx = ContextifyContext::Get(args);
+ 
+   // Still initializing
+-  if (IsStillInitializing(ctx)) return;
++  if (IsStillInitializing(ctx)) {
++    return Intercepted::kNo;
++  }
+ 
+   Local<Context> context = ctx->context();
+   Local<Object> sandbox = ctx->sandbox();
+diff --git a/third_party/electron_node/src/node_external_reference.h b/third_party/electron_node/src/node_external_reference.h
+index c4aba23510..6d9988810b 100644
+--- a/third_party/electron_node/src/node_external_reference.h
++++ b/third_party/electron_node/src/node_external_reference.h
+@@ -66,16 +66,17 @@ class ExternalReferenceRegistry {
+   V(v8::FunctionCallback)                                                      \
+   V(v8::AccessorNameGetterCallback)                                            \
+   V(v8::AccessorNameSetterCallback)                                            \
+-  V(v8::GenericNamedPropertyDefinerCallback)                                   \
+-  V(v8::GenericNamedPropertyDeleterCallback)                                   \
+-  V(v8::GenericNamedPropertyEnumeratorCallback)                                \
+-  V(v8::GenericNamedPropertyQueryCallback)                                     \
+-  V(v8::GenericNamedPropertySetterCallback)                                    \
+-  V(v8::IndexedPropertySetterCallback)                                         \
+-  V(v8::IndexedPropertyDefinerCallback)                                        \
+-  V(v8::IndexedPropertyDeleterCallback)                                        \
+-  V(v8::IndexedPropertyQueryCallback)                                          \
+-  V(v8::IndexedPropertyDescriptorCallback)                                     \
++  V(v8::NamedPropertyGetterCallback)                                           \
++  V(v8::NamedPropertyDefinerCallback)                                          \
++  V(v8::NamedPropertyDeleterCallback)                                          \
++  V(v8::NamedPropertyEnumeratorCallback)                                       \
++  V(v8::NamedPropertyQueryCallback)                                            \
++  V(v8::NamedPropertySetterCallback)                                           \
++  V(v8::IndexedPropertyGetterCallbackV2)                                       \
++  V(v8::IndexedPropertySetterCallbackV2)                                       \
++  V(v8::IndexedPropertyDefinerCallbackV2)                                      \
++  V(v8::IndexedPropertyDeleterCallbackV2)                                      \
++  V(v8::IndexedPropertyQueryCallbackV2)                                        \
+   V(const v8::String::ExternalStringResourceBase*)
+ 
+ #define V(ExternalReferenceType)                                               \
