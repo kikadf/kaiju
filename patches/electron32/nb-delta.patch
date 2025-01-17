@@ -81,7 +81,7 @@ index 7d3b5baebf..9229303073 100644
  void* GetStackTop() {
     pthread_attr_t attr;
 diff --git a/base/base_paths_posix.cc b/base/base_paths_posix.cc
-index 54cb093775..1bd6713b0c 100644
+index 54cb093775..2eedebdef6 100644
 --- a/base/base_paths_posix.cc
 +++ b/base/base_paths_posix.cc
 @@ -61,6 +61,15 @@ bool PathProviderPosix(int key, FilePath* result) {
@@ -100,6 +100,15 @@ index 54cb093775..1bd6713b0c 100644
  #elif BUILDFLAG(IS_SOLARIS)
        char bin_dir[PATH_MAX + 1];
        if (realpath(getexecname(), bin_dir) == NULL) {
+@@ -124,7 +133,7 @@ out:
+         if ((cpath = getenv("CHROME_EXE_PATH")) != NULL)
+           *result = FilePath(cpath);
+         else
+-          *result = FilePath("/usr/local/chrome/chrome");
++          *result = FilePath("@PREFIX@/lib/@PKGBASE@/electron");
+         return true;
+ #if !BUILDFLAG(IS_AIX)
+       }
 diff --git a/base/compiler_specific.h b/base/compiler_specific.h
 index a804c3a47e..9c59a6e293 100644
 --- a/base/compiler_specific.h
@@ -351,6 +360,19 @@ index 0000000000..64f0533fb1
 +}
 +
 +}  // namespace base
+diff --git a/base/process/process_handle_openbsd.cc b/base/process/process_handle_openbsd.cc
+index 7b30e099be..91e59a3fbf 100644
+--- a/base/process/process_handle_openbsd.cc
++++ b/base/process/process_handle_openbsd.cc
+@@ -60,7 +60,7 @@ FilePath GetProcessExecutablePath(ProcessHandle process) {
+   if ((cpath = getenv("CHROME_EXE_PATH")) != NULL)
+     result = FilePath(cpath);
+   else
+-    result = FilePath("/usr/local/chrome/chrome");
++    result = FilePath("@PREFIX@/lib/@PKGBASE@/electron");
+ 
+   if (sysctl(mib, std::size(mib), NULL, &len, NULL, 0) != -1) {
+     retvalargs = static_cast<char**>(malloc(len));
 diff --git a/base/process/process_iterator.h b/base/process/process_iterator.h
 index a819ae1327..1bcf2e60c1 100644
 --- a/base/process/process_iterator.h
@@ -4587,6 +4609,35 @@ index 76a91369de..a9b899f5ae 100644
  #elif PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
    struct xucred user_cred;
    socklen_t len = sizeof(user_cred);
+diff --git a/third_party/perfetto/src/base/utils.cc b/third_party/perfetto/src/base/utils.cc
+index b785dd0899..9af408f857 100644
+--- a/third_party/perfetto/src/base/utils.cc
++++ b/third_party/perfetto/src/base/utils.cc
+@@ -280,14 +280,22 @@ void Daemonize(std::function<int()> parent_cb) {
+ 
+ std::string GetCurExecutablePath() {
+   std::string self_path;
+-#if PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) ||   \
++#if (PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) ||   \
+     PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) || \
+-    PERFETTO_BUILDFLAG(PERFETTO_OS_FUCHSIA)
++    PERFETTO_BUILDFLAG(PERFETTO_OS_FUCHSIA)) && \
++    !PERFETTO_BUILDFLAG(PERFETTO_OS_BSD)
+   char buf[PATH_MAX];
+   ssize_t size = readlink("/proc/self/exe", buf, sizeof(buf));
+   PERFETTO_CHECK(size != -1);
+   // readlink does not null terminate.
+   self_path = std::string(buf, static_cast<size_t>(size));
++#elif PERFETTO_BUILDFLAG(PERFETTO_OS_BSD)
++  char *buf;
++  const char *cpath = "@PREFIX@/lib/@PKGBASE@/electron";
++  if ((buf = getenv("CHROME_EXE_PATH")) != NULL)
++    self_path = std::string(buf);
++  else
++    self_path = std::string(cpath);
+ #elif PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
+   uint32_t size = 0;
+   PERFETTO_CHECK(_NSGetExecutablePath(nullptr, &size));
 diff --git a/third_party/perfetto/src/trace_processor/importers/ftrace/v4l2_tracker.cc b/third_party/perfetto/src/trace_processor/importers/ftrace/v4l2_tracker.cc
 index c441fb124b..0387d9b06b 100644
 --- a/third_party/perfetto/src/trace_processor/importers/ftrace/v4l2_tracker.cc
