@@ -26,7 +26,7 @@ die () {
 }
 
 # Check arguments
-if [ $# -ne 0 ] && [ $# -ne 2 ] && [ $# -ne 4 ]; then
+if [ $# -ne 2 ] && [ $# -ne 4 ]; then
         echo "Error: wrong args"
         echo "Usage: ./update_pkgsrc_patches.sh [-d <pkgsrc/package/path> -o <pkgsrc/workobj/dir>]"
         exit 1
