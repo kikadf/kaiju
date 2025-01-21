@@ -944,6 +944,19 @@ index e30f784cd3..023ff10df1 100644
  is_mac = current_os == "mac"
  is_nacl = current_os == "nacl"
  is_watchos = current_os == "watchos"
+diff --git a/build/config/compiler/BUILD.gn b/build/config/compiler/BUILD.gn
+index 53b538942b..5c65f35db0 100644
+--- a/build/config/compiler/BUILD.gn
++++ b/build/config/compiler/BUILD.gn
+@@ -2310,7 +2310,7 @@ config("export_dynamic") {
+ # 2. Remove the thin_archive config, so that the .a file actually contains all
+ #    .o files, instead of just references to .o files in the build directoy
+ config("thin_archive") {
+-  if ((is_apple && use_lld) || (is_linux && !is_clang)) {
++  if ((is_apple && use_lld) || (is_linux && !is_clang) || (is_netbsd)) {
+     # The macOS and iOS linker ld64.ldd doesn't support thin archive without
+     # symbol table, gcc on linux also throws the error `archive has no index`.
+     arflags = [
 diff --git a/build/config/linux/pkg-config.py b/build/config/linux/pkg-config.py
 index 3caf00630d..aaabfcaa5c 100755
 --- a/build/config/linux/pkg-config.py
@@ -3483,6 +3496,23 @@ index e69d781b4a..ced3b78ef2 100755
      'Windows': ('win', 'node.exe'),
    }[platform.system()])
  
+diff --git a/third_party/pdfium/core/fxge/linux/fx_linux_impl.cpp b/third_party/pdfium/core/fxge/linux/fx_linux_impl.cpp
+index e2bd4a8e4d..abc1852252 100644
+--- a/third_party/pdfium/core/fxge/linux/fx_linux_impl.cpp
++++ b/third_party/pdfium/core/fxge/linux/fx_linux_impl.cpp
+@@ -173,9 +173,9 @@ class CLinuxPlatform : public CFX_GEModule::PlatformIface {
+   std::unique_ptr<SystemFontInfoIface> CreateDefaultSystemFontInfo() override {
+     auto pInfo = std::make_unique<CFX_LinuxFontInfo>();
+     if (!pInfo->ParseFontCfg(CFX_GEModule::Get()->GetUserFontPaths())) {
+-      pInfo->AddPath("/usr/X11R6/lib/X11/fonts/Type1");
+-      pInfo->AddPath("/usr/X11R6/lib/X11/fonts/TTF");
+-      pInfo->AddPath("/usr/local/share/fonts");
++      pInfo->AddPath("@X11BASE@/lib/X11/fonts/Type1");
++      pInfo->AddPath("@X11BASE@/lib/X11/fonts/TTF");
++      pInfo->AddPath("@PREFIX@/share/fonts");
+     }
+     return pInfo;
+   }
 diff --git a/third_party/perfetto/include/perfetto/base/build_config.h b/third_party/perfetto/include/perfetto/base/build_config.h
 index e090b30385..f972b86dd7 100644
 --- a/third_party/perfetto/include/perfetto/base/build_config.h
@@ -4272,7 +4302,7 @@ index ef2f4ee84d..d17ee7b539 100644
  #elif V8_OS_DARWIN
  constexpr int kOobSignal = SIGBUS;
 diff --git a/v8/src/trap-handler/trap-handler.h b/v8/src/trap-handler/trap-handler.h
-index e1bd5b1169..e09c09f160 100644
+index e1bd5b1169..29a62eb342 100644
 --- a/v8/src/trap-handler/trap-handler.h
 +++ b/v8/src/trap-handler/trap-handler.h
 @@ -20,7 +20,7 @@ namespace trap_handler {
@@ -4280,7 +4310,7 @@ index e1bd5b1169..e09c09f160 100644
  #if V8_HOST_ARCH_X64 && V8_TARGET_ARCH_X64 &&                        \
      ((V8_OS_LINUX && !V8_OS_ANDROID) || V8_OS_WIN || V8_OS_DARWIN || \
 -     V8_OS_FREEBSD || V8_OS_OPENBSD)
-+     V8_OS_FREEBSD || V8_OS_OPENBSD) || V8_OS_NETBSD)
++     V8_OS_FREEBSD || V8_OS_OPENBSD || V8_OS_NETBSD)
  #define V8_TRAP_HANDLER_SUPPORTED true
  // Arm64 (non-simulator) on Linux, Windows, MacOS.
  #elif V8_TARGET_ARCH_ARM64 && V8_HOST_ARCH_ARM64 && \
