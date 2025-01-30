@@ -61,7 +61,7 @@ fi
 _ppath=$(ppath "$_path")
 echo "$_ppath" | grep electron >/dev/null && _pkg="electron"
 echo "$_ppath" | grep chromium >/dev/null && _pkg="chromium"
-_pkgd=$(basename "$_ppath")
+_pkgd=$(basename "$_ppath"| sed 's/-next//')
 echo ">>> Used $_pkg pkgrsc path: $_path"
 
 # Set pkgsrc's workobjdir path
