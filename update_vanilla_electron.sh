@@ -172,6 +172,14 @@ if [ ! -f "../electron${_e_main}-${e_ver}-electronpatches_done" ]; then
     done
 
     cd "$_bd" || die
+    sed -i'' 's/electron/electronXXX/g' .gitignore
+    sed -i'' 's/electron_node/electron_nodeXXX/g' third_party/.gitignore
+    sed -i'' 's/engflow-reclient-configs/engflow-reclient-configsXXX/g' third_party/.gitignore
+    sed -i'' 's/nan/nanXXX/g' third_party/.gitignore
+    sed -i'' 's/squirrel.mac/squirrel.macXXX/g' third_party/.gitignore
+    sed -i'' 's/vendor/vendorXXX/g' third_party/squirrel.mac/.gitignore
+    sed -i'' 's/nacl/naclXXX/g' buildtools/reclient_cfgs/.gitignore
+
     git add . || die
     git commit -m "Apply Electron patchset" || die
     cd "$_startdir" || die

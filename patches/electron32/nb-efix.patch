@@ -1,6 +1,6 @@
-commit aa3e0dcde41c56d043ed9fdc0c29a4202035bbc7
+commit 74c1ae6ef974ffe9755a55306b3cfc02a4086161
 Author: kikadf <kikadf.01@gmail.com>
-Date:   Mon Jan 6 11:35:49 2025 +0100
+Date:   Sat Feb 15 12:17:30 2025 +0100
 
     Fix electron patches
 
@@ -137,6 +137,93 @@ index 350801e5c8..b41b6c4a51 100644
  }
  
  bool EditContext::HasValidCompositionBounds() const {
+diff --git a/third_party/dawn/src/tint/lang/wgsl/resolver/address_space_layout_validation_test.cc b/third_party/dawn/src/tint/lang/wgsl/resolver/address_space_layout_validation_test.cc
+index f1e14a36a3..093a577385 100644
+--- a/third_party/dawn/src/tint/lang/wgsl/resolver/address_space_layout_validation_test.cc
++++ b/third_party/dawn/src/tint/lang/wgsl/resolver/address_space_layout_validation_test.cc
+@@ -730,7 +730,7 @@ TEST_F(ResolverAddressSpaceLayoutValidationTest, RelaxedUniformLayout_ArrayStrid
+     EXPECT_TRUE(r()->Resolve()) << r()->error();
+ }
+ 
+-TEST_F(ResolverAddressSpaceLayoutValidationTest, AlignAttributeTooSmall) {
++TEST_F(ResolverAddressSpaceLayoutValidationTest, AlignAttributeTooSmal_Storagel) {
+     // struct S {
+     //   @align(4) vector : vec4u;
+     //   scalar : u32;
+@@ -754,5 +754,73 @@ TEST_F(ResolverAddressSpaceLayoutValidationTest, AlignAttributeTooSmall) {
+ 56:78 note: 'S' used in address space 'storage' here)");
+ }
+ 
++TEST_F(ResolverAddressSpaceLayoutValidationTest, AlignAttributeTooSmall_Workgroup) {
++    // struct S {
++    //   @align(4) vector : vec4u;
++    //   scalar : u32;
++    // };
++    //
++    // var<workgroup> a : array<S, 4>;
++    Structure(
++        "S", Vector{
++                 Member("vector", ty.vec4<u32>(), Vector{MemberAlign(Expr(Source{{12, 34}}, 4_a))}),
++                 Member("scalar", ty.u32()),
++             });
++
++    GlobalVar(Source{{56, 78}}, "a", ty("S"), core::AddressSpace::kWorkgroup, Group(0_a));
++
++    ASSERT_FALSE(r()->Resolve());
++    EXPECT_EQ(
++        r()->error(),
++        R"(12:34 error: alignment must be a multiple of '16' bytes for the 'workgroup' address space
++56:78 note: 'S' used in address space 'workgroup' here)");
++}
++
++TEST_F(ResolverAddressSpaceLayoutValidationTest, AlignAttributeTooSmall_Private) {
++    // struct S {
++    //   @align(4) vector : vec4u;
++    //   scalar : u32;
++    // };
++    //
++    // var<private> a : array<S, 4>;
++    Structure(
++        "S", Vector{
++                 Member("vector", ty.vec4<u32>(), Vector{MemberAlign(Expr(Source{{12, 34}}, 4_a))}),
++                 Member("scalar", ty.u32()),
++             });
++
++    GlobalVar(Source{{56, 78}}, "a", ty("S"), core::AddressSpace::kPrivate, Group(0_a));
++
++    ASSERT_FALSE(r()->Resolve());
++    EXPECT_EQ(
++        r()->error(),
++        R"(12:34 error: alignment must be a multiple of '16' bytes for the 'private' address space
++56:78 note: 'S' used in address space 'private' here)");
++}
++
++TEST_F(ResolverAddressSpaceLayoutValidationTest, AlignAttributeTooSmall_Function) {
++    // struct S {
++    //   @align(4) vector : vec4u;
++    //   scalar : u32;
++    // };
++    //
++    // fn foo() {
++    //   var a : array<S, 4>;
++    // }
++    Structure(
++        "S", Vector{
++                 Member("vector", ty.vec4<u32>(), Vector{MemberAlign(Expr(Source{{12, 34}}, 4_a))}),
++                 Member("scalar", ty.u32()),
++             });
++
++    GlobalVar(Source{{56, 78}}, "a", ty("S"), core::AddressSpace::kFunction, Group(0_a));
++
++    ASSERT_FALSE(r()->Resolve());
++    EXPECT_EQ(
++        r()->error(),
++        R"(12:34 error: alignment must be a multiple of '16' bytes for the 'function' address space
++56:78 note: 'S' used in address space 'function' here)");
++}
++
+ }  // namespace
+ }  // namespace tint::resolver
 diff --git a/third_party/electron_node/common.gypi b/third_party/electron_node/common.gypi
 index 42246c20d2..3ec08ee144 100644
 --- a/third_party/electron_node/common.gypi
