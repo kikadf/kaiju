@@ -14,12 +14,13 @@ die () {
 }
 
 _startdir=$(pwd)
+_distfiles=/usr/pkgsrc/distfiles
 _isend="0"
 
 if [ "$1" != "" ]; then
-	e_ver="$1"
+    e_ver="$1"
 else
-	echo "Error: not set chromium version"
+    echo "Error: not set chromium version"
     echo "Usage: ./update_vanilla.sh <chromium version>"
 	exit 1
 fi
@@ -57,9 +58,11 @@ hasrej() {
     done
     cd "$_sd" || die
     if [ "$_hasrej" = "1" ]; then
-        if [ "$_isend" = "1" ]; then
+        if [ "$_isend" = "0" ]; then
        	    _emsg=", after run again script"
-	    fi
+        else
+            _emsg=", as Apply NetBSD patches"
+        fi
         echo ">>> Fix rejected patches and git commit them$_emsg"
         return 0
     else
@@ -71,15 +74,47 @@ hasrej() {
 if [ ! -f "../electron${_e_main}-${e_ver}-download_done" ]; then
     cd .. || die
     for c_num in 0 1 2; do
-        curl -L "${c_tarball_url}/chromium-${_c_ver}.tar.xz.${c_num}" -o "chromium-${_c_ver}.tar.xz.${c_num}" || die "curl chromium.${c_num}"
+        if [ ! -f "$_distfiles/chromium-${_c_ver}.tar.xz.${c_num}" ]; then
+            curl -L "${c_tarball_url}/chromium-${_c_ver}.tar.xz.${c_num}" \
+                 -o "chromium-${_c_ver}.tar.xz.${c_num}" \
+                 || die "curl chromium.${c_num}"
+        fi
     done
-    curl -L "https://github.com/nodejs/node/archive/v${_node_ver}.tar.gz" -o "node-${_node_ver}.tar.gz" || die "curl node"
-    curl -L "https://github.com/nodejs/nan/archive/${_nan_ver}.tar.gz" -o "nan-${_nan_ver}.tar.gz" || die "curl nan"
-    curl -L "https://github.com/Squirrel/Squirrel.Mac/archive/${_sq_ver}.tar.gz" -o "Squirrel.Mac-${_sq_ver}.tar.gz" || die "curl Squirrel.Mac"
-    curl -L "https://github.com/ReactiveCocoa/ReactiveObjC/archive/${_ro_ver}.tar.gz" -o "ReactiveObjC-${_ro_ver}.tar.gz" || die "curl ReactiveObjC"
-    curl -L "https://github.com/Mantle/Mantle/archive/${_m_ver}.tar.gz" -o "Mantle-${_m_ver}.tar.gz" || die "curl Mantle"
-    curl -L "https://github.com/EngFlow/reclient-configs/archive/${_eng_ver}.tar.gz" -o "reclient-configs-${_eng_ver}.tar.gz" || die "curl reclient-configs"
-    curl -L "https://github.com/electron/electron/archive/v${e_ver}.tar.gz" -o "electron-${e_ver}.tar.gz" || die "curl electron"
+    if [ ! -f "$_distfiles/nodejs-node-v${_node_ver}.tar.gz" ]; then
+         curl -L "https://github.com/nodejs/node/archive/v${_node_ver}.tar.gz" \
+              -o "$_distfiles/nodejs-node-v${_node_ver}.tar.gz" \
+              || die "curl node"
+    fi
+    if [ ! -f "$_distfiles/nodejs-nan-${_nan_ver}.tar.gz" ]; then
+         curl -L "https://github.com/nodejs/nan/archive/${_nan_ver}.tar.gz" \
+              -o "$_distfiles/nodejs-nan-${_nan_ver}.tar.gz" \
+              || die "curl nan"
+    fi
+    if [ ! -f "$_distfiles/Squirrel-Squirrel.Mac-${_sq_ver}.tar.gz" ]; then
+         curl -L "https://github.com/Squirrel/Squirrel.Mac/archive/${_sq_ver}.tar.gz" \
+              -o "$_distfiles/Squirrel-Squirrel.Mac-${_sq_ver}.tar.gz" \
+              || die "curl Squirrel.Mac"
+    fi
+    if [ ! -f "$_distfiles/ReactiveCocoa-ReactiveObjC-${_ro_ver}.tar.gz" ]; then
+         curl -L "https://github.com/ReactiveCocoa/ReactiveObjC/archive/${_ro_ver}.tar.gz" \
+              -o "$_distfiles/ReactiveCocoa-ReactiveObjC-${_ro_ver}.tar.gz" \
+              || die "curl ReactiveObjC"
+    fi
+    if [ ! -f "$_distfiles/Mantle-Mantle-${_m_ver}.tar.gz" ]; then
+         curl -L "https://github.com/Mantle/Mantle/archive/${_m_ver}.tar.gz" \
+              -o "$_distfiles/Mantle-Mantle-${_m_ver}.tar.gz" \
+              || die "curl Mantle"
+    fi
+    if [ ! -f "$_distfiles/EngFlow-reclient-configs-${_eng_ver}.tar.gz" ]; then
+         curl -L "https://github.com/EngFlow/reclient-configs/archive/${_eng_ver}.tar.gz" \
+              -o "$_distfiles/EngFlow-reclient-configs-${_eng_ver}.tar.gz" \
+              || die "curl reclient-configs"
+    fi
+    if [ ! -f "$_distfiles/electron${_e_main}-${e_ver}.tar.gz" ]; then
+         curl -L "https://github.com/electron/electron/archive/v${e_ver}.tar.gz" \
+              -o "$_distfiles/electron${_e_main}-${e_ver}.tar.gz" \
+              || die "curl electron"
+    fi
     cd "$_startdir" || die
     touch "../electron${_e_main}-${e_ver}-download_done"
 fi
@@ -88,25 +123,26 @@ fi
 if [ ! -f "../electron${_e_main}-${e_ver}-extract_done" ]; then
     cd .. || die
     mkdir "electron${_e_main}-netbsd-${e_ver}" || die
-    cat chromium-"${_c_ver}".tar.xz.? > "chromium-${_c_ver}.tar.xz" || die "cat chromium.?"
+    cat "$_distfiles"/chromium-"${_c_ver}".tar.xz.? > "chromium-${_c_ver}.tar.xz" || die "cat chromium.?"
     tar -xJf "chromium-${_c_ver}.tar.xz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}" || die "extract chromium"
+    echo "*.rej" >> "electron${_e_main}-netbsd-${e_ver}/.gitignore" 
     sed -i'' 's/swiftshader/swiftshaderXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/.gitignore"
     sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/vulkan-deps/.gitignore"
     sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/.gitignore"
     mkdir "electron${_e_main}-netbsd-${e_ver}/electron" || die
-    tar -xzf "electron-${e_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/electron" || die "extract electron"
+    tar -xzf "$_distfiles/electron${_e_main}-${e_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/electron" || die "extract electron"
     mkdir "electron${_e_main}-netbsd-${e_ver}/third_party/electron_node" || die
-    tar -xzf "node-${_node_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/third_party/electron_node" || die "extract node"
+    tar -xzf "$_distfiles/nodejs-node-v${_node_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/third_party/electron_node" || die "extract node"
     mkdir "electron${_e_main}-netbsd-${e_ver}/third_party/nan" || die
-    tar -xzf "nan-${_nan_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/third_party/nan" || die "extract nan"
+    tar -xzf "$_distfiles/nodejs-nan-${_nan_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/third_party/nan" || die "extract nan"
     mkdir "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac" || die
-    tar -xzf "Squirrel.Mac-${_sq_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac" || die "extract squirrel"
+    tar -xzf "$_distfiles/Squirrel-Squirrel.Mac-${_sq_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac" || die "extract squirrel"
     mkdir -p "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac/vendor/ReactiveObjC" || die
-    tar -xzf "ReactiveObjC-${_ro_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac/vendor/ReactiveObjC" || die "extract ReactiveObjC"
+    tar -xzf "$_distfiles/ReactiveCocoa-ReactiveObjC-${_ro_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac/vendor/ReactiveObjC" || die "extract ReactiveObjC"
     mkdir "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac/vendor/Mantle" || die
-    tar -xzf "Mantle-${_m_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac/vendor/Mantle" || die "extract mantle"
+    tar -xzf "$_distfiles/Mantle-Mantle-${_m_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac/vendor/Mantle" || die "extract mantle"
     mkdir "electron${_e_main}-netbsd-${e_ver}/third_party/engflow-reclient-configs" || die
-    tar -xzf "reclient-configs-${_eng_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/third_party/engflow-reclient-configs" || die "extract engflow"
+    tar -xzf "$_distfiles/EngFlow-reclient-configs-${_eng_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/third_party/engflow-reclient-configs" || die "extract engflow"
     cd "$_startdir" || die
     touch "../electron${_e_main}-${e_ver}-extract_done"
 fi
@@ -136,33 +172,38 @@ if [ ! -f "../electron${_e_main}-${e_ver}-electronpatches_done" ]; then
     done
 
     cd "$_bd" || die
-    if hasrej >/dev/null; then 
-        find . -type f -name "*.rej" -exec mv -t ../ {} +
-        _broken=1
-    fi
     git add . || die
     git commit -m "Apply Electron patchset" || die
-
-    if [ "$_broken" = "1" ] && [ -e "../kaiju/patches/electron${_e_main}/nb-efix.patch" ]; then
-        git apply --reject "../kaiju/patches/electron${_e_main}/nb-efix.patch"
-        _broken=0
-    fi
     cd "$_startdir" || die
     touch "../electron${_e_main}-${e_ver}-electronpatches_done"
-    if [ "$_broken" = "1" ]; then
-        echo "Error to fix rejected patches:"
-        find ../ -type f -name "*.rej"
+fi
+
+# Fix electron patches
+if [ ! -f "../electron${_e_main}-${e_ver}-fixelectronpatches_done" ]; then
+    cd "../electron${_e_main}-netbsd-${e_ver}" || die
+
+    if hasrej >/dev/null; then
+        echo "ERROR: electron shipped patches failed again:"
+        find . -type f -name "*.rej"
+        echo "Fix with:"
+        echo "\$ cd ../electron${_e_main}-netbsd-${e_ver}"
+        echo "\$ git apply --reject ../kaiju/patches/electron${_e_main}/nb-efix.patch"
+        echo "And check manually the rejected patches"
+        echo "If all fixed, don't forget to remove *.rej files amd run:"
+        echo "\$ cd ../kaiju"
+        echo "\$ ./update_vanilla_electron.sh ${e_ver}"
         exit 1
+    else
+        git add .
+        git commit -m "Fix electron patchset"
+        cd "$_startdir" || die
+        touch "../electron${_e_main}-${e_ver}-fixelectronpatches_done"
     fi
-    hasrej "$_bd" && exit 1
 fi
 
 # Apply freebsd patchset in wip branch
 if [ ! -f "../electron${_e_main}-${e_ver}-fbpatches_done" ]; then
-    # First commit the official electron patches
     cd "../electron${_e_main}-netbsd-${e_ver}" || die
-    git add . || die
-    git commit -m "Apply Electron fix patchset" || die
 
     if [ -d "../freebsd-ports/devel/electron${_e_main}/files" ]; then
         p_dir="../freebsd-ports/devel/electron${_e_main}/files"
@@ -192,16 +233,7 @@ fi
 cd "../electron${_e_main}-netbsd-${e_ver}" || die
 if [ -e "../kaiju/patches/electron${_e_main}/nb-delta.patch" ]; then
     _isend="1"
-    # clean distfiles, status files
-    rm "../chromium-${_c_ver}.tar.xz"* || die
-    rm "../node-${_node_ver}.tar.gz" || die
-    rm "../nan-${_nan_ver}.tar.gz" || die
-    rm "../Squirrel.Mac-${_sq_ver}.tar.gz" || die
-    rm "../ReactiveObjC-${_ro_ver}.tar.gz" || die
-    rm "../Mantle-${_m_ver}.tar.gz" || die
-    rm "../reclient-configs-${_eng_ver}.tar.gz" || die
-    rm "../electron-${e_ver}.tar.gz" || die
-    rm "../*.rej" || die
+    # clean status files
     rm "../electron${_e_main}-${e_ver}-download_done"
     rm "../electron${_e_main}-${e_ver}-extract_done"
     rm "../electron${_e_main}-${e_ver}-init_done"
