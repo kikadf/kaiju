@@ -73,6 +73,7 @@ hasrej() {
 # get sources
 if [ ! -f "../electron${_e_main}-${e_ver}-download_done" ]; then
     cd .. || die
+    echo "Download distfiles..."
     for c_num in 0 1 2; do
         if [ ! -f "$_distfiles/chromium-${_c_ver}.tar.xz.${c_num}" ]; then
             curl -L "${c_tarball_url}/chromium-${_c_ver}.tar.xz.${c_num}" \
@@ -122,6 +123,7 @@ fi
 # extract tarballs
 if [ ! -f "../electron${_e_main}-${e_ver}-extract_done" ]; then
     cd .. || die
+    echo "Extract distfiles..."
     mkdir "electron${_e_main}-netbsd-${e_ver}" || die
     cat "$_distfiles"/chromium-"${_c_ver}".tar.xz.? > "chromium-${_c_ver}.tar.xz" || die "cat chromium.?"
     tar -xJf "chromium-${_c_ver}.tar.xz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}" || die "extract chromium"
@@ -242,6 +244,7 @@ cd "../electron${_e_main}-netbsd-${e_ver}" || die
 if [ -e "../kaiju/patches/electron${_e_main}/nb-delta.patch" ]; then
     _isend="1"
     # clean status files
+    rm "../chromium-${_c_ver}.tar.xz"
     rm "../electron${_e_main}-${e_ver}-download_done"
     rm "../electron${_e_main}-${e_ver}-extract_done"
     rm "../electron${_e_main}-${e_ver}-init_done"
@@ -250,6 +253,7 @@ if [ -e "../kaiju/patches/electron${_e_main}/nb-delta.patch" ]; then
 
     git apply --reject "../kaiju/patches/electron${_e_main}/nb-delta.patch"
     hasrej && exit 1
+    echo "Finished. Don't forget to commit NetBSD patchset."
 fi
 
 exit 0
