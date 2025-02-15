@@ -4312,6 +4312,21 @@ index 916b25f937..86aba39a80 100644
  #define DAWN_PLATFORM_IS_LINUX 1
  #define DAWN_PLATFORM_IS_BSD 1
  #define DAWN_PLATFORM_IS_POSIX 1
+diff --git a/third_party/electron_node/BUILD.gn b/third_party/electron_node/BUILD.gn
+index 2ce1e8a7dc..296a53a28d 100644
+--- a/third_party/electron_node/BUILD.gn
++++ b/third_party/electron_node/BUILD.gn
+@@ -40,8 +40,8 @@ declare_args() {
+   node_release_urlbase = ""
+ 
+   # Allows downstream packagers (eg. Linux distributions) to build Electron against system shared libraries.
+-  use_system_cares = false
+-  use_system_nghttp2 = false
++  use_system_cares = true
++  use_system_nghttp2 = true
+   use_system_llhttp = false
+   use_system_histogram = false
+ }
 diff --git a/third_party/electron_node/deps/cares/BUILD.gn b/third_party/electron_node/deps/cares/BUILD.gn
 index 42074e24a2..7e21b9bb76 100644
 --- a/third_party/electron_node/deps/cares/BUILD.gn
@@ -4334,10 +4349,10 @@ index 42074e24a2..7e21b9bb76 100644
      include_dirs += [ "config/darwin" ]
      sources += [
 diff --git a/third_party/electron_node/deps/uv/BUILD.gn b/third_party/electron_node/deps/uv/BUILD.gn
-index e063151ab4..33106037dd 100644
+index e063151ab4..1b43456c60 100644
 --- a/third_party/electron_node/deps/uv/BUILD.gn
 +++ b/third_party/electron_node/deps/uv/BUILD.gn
-@@ -195,10 +195,24 @@ static_library("uv") {
+@@ -195,10 +195,25 @@ static_library("uv") {
      sources += [
        "src/unix/bsd-ifaddrs.c",
        "src/unix/bsd-proctitle.c",
@@ -4361,6 +4376,7 @@ index e063151ab4..33106037dd 100644
 +    sources += [
 +      "src/unix/netbsd.c",
 +    ]
++    libs += [ "kvm" ]
 +  }
  }
 diff --git a/third_party/ffmpeg/configure b/third_party/ffmpeg/configure
