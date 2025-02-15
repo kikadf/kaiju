@@ -1077,6 +1077,29 @@ index 0000000000..27240dd95a
 +    current_os = "netbsd"
 +  }
 +}
+diff --git a/chrome/browser/about_flags.cc b/chrome/browser/about_flags.cc
+index 0b5b4d0e04..8e3cb43f4b 100644
+--- a/chrome/browser/about_flags.cc
++++ b/chrome/browser/about_flags.cc
+@@ -898,6 +898,8 @@ const FeatureEntry::FeatureParam kAudioBackendPulseAudio[] = {
+         { "audio-backend", "pulseaudio" }};
+ const FeatureEntry::FeatureParam kAudioBackendSndio[] = {
+         { "audio-backend", "sndio" }};
++const FeatureEntry::FeatureParam kAudioBackendAudioIO[] = {
++        { "audio-backend", "audioio" }};
+ const FeatureEntry::FeatureParam kAudioBackendAlsa[] = {
+         { "audio-backend", "alsa" }};
+ const FeatureEntry::FeatureVariation
+@@ -908,6 +910,9 @@ const FeatureEntry::FeatureVariation
+         {"using sndio by default if available", kAudioBackendSndio,
+          std::size(kAudioBackendSndio),
+          nullptr},
++        {"using audioio by default if available", kAudioBackendAudioIO,
++         std::size(kAudioBackendAudioIO),
++         nullptr},
+         {"using ALSA by default if available", kAudioBackendAlsa,
+          std::size(kAudioBackendAlsa),
+          nullptr}};
 diff --git a/chrome/browser/extensions/api/runtime/chrome_runtime_api_delegate.cc b/chrome/browser/extensions/api/runtime/chrome_runtime_api_delegate.cc
 index ce049dc56a..12f40cb6eb 100644
 --- a/chrome/browser/extensions/api/runtime/chrome_runtime_api_delegate.cc
@@ -1104,18 +1127,18 @@ index 40f1022cae..741037bc40 100644
        // and windows.
        {base::DIR_HOME, FILE_PATH_LITERAL(".config"), kBlockAllChildren},
 diff --git a/chrome/browser/flag_descriptions.cc b/chrome/browser/flag_descriptions.cc
-index f91c23b3cb..a58c4b14f1 100644
+index f91c23b3cb..92f083bcba 100644
 --- a/chrome/browser/flag_descriptions.cc
 +++ b/chrome/browser/flag_descriptions.cc
-@@ -8163,7 +8163,7 @@ const char kAudioBackendName[] =
+@@ -8163,6 +8163,8 @@ const char kAudioBackendName[] =
  const char kAudioBackendDescription[] =
  #if BUILDFLAG(IS_OPENBSD)
      "Select the desired audio backend to use. The default is sndio.";
--#elif BUILDFLAG(IS_FREEBSD)
-+#elif BUILDFLAG(IS_FREEBSD) || BUILDFLAG(IS_NETBSD)
++#if BUILDFLAG(IS_NETBSD)
++    "Select the desired audio backend to use. The default is audioio.";
+ #elif BUILDFLAG(IS_FREEBSD)
      "Select the desired audio backend to use. The default will automatically "
      "enumerate through the supported backends.";
- #endif
 diff --git a/chrome/common/chrome_paths.cc b/chrome/common/chrome_paths.cc
 index a37eeb4307..7a33810139 100644
 --- a/chrome/common/chrome_paths.cc
@@ -2541,6 +2564,37 @@ index 4d13e697a5..dbb32d43b2 100644
  
      // We currently only allow overriding the baked-in values for the
      // default OAuth2 client ID and secret using a command-line
+diff --git a/media/audio/BUILD.gn b/media/audio/BUILD.gn
+index 4d80f74855..ef05c58b33 100644
+--- a/media/audio/BUILD.gn
++++ b/media/audio/BUILD.gn
+@@ -275,7 +275,7 @@ source_set("audio") {
+     sources += [ "linux/audio_manager_linux.cc" ]
+   }
+ 
+-  if (is_bsd) {
++  if (is_bsd && !use_audioio) {
+     sources += [ "sndio/audio_manager_sndio.cc" ]
+   }
+ 
+@@ -289,6 +289,17 @@ source_set("audio") {
+     ]
+    }
+ 
++  if (use_audioio) {
++    sources += [
++      "audioio/audio_manager_audioio.cc",
++      "audioio/audio_manager_audioio.h",
++      "audioio/audioio_input.cc",
++      "audioio/audioio_input.h",
++      "audioio/audioio_output.cc",
++      "audioio/audioio_output.h"
++    ]
++   }
++
+   if (use_alsa) {
+     libs += [ "asound" ]
+     sources += [
 diff --git a/media/base/libvpx_thread_wrapper.cc b/media/base/libvpx_thread_wrapper.cc
 index ad545ee2ae..d43ed6bb60 100644
 --- a/media/base/libvpx_thread_wrapper.cc
@@ -2563,7 +2617,7 @@ index ad545ee2ae..d43ed6bb60 100644
        CodecWorkerImpl<VPxWorkerInterface, VPxWorkerImpl, VPxWorker,
                        VPxWorkerStatus, VPX_WORKER_STATUS_NOT_OK,
 diff --git a/media/base/media_switches.cc b/media/base/media_switches.cc
-index 075957b79b..f540917e71 100644
+index 075957b79b..901b99ad38 100644
 --- a/media/base/media_switches.cc
 +++ b/media/base/media_switches.cc
 @@ -61,7 +61,7 @@ const char kReportVp9AsAnUnsupportedMimeType[] =
@@ -2575,17 +2629,25 @@ index 075957b79b..f540917e71 100644
  // The Alsa device to use when opening an audio input stream.
  const char kAlsaInputDevice[] = "alsa-input-device";
  // The Alsa device to use when opening an audio stream.
-@@ -397,7 +397,7 @@ const base::FeatureParam<AudioBackend>
+@@ -388,6 +388,7 @@ constexpr base::FeatureParam<AudioBackend>::Option
+     kAudioBackendOptions[] = {
+         {AudioBackend::kAuto,
+          "auto"},
++        {AudioBackend::kAudioIO, "audioio"},
+         {AudioBackend::kPulseAudio, "pulseaudio"},
+         {AudioBackend::kSndio, "sndio"},
+         {AudioBackend::kAlsa, "alsa"}};
+@@ -397,6 +398,8 @@ const base::FeatureParam<AudioBackend>
          &kAudioBackend, "audio-backend",
  #if BUILDFLAG(IS_OPENBSD)
          AudioBackend::kSndio,
--#elif BUILDFLAG(IS_FREEBSD)
-+#elif BUILDFLAG(IS_FREEBSD) || BUILDFLAG(IS_NETBSD)
++#if BUILDFLAG(IS_NETBSD)
++        AudioBackend::kAudioIO,
+ #elif BUILDFLAG(IS_FREEBSD)
          AudioBackend::kAuto,
  #endif
-         &kAudioBackendOptions};
 diff --git a/media/base/media_switches.h b/media/base/media_switches.h
-index 206d0adaf7..7f9837be1b 100644
+index 206d0adaf7..55079b2476 100644
 --- a/media/base/media_switches.h
 +++ b/media/base/media_switches.h
 @@ -44,7 +44,7 @@ MEDIA_EXPORT extern const char kDisableBackgroundMediaSuspend[];
@@ -2597,6 +2659,14 @@ index 206d0adaf7..7f9837be1b 100644
  MEDIA_EXPORT extern const char kAlsaInputDevice[];
  MEDIA_EXPORT extern const char kAlsaOutputDevice[];
  #endif
+@@ -333,6 +333,7 @@ enum class AudioBackend {
+   kAuto,
+   kPulseAudio,
+   kSndio,
++  kAudioIO,
+   kAlsa
+ };
+ 
 diff --git a/media/capture/video/linux/fake_v4l2_impl.h b/media/capture/video/linux/fake_v4l2_impl.h
 index 8dc249424d..4adfa0cfb8 100644
 --- a/media/capture/video/linux/fake_v4l2_impl.h
@@ -2783,6 +2853,20 @@ index 84f5b3d38f..65b0f75fbe 100644
          else:
              raise ValueError(f"Unsupported platform: {platform.system()}")
  
+diff --git a/media/media_options.gni b/media/media_options.gni
+index 5682ed6291..5ae8f0191a 100644
+--- a/media/media_options.gni
++++ b/media/media_options.gni
+@@ -193,6 +193,9 @@ declare_args() {
+   # Enable runtime selection of sndio(7)
+   use_sndio = false
+ 
++  # Enable runtime selection of audioio(4)
++  use_audioio = false
++
+   # Alsa should be used on all non-Android, non-Mac POSIX systems - with the
+   # exception of CastOS desktop builds.
+   #
 diff --git a/media/mojo/mojom/stable/BUILD.gn b/media/mojo/mojom/stable/BUILD.gn
 index 8c3d3bb7f6..f27c311fac 100644
 --- a/media/mojo/mojom/stable/BUILD.gn

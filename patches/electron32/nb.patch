@@ -7519,7 +7519,7 @@ index fe0452e8bd..005d29919e 100644
      sources += [
        "dbus_memory_pressure_evaluator_linux.cc",
 diff --git a/chrome/browser/about_flags.cc b/chrome/browser/about_flags.cc
-index 96370d4ac3..0b5b4d0e04 100644
+index 96370d4ac3..8e3cb43f4b 100644
 --- a/chrome/browser/about_flags.cc
 +++ b/chrome/browser/about_flags.cc
 @@ -238,7 +238,7 @@
@@ -7567,7 +7567,7 @@ index 96370d4ac3..0b5b4d0e04 100644
  const FeatureEntry::Choice kOzonePlatformHintRuntimeChoices[] = {
      {flag_descriptions::kOzonePlatformHintChoiceDefault, "", ""},
      {flag_descriptions::kOzonePlatformHintChoiceAuto,
-@@ -893,6 +893,26 @@ const FeatureEntry::FeatureVariation
+@@ -893,6 +893,31 @@ const FeatureEntry::FeatureVariation
           std::size(kWebIdentityDigitalIdentityCredentialHighRiskDialogParam),
           nullptr}};
  
@@ -7576,6 +7576,8 @@ index 96370d4ac3..0b5b4d0e04 100644
 +        { "audio-backend", "pulseaudio" }};
 +const FeatureEntry::FeatureParam kAudioBackendSndio[] = {
 +        { "audio-backend", "sndio" }};
++const FeatureEntry::FeatureParam kAudioBackendAudioIO[] = {
++        { "audio-backend", "audioio" }};
 +const FeatureEntry::FeatureParam kAudioBackendAlsa[] = {
 +        { "audio-backend", "alsa" }};
 +const FeatureEntry::FeatureVariation
@@ -7586,6 +7588,9 @@ index 96370d4ac3..0b5b4d0e04 100644
 +        {"using sndio by default if available", kAudioBackendSndio,
 +         std::size(kAudioBackendSndio),
 +         nullptr},
++        {"using audioio by default if available", kAudioBackendAudioIO,
++         std::size(kAudioBackendAudioIO),
++         nullptr},
 +        {"using ALSA by default if available", kAudioBackendAlsa,
 +         std::size(kAudioBackendAlsa),
 +         nullptr}};
@@ -7594,7 +7599,7 @@ index 96370d4ac3..0b5b4d0e04 100644
  const FeatureEntry::FeatureParam kClipboardMaximumAge60Seconds[] = {
      {"UIClipboardMaximumAge", "60"}};
  const FeatureEntry::FeatureParam kClipboardMaximumAge90Seconds[] = {
-@@ -1306,7 +1326,7 @@ const FeatureEntry::FeatureVariation kPageContentAnnotationsVariations[] = {
+@@ -1306,7 +1331,7 @@ const FeatureEntry::FeatureVariation kPageContentAnnotationsVariations[] = {
  };
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_MAC) || \
@@ -7603,7 +7608,7 @@ index 96370d4ac3..0b5b4d0e04 100644
  const FeatureEntry::FeatureParam kHistoryEmbeddingsAtKeywordAcceleration[]{
      {"AtKeywordAcceleration", "true"},
  };
-@@ -1350,7 +1370,7 @@ const FeatureEntry::FeatureVariation
+@@ -1350,7 +1375,7 @@ const FeatureEntry::FeatureVariation
  };
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_MAC) || \
@@ -7612,7 +7617,7 @@ index 96370d4ac3..0b5b4d0e04 100644
  const FeatureEntry::FeatureParam kShortcutBoostSingleUrl[] = {
      {"ShortcutBoostSearchScore", "0"},
      {"ShortcutBoostNonTopHitThreshold", "0"},
-@@ -3779,7 +3799,7 @@ const flags_ui::FeatureEntry::FeatureVariation
+@@ -3779,7 +3804,7 @@ const flags_ui::FeatureEntry::FeatureVariation
  };
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN) || \
@@ -7621,7 +7626,7 @@ index 96370d4ac3..0b5b4d0e04 100644
  const flags_ui::FeatureEntry::FeatureParam
      kDesktopPWAsLinkCapturingDefaultOn[] = {
          {"link_capturing_state", "on_by_default"}};
-@@ -4858,7 +4878,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -4858,7 +4883,7 @@ const FeatureEntry kFeatureEntries[] = {
      },
  #endif  // BUILDFLAG(IS_ANDROID)
  
@@ -7630,7 +7635,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {
          "fluent-overlay-scrollbars",
          flag_descriptions::kFluentOverlayScrollbarsName,
-@@ -5277,7 +5297,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -5277,7 +5302,7 @@ const FeatureEntry kFeatureEntries[] = {
       flag_descriptions::kWebAppUniversalInstallDescription, kOsDesktop,
       FEATURE_VALUE_TYPE(features::kWebAppUniversalInstall)},
  #endif  // !BUILDFLAG(IS_ANDROID)
@@ -7639,7 +7644,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"shortcuts-not-apps", flag_descriptions::kShortcutsNotAppsName,
       flag_descriptions::kShortcutsNotAppsDescription,
       kOsMac | kOsWin | kOsLinux,
-@@ -5413,7 +5433,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -5413,7 +5438,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(features::kWebShare)},
  #endif  // BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC)
  
@@ -7648,7 +7653,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"pulseaudio-loopback-for-cast",
       flag_descriptions::kPulseaudioLoopbackForCastName,
       flag_descriptions::kPulseaudioLoopbackForCastDescription, kOsLinux,
-@@ -5436,9 +5456,19 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -5436,9 +5461,19 @@ const FeatureEntry kFeatureEntries[] = {
       flag_descriptions::kWaylandPerWindowScalingName,
       flag_descriptions::kWaylandPerWindowScalingDescription, kOsLinux,
       FEATURE_VALUE_TYPE(features::kWaylandPerSurfaceScale)},
@@ -7669,7 +7674,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"skip-undecryptable-passwords",
       flag_descriptions::kSkipUndecryptablePasswordsName,
       flag_descriptions::kSkipUndecryptablePasswordsDescription,
-@@ -6433,7 +6463,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -6433,7 +6468,7 @@ const FeatureEntry kFeatureEntries[] = {
                                      "MlUrlScoring")},
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_MAC) || \
@@ -7678,7 +7683,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"omnibox-domain-suggestions",
       flag_descriptions::kOmniboxDomainSuggestionsName,
       flag_descriptions::kOmniboxDomainSuggestionsDescription, kOsDesktop,
-@@ -6728,7 +6758,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -6728,7 +6763,7 @@ const FeatureEntry kFeatureEntries[] = {
                                      "OrganicRepeatableQueries")},
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_MAC) || \
@@ -7687,7 +7692,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"history-embeddings", flag_descriptions::kHistoryEmbeddingsName,
       flag_descriptions::kHistoryEmbeddingsDescription, kOsDesktop,
       FEATURE_WITH_PARAMS_VALUE_TYPE(history_embeddings::kHistoryEmbeddings,
-@@ -7397,7 +7427,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -7397,7 +7432,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(printing::features::kAddPrinterViaPrintscanmgr)},
  #endif  // BUILDFLAG(IS_CHROMEOS)
  
@@ -7696,7 +7701,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"cups-ipp-printing-backend",
       flag_descriptions::kCupsIppPrintingBackendName,
       flag_descriptions::kCupsIppPrintingBackendDescription, kOsDesktop,
-@@ -8417,7 +8447,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -8417,7 +8452,7 @@ const FeatureEntry kFeatureEntries[] = {
       flag_descriptions::kCooperativeSchedulingDescription, kOsAll,
       FEATURE_VALUE_TYPE(features::kCooperativeScheduling)},
  
@@ -7705,7 +7710,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"enable-network-service-sandbox",
       flag_descriptions::kEnableNetworkServiceSandboxName,
       flag_descriptions::kEnableNetworkServiceSandboxDescription,
-@@ -8441,7 +8471,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -8441,7 +8476,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(media::kV4L2FlatStatefulVideoDecoder)},
  #endif
  
@@ -7714,7 +7719,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"enable-family-link-extensions-permissions",
       flag_descriptions::
           kEnableExtensionsPermissionsForSupervisedUsersOnDesktopName,
-@@ -9292,7 +9322,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -9292,7 +9327,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(ash::features::kWallpaperPerDesk)},
  #endif  // BUILDFLAG(IS_CHROMEOS_ASH)
  
@@ -7723,7 +7728,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"enable-get-all-screens-media", flag_descriptions::kGetAllScreensMediaName,
       flag_descriptions::kGetAllScreensMediaDescription,
       kOsCrOS | kOsLacros | kOsLinux,
-@@ -9331,7 +9361,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -9331,7 +9366,7 @@ const FeatureEntry kFeatureEntries[] = {
  
  #if BUILDFLAG(IS_WIN) ||                                      \
      (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS_LACROS)) || \
@@ -7732,7 +7737,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {
          "ui-debug-tools",
          flag_descriptions::kUIDebugToolsName,
-@@ -9556,7 +9586,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -9556,7 +9591,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -7741,7 +7746,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"policy-indication-for-managed-default-search",
       flag_descriptions::kPolicyIndicationForManagedDefaultSearchName,
       flag_descriptions::kPolicyIndicationForManagedDefaultSearchDescription,
-@@ -9896,7 +9926,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -9896,7 +9931,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || \
@@ -7750,7 +7755,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"media-session-enter-picture-in-picture",
       flag_descriptions::kMediaSessionEnterPictureInPictureName,
       flag_descriptions::kMediaSessionEnterPictureInPictureDescription,
-@@ -10796,7 +10826,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -10796,7 +10831,7 @@ const FeatureEntry kFeatureEntries[] = {
       kOsDesktop | kOsAndroid,
       FEATURE_VALUE_TYPE(features::kProcessPerSiteUpToMainFrameThreshold)},
  
@@ -7759,7 +7764,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"camera-mic-effects", flag_descriptions::kCameraMicEffectsName,
       flag_descriptions::kCameraMicEffectsDescription,
       static_cast<unsigned short>(kOsMac | kOsWin | kOsLinux),
-@@ -10834,7 +10864,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -10834,7 +10869,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(features::kSiteInstanceGroupsForDataUrls)},
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -7768,7 +7773,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"site-search-settings-policy",
       flag_descriptions::kSiteSearchSettingsPolicyName,
       flag_descriptions::kSiteSearchSettingsPolicyDescription, kOsAll,
-@@ -10959,7 +10989,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -10959,7 +10994,7 @@ const FeatureEntry kFeatureEntries[] = {
       flag_descriptions::kHideIncognitoMediaMetadataDescription, kOsAll,
       FEATURE_VALUE_TYPE(media::kHideIncognitoMediaMetadata)},
  
@@ -7777,7 +7782,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"third-party-profile-management",
       flag_descriptions::kThirdPartyProfileManagementName,
       flag_descriptions::kThirdPartyProfileManagementDescription,
-@@ -11002,7 +11032,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -11002,7 +11037,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN) || \
@@ -7786,7 +7791,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"enable-user-link-capturing-pwa",
       flag_descriptions::kDesktopPWAsUserLinkCapturingName,
       flag_descriptions::kDesktopPWAsUserLinkCapturingDescription,
-@@ -11318,7 +11348,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -11318,7 +11353,7 @@ const FeatureEntry kFeatureEntries[] = {
           trusted_vault::kTrustedVaultFrequentDegradedRecoverabilityPolling)},
  #endif
  
@@ -7795,7 +7800,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"restart-to-gain-access-to-keychain",
       flag_descriptions::kRestartToGainAccessToKeychainName,
       flag_descriptions::kRestartToGainAccessToKeychainDescription,
-@@ -11981,7 +12011,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -11981,7 +12016,7 @@ const FeatureEntry kFeatureEntries[] = {
                              kAuthenticateUsingUserConsentVerifierInteropApi)},
  #endif
  
@@ -7804,7 +7809,7 @@ index 96370d4ac3..0b5b4d0e04 100644
      {"sync-enable-bookmarks-in-transport-mode",
       flag_descriptions::kSyncEnableBookmarksInTransportModeName,
       flag_descriptions::kSyncEnableBookmarksInTransportModeDescription,
-@@ -12007,7 +12037,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12007,7 +12042,7 @@ const FeatureEntry kFeatureEntries[] = {
           "AutofillUploadCardRequestTimeout")},
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -10107,7 +10112,7 @@ index 0a0aa74972..397156aabd 100644
  // called, the decision to show the dialog or not will be made by Chrome based
  // on a number of factors (such as install type, whether it's a Chrome-branded
 diff --git a/chrome/browser/flag_descriptions.cc b/chrome/browser/flag_descriptions.cc
-index be5b3f2e79..a58c4b14f1 100644
+index be5b3f2e79..92f083bcba 100644
 --- a/chrome/browser/flag_descriptions.cc
 +++ b/chrome/browser/flag_descriptions.cc
 @@ -419,7 +419,7 @@ const char kIsolatedSandboxedIframesDescription[] =
@@ -10173,7 +10178,7 @@ index be5b3f2e79..a58c4b14f1 100644
  const char kOzonePlatformHintChoiceDefault[] = "Default";
  const char kOzonePlatformHintChoiceAuto[] = "Auto";
  const char kOzonePlatformHintChoiceX11[] = "X11";
-@@ -8156,6 +8156,18 @@ const char kSimplifiedTabDragUIDescription[] =
+@@ -8156,6 +8156,20 @@ const char kSimplifiedTabDragUIDescription[] =
  const char kWaylandPerWindowScalingName[] = "Wayland per-window scaling";
  const char kWaylandPerWindowScalingDescription[] =
      "Enable Wayland's per-window scaling experimental support.";
@@ -10184,7 +10189,9 @@ index be5b3f2e79..a58c4b14f1 100644
 +const char kAudioBackendDescription[] =
 +#if BUILDFLAG(IS_OPENBSD)
 +    "Select the desired audio backend to use. The default is sndio.";
-+#elif BUILDFLAG(IS_FREEBSD) || BUILDFLAG(IS_NETBSD)
++#if BUILDFLAG(IS_NETBSD)
++    "Select the desired audio backend to use. The default is audioio.";
++#elif BUILDFLAG(IS_FREEBSD)
 +    "Select the desired audio backend to use. The default will automatically "
 +    "enumerate through the supported backends.";
 +#endif
@@ -10192,7 +10199,7 @@ index be5b3f2e79..a58c4b14f1 100644
  #endif  // BUILDFLAG(IS_LINUX)
  
  // All views-based platforms --------------------------------------------------
-@@ -8182,14 +8194,14 @@ const char kZeroCopyVideoCaptureDescription[] =
+@@ -8182,14 +8196,14 @@ const char kZeroCopyVideoCaptureDescription[] =
  #endif  // BUILDFLAG(IS_CHROMEOS_ASH) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -10209,7 +10216,7 @@ index be5b3f2e79..a58c4b14f1 100644
  const char kEnableNetworkServiceSandboxName[] =
      "Enable the network service sandbox.";
  const char kEnableNetworkServiceSandboxDescription[] =
-@@ -8221,7 +8233,7 @@ const char kWebBluetoothConfirmPairingSupportDescription[] =
+@@ -8221,7 +8235,7 @@ const char kWebBluetoothConfirmPairingSupportDescription[] =
      "Bluetooth";
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX)
  
@@ -10218,7 +10225,7 @@ index be5b3f2e79..a58c4b14f1 100644
  const char kSkipUndecryptablePasswordsName[] =
      "Skip undecryptable passwords to use the available decryptable "
      "passwords.";
-@@ -8375,7 +8387,7 @@ const char kElementCaptureDescription[] =
+@@ -8375,7 +8389,7 @@ const char kElementCaptureDescription[] =
  
  #if BUILDFLAG(IS_WIN) ||                                      \
      (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS_LACROS)) || \
@@ -10227,7 +10234,7 @@ index be5b3f2e79..a58c4b14f1 100644
  const char kUIDebugToolsName[] = "Debugging tools for UI";
  const char kUIDebugToolsDescription[] =
      "Enables additional keyboard shortcuts to help debugging.";
-@@ -8449,7 +8461,7 @@ const char kAutofillCaretExtractionDescription[] =
+@@ -8449,7 +8463,7 @@ const char kAutofillCaretExtractionDescription[] =
      "Enables passing caret position via Autofill";
  #endif  // BUILDFLAG(ENABLE_COMPOSE)
  
@@ -34076,7 +34083,7 @@ index d53c9a3e10..c6ed283764 100644
      defines += [ "USE_CRAS" ]
    }
 diff --git a/media/audio/BUILD.gn b/media/audio/BUILD.gn
-index 90e093cd2d..4d80f74855 100644
+index 90e093cd2d..ef05c58b33 100644
 --- a/media/audio/BUILD.gn
 +++ b/media/audio/BUILD.gn
 @@ -199,6 +199,7 @@ source_set("audio") {
@@ -34087,7 +34094,7 @@ index 90e093cd2d..4d80f74855 100644
    }
  
    if (is_ios) {
-@@ -270,10 +271,24 @@ source_set("audio") {
+@@ -270,10 +271,35 @@ source_set("audio") {
      deps += [ "//media/base/android:media_jni_headers" ]
    }
  
@@ -34096,7 +34103,7 @@ index 90e093cd2d..4d80f74855 100644
      sources += [ "linux/audio_manager_linux.cc" ]
    }
  
-+  if (is_bsd) {
++  if (is_bsd && !use_audioio) {
 +    sources += [ "sndio/audio_manager_sndio.cc" ]
 +  }
 +
@@ -34107,6 +34114,17 @@ index 90e093cd2d..4d80f74855 100644
 +      "sndio/sndio_input.h",
 +      "sndio/sndio_output.cc",
 +      "sndio/sndio_output.h"
++    ]
++   }
++
++  if (use_audioio) {
++    sources += [
++      "audioio/audio_manager_audioio.cc",
++      "audioio/audio_manager_audioio.h",
++      "audioio/audioio_input.cc",
++      "audioio/audioio_input.h",
++      "audioio/audioio_output.cc",
++      "audioio/audioio_output.h"
 +    ]
 +   }
 +
@@ -35204,7 +35222,7 @@ index 5566c8e8da..d43ed6bb60 100644
  
  }  // namespace media
 diff --git a/media/base/media_switches.cc b/media/base/media_switches.cc
-index c1033de7b2..f540917e71 100644
+index c1033de7b2..901b99ad38 100644
 --- a/media/base/media_switches.cc
 +++ b/media/base/media_switches.cc
 @@ -21,7 +21,7 @@
@@ -35236,7 +35254,7 @@ index c1033de7b2..f540917e71 100644
  // Enables system audio mirroring using pulseaudio.
  BASE_FEATURE(kPulseaudioLoopbackForCast,
               "PulseaudioLoopbackForCast",
-@@ -379,6 +379,28 @@ BASE_FEATURE(kPulseaudioLoopbackForCast,
+@@ -379,6 +379,31 @@ BASE_FEATURE(kPulseaudioLoopbackForCast,
  BASE_FEATURE(kPulseaudioLoopbackForScreenShare,
               "PulseaudioLoopbackForScreenShare",
               base::FEATURE_DISABLED_BY_DEFAULT);
@@ -35249,6 +35267,7 @@ index c1033de7b2..f540917e71 100644
 +    kAudioBackendOptions[] = {
 +        {AudioBackend::kAuto,
 +         "auto"},
++        {AudioBackend::kAudioIO, "audioio"},
 +        {AudioBackend::kPulseAudio, "pulseaudio"},
 +        {AudioBackend::kSndio, "sndio"},
 +        {AudioBackend::kAlsa, "alsa"}};
@@ -35258,14 +35277,16 @@ index c1033de7b2..f540917e71 100644
 +        &kAudioBackend, "audio-backend",
 +#if BUILDFLAG(IS_OPENBSD)
 +        AudioBackend::kSndio,
-+#elif BUILDFLAG(IS_FREEBSD) || BUILDFLAG(IS_NETBSD)
++#if BUILDFLAG(IS_NETBSD)
++        AudioBackend::kAudioIO,
++#elif BUILDFLAG(IS_FREEBSD)
 +        AudioBackend::kAuto,
 +#endif
 +        &kAudioBackendOptions};
  #endif  // BUILDFLAG(IS_LINUX)
  
  // When enabled, MediaCapabilities will check with GPU Video Accelerator
-@@ -676,7 +698,7 @@ BASE_FEATURE(kFeatureManagementLiveTranslateCrOS,
+@@ -676,7 +701,7 @@ BASE_FEATURE(kFeatureManagementLiveTranslateCrOS,
  // Show toolbar button that opens dialog for controlling media sessions.
  BASE_FEATURE(kGlobalMediaControls,
               "GlobalMediaControls",
@@ -35274,7 +35295,7 @@ index c1033de7b2..f540917e71 100644
               base::FEATURE_ENABLED_BY_DEFAULT
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
-@@ -704,7 +726,7 @@ BASE_FEATURE(kGlobalMediaControlsUpdatedUI,
+@@ -704,7 +729,7 @@ BASE_FEATURE(kGlobalMediaControlsUpdatedUI,
  // If enabled, users can request Media Remoting without fullscreen-in-tab.
  BASE_FEATURE(kMediaRemotingWithoutFullscreen,
               "MediaRemotingWithoutFullscreen",
@@ -35283,7 +35304,7 @@ index c1033de7b2..f540917e71 100644
               base::FEATURE_ENABLED_BY_DEFAULT
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
-@@ -716,7 +738,7 @@ BASE_FEATURE(kMediaRemotingWithoutFullscreen,
+@@ -716,7 +741,7 @@ BASE_FEATURE(kMediaRemotingWithoutFullscreen,
  BASE_FEATURE(kGlobalMediaControlsPictureInPicture,
               "GlobalMediaControlsPictureInPicture",
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -35292,7 +35313,7 @@ index c1033de7b2..f540917e71 100644
               base::FEATURE_ENABLED_BY_DEFAULT
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
-@@ -745,7 +767,7 @@ BASE_FEATURE(kUnifiedAutoplay,
+@@ -745,7 +770,7 @@ BASE_FEATURE(kUnifiedAutoplay,
               "UnifiedAutoplay",
               base::FEATURE_ENABLED_BY_DEFAULT);
  
@@ -35301,7 +35322,7 @@ index c1033de7b2..f540917e71 100644
  // Enable vaapi video decoding on linux. This is already enabled by default on
  // chromeos, but needs an experiment on linux.
  BASE_FEATURE(kVaapiVideoDecodeLinux,
-@@ -836,7 +858,7 @@ BASE_FEATURE(kVaapiVp9SModeHWEncoding,
+@@ -836,7 +861,7 @@ BASE_FEATURE(kVaapiVp9SModeHWEncoding,
               "VaapiVp9SModeHWEncoding",
               base::FEATURE_ENABLED_BY_DEFAULT);
  #endif  // defined(ARCH_CPU_X86_FAMILY) && BUILDFLAG(IS_CHROMEOS)
@@ -35310,7 +35331,7 @@ index c1033de7b2..f540917e71 100644
  // Enables the new V4L2StatefulVideoDecoder instead of V4L2VideoDecoder.
  // Owners: frkoenig@chromium.org, mcasas@chromium.org
  // Expiry: When the |V4L2FlatVideoDecoder| flag handles stateful decoding on
-@@ -963,7 +985,7 @@ BASE_FEATURE(kLiveCaptionUseWaitK,
+@@ -963,7 +988,7 @@ BASE_FEATURE(kLiveCaptionUseWaitK,
  // Live Caption can be used in multiple languages, as opposed to just English.
  BASE_FEATURE(kLiveCaptionMultiLanguage,
               "LiveCaptionMultiLanguage",
@@ -35319,7 +35340,7 @@ index c1033de7b2..f540917e71 100644
               base::FEATURE_ENABLED_BY_DEFAULT
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
-@@ -993,7 +1015,7 @@ BASE_FEATURE(kLiveCaptionWebAudio,
+@@ -993,7 +1018,7 @@ BASE_FEATURE(kLiveCaptionWebAudio,
  // Live Translate translates captions generated by Live Caption.
  BASE_FEATURE(kLiveTranslate,
               "LiveTranslate",
@@ -35328,7 +35349,7 @@ index c1033de7b2..f540917e71 100644
               base::FEATURE_ENABLED_BY_DEFAULT
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
-@@ -1468,7 +1490,7 @@ BASE_FEATURE(kUseGTFOOutOfProcessVideoDecoding,
+@@ -1468,7 +1493,7 @@ BASE_FEATURE(kUseGTFOOutOfProcessVideoDecoding,
               base::FEATURE_DISABLED_BY_DEFAULT);
  #endif  // BUILDFLAG(ALLOW_OOP_VIDEO_DECODER)
  
@@ -35337,7 +35358,7 @@ index c1033de7b2..f540917e71 100644
  // Spawn utility processes to perform hardware encode acceleration instead of
  // using the GPU process.
  BASE_FEATURE(kUseOutOfProcessVideoEncoding,
-@@ -1548,7 +1570,7 @@ BASE_FEATURE(kRecordWebAudioEngagement,
+@@ -1548,7 +1573,7 @@ BASE_FEATURE(kRecordWebAudioEngagement,
               "RecordWebAudioEngagement",
               base::FEATURE_ENABLED_BY_DEFAULT);
  
@@ -35347,7 +35368,7 @@ index c1033de7b2..f540917e71 100644
  // populate the Renderer pipeline for hardware accelerated VideoDecoder in
  // non-low latency scenarios.
 diff --git a/media/base/media_switches.h b/media/base/media_switches.h
-index e95d90d84d..7f9837be1b 100644
+index e95d90d84d..55079b2476 100644
 --- a/media/base/media_switches.h
 +++ b/media/base/media_switches.h
 @@ -44,7 +44,7 @@ MEDIA_EXPORT extern const char kDisableBackgroundMediaSuspend[];
@@ -35359,7 +35380,7 @@ index e95d90d84d..7f9837be1b 100644
  MEDIA_EXPORT extern const char kAlsaInputDevice[];
  MEDIA_EXPORT extern const char kAlsaOutputDevice[];
  #endif
-@@ -325,13 +325,25 @@ MEDIA_EXPORT BASE_DECLARE_FEATURE(kPlatformHEVCEncoderSupport);
+@@ -325,13 +325,26 @@ MEDIA_EXPORT BASE_DECLARE_FEATURE(kPlatformHEVCEncoderSupport);
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kPlaybackSpeedButton);
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kPreloadMediaEngagementData);
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kPreloadMetadataSuspend);
@@ -35372,6 +35393,7 @@ index e95d90d84d..7f9837be1b 100644
 +  kAuto,
 +  kPulseAudio,
 +  kSndio,
++  kAudioIO,
 +  kAlsa
 +};
 +
@@ -35387,7 +35409,7 @@ index e95d90d84d..7f9837be1b 100644
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kReduceHardwareVideoDecoderBuffers);
  #endif  // BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_LINUX)
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kResumeBackgroundVideo);
-@@ -346,7 +358,7 @@ MEDIA_EXPORT BASE_DECLARE_FEATURE(kUnifiedAutoplay);
+@@ -346,7 +359,7 @@ MEDIA_EXPORT BASE_DECLARE_FEATURE(kUnifiedAutoplay);
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kUseAndroidOverlayForSecureOnly);
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kUseDecoderStreamForWebRTC);
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kUseFakeDeviceForMediaStream);
@@ -35396,7 +35418,7 @@ index e95d90d84d..7f9837be1b 100644
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kVaapiVideoDecodeLinux);
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kVaapiVideoDecodeLinuxGL);
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kVaapiVideoEncodeLinux);
-@@ -365,7 +377,7 @@ MEDIA_EXPORT BASE_DECLARE_FEATURE(kVaapiH264TemporalLayerHWEncoding);
+@@ -365,7 +378,7 @@ MEDIA_EXPORT BASE_DECLARE_FEATURE(kVaapiH264TemporalLayerHWEncoding);
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kVaapiVp8TemporalLayerHWEncoding);
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kVaapiVp9SModeHWEncoding);
  #endif  // defined(ARCH_CPU_X86_FAMILY) && BUILDFLAG(IS_CHROMEOS)
@@ -35405,7 +35427,7 @@ index e95d90d84d..7f9837be1b 100644
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kV4L2FlatStatefulVideoDecoder);
  #endif  // BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_LINUX)
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kVideoBlitColorAccuracy);
-@@ -510,7 +522,7 @@ MEDIA_EXPORT BASE_DECLARE_FEATURE(kUseOutOfProcessVideoDecoding);
+@@ -510,7 +523,7 @@ MEDIA_EXPORT BASE_DECLARE_FEATURE(kUseOutOfProcessVideoDecoding);
  MEDIA_EXPORT BASE_DECLARE_FEATURE(kUseGTFOOutOfProcessVideoDecoding);
  #endif  // BUILDFLAG(ALLOW_OOP_VIDEO_DECODER)
  
@@ -36582,15 +36604,18 @@ index 312bcfb5f1..d268f507e2 100644
  #include "base/strings/string_split.h"
  #endif
 diff --git a/media/media_options.gni b/media/media_options.gni
-index 7590af7c8e..5682ed6291 100644
+index 7590af7c8e..5ae8f0191a 100644
 --- a/media/media_options.gni
 +++ b/media/media_options.gni
-@@ -190,12 +190,15 @@ declare_args() {
+@@ -190,12 +190,18 @@ declare_args() {
    # Enables runtime selection of ALSA library for audio.
    use_alsa = false
  
 +  # Enable runtime selection of sndio(7)
 +  use_sndio = false
++
++  # Enable runtime selection of audioio(4)
++  use_audioio = false
 +
    # Alsa should be used on all non-Android, non-Mac POSIX systems - with the
    # exception of CastOS desktop builds.
