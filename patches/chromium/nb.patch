@@ -5114,7 +5114,7 @@ index c9d47e9139..ad49276af5 100755
      host_arch = 'arm'
    elif host_arch.startswith('aarch64'):
 diff --git a/build/gn_run_binary.py b/build/gn_run_binary.py
-index 414f6952fe..375ab50311 100644
+index 414f6952fe..8485a0a00a 100644
 --- a/build/gn_run_binary.py
 +++ b/build/gn_run_binary.py
 @@ -23,7 +23,7 @@ if not os.path.isabs(path):
@@ -5122,7 +5122,7 @@ index 414f6952fe..375ab50311 100644
  args = [path] + sys.argv[2:]
  
 -ret = subprocess.call(args)
-+ret = subprocess.call(args, env={"CHROME_EXE_PATH":"${WRKSRC}/out/Release/chrome","LD_LIBRARY_PATH":"${WRKSRC}/out/Release"})
++ret = subprocess.call(args, env={"CHROME_EXE_PATH":"@WRKSRC@/out/Release/chrome","LD_LIBRARY_PATH":"@WRKSRC@/out/Release"})
  if ret != 0:
    if ret <= -100:
      # Windows error codes such as 0xC0000005 and 0xC0000409 are much easier to
@@ -32731,14 +32731,14 @@ index 87be96bfd1..bb75cb06f5 100644
          exe_suffix = ""
      elif sys.platform.startswith("darwin"):
 diff --git a/third_party/blink/renderer/build/scripts/run_with_pythonpath.py b/third_party/blink/renderer/build/scripts/run_with_pythonpath.py
-index 1b535b1bd1..703e54a7b8 100755
+index 1b535b1bd1..b24d91923d 100755
 --- a/third_party/blink/renderer/build/scripts/run_with_pythonpath.py
 +++ b/third_party/blink/renderer/build/scripts/run_with_pythonpath.py
 @@ -22,6 +22,7 @@ def main():
          existing_pp = (
              os.pathsep + env['PYTHONPATH']) if 'PYTHONPATH' in env else ''
          env['PYTHONPATH'] = os.pathsep.join(python_paths) + existing_pp
-+    env['LD_LIBRARY_PATH'] = "${WRKSRC}/out/Release"
++    env['LD_LIBRARY_PATH'] = "@WRKSRC@/out/Release"
      sys.exit(subprocess.call([sys.executable] + args, env=env))
  
  
@@ -37103,7 +37103,7 @@ index 06447bc266..b131f036a9 100644
        # This is defined for Windows, but is unused by Telemetry on
        # Windows, and including it can have issues when cross-compiling
 diff --git a/tools/protoc_wrapper/protoc_wrapper.py b/tools/protoc_wrapper/protoc_wrapper.py
-index d339b3458d..b133f42c59 100755
+index d339b3458d..3bc1ad5de7 100755
 --- a/tools/protoc_wrapper/protoc_wrapper.py
 +++ b/tools/protoc_wrapper/protoc_wrapper.py
 @@ -183,15 +183,19 @@ def main(argv):
@@ -37111,8 +37111,8 @@ index d339b3458d..b133f42c59 100755
        protoc_cmd += ["--include_imports"]
  
 +  nenv = os.environ.copy()
-+  nenv["PATH"] = "${WRKOBJDIR}/bin:" + nenv["PATH"]
-+  nenv["LD_LIBRARY_PATH"] = "${WRKSRC}/out/Release"
++#  nenv["PATH"] = "${WRKOBJDIR}/bin:" + nenv["PATH"]
++  nenv["LD_LIBRARY_PATH"] = "@WRKSRC@/out/Release"
 +
    dependency_file_data = None
    if options.descriptor_set_out and options.descriptor_set_dependency_file:
@@ -40808,7 +40808,7 @@ index 0000000000..7cffa35b09
 +
 +sys.exit(subprocess.call(sys.argv[2:]))
 diff --git a/v8/tools/run.py b/v8/tools/run.py
-index 77b6538d41..f8ec94c6bc 100755
+index 77b6538d41..8879702b77 100755
 --- a/v8/tools/run.py
 +++ b/v8/tools/run.py
 @@ -21,7 +21,7 @@ if cmd and cmd[0] == '--redirect-stdout':
@@ -40816,7 +40816,7 @@ index 77b6538d41..f8ec94c6bc 100755
    cmd = cmd[2:]
  
 -process = subprocess.Popen(cmd, **kwargs)
-+process = subprocess.Popen(cmd, env={"LD_LIBRARY_PATH":"${WRKSRC}/out/Release"}, **kwargs)
++process = subprocess.Popen(cmd, env={"LD_LIBRARY_PATH":"@WRKSRC@/out/Release"}, **kwargs)
  stdout, _ = process.communicate()
  if stdout_file:
    with stdout_file.open('w') as f:

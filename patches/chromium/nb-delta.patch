@@ -998,6 +998,19 @@ index b525322a2c..5b6ce3c82c 100644
      cargo_target_abi = ""
    } else if (current_cpu == "x64") {
      rust_abi_target = "x86_64-unknown-linux-gnu"
+diff --git a/build/gn_run_binary.py b/build/gn_run_binary.py
+index 375ab50311..8485a0a00a 100644
+--- a/build/gn_run_binary.py
++++ b/build/gn_run_binary.py
+@@ -23,7 +23,7 @@ if not os.path.isabs(path):
+ # The rest of the arguments are passed directly to the executable.
+ args = [path] + sys.argv[2:]
+ 
+-ret = subprocess.call(args, env={"CHROME_EXE_PATH":"${WRKSRC}/out/Release/chrome","LD_LIBRARY_PATH":"${WRKSRC}/out/Release"})
++ret = subprocess.call(args, env={"CHROME_EXE_PATH":"@WRKSRC@/out/Release/chrome","LD_LIBRARY_PATH":"@WRKSRC@/out/Release"})
+ if ret != 0:
+   if ret <= -100:
+     # Windows error codes such as 0xC0000005 and 0xC0000409 are much easier to
 diff --git a/build/rust/rust_bindgen.gni b/build/rust/rust_bindgen.gni
 index c68051e2fa..a8bbc0af17 100644
 --- a/build/rust/rust_bindgen.gni
@@ -3120,6 +3133,19 @@ index cdbf6cb89a..bb75cb06f5 100644
          platform = "linux64"
          exe_suffix = ""
      elif sys.platform.startswith("darwin"):
+diff --git a/third_party/blink/renderer/build/scripts/run_with_pythonpath.py b/third_party/blink/renderer/build/scripts/run_with_pythonpath.py
+index 703e54a7b8..b24d91923d 100755
+--- a/third_party/blink/renderer/build/scripts/run_with_pythonpath.py
++++ b/third_party/blink/renderer/build/scripts/run_with_pythonpath.py
+@@ -22,7 +22,7 @@ def main():
+         existing_pp = (
+             os.pathsep + env['PYTHONPATH']) if 'PYTHONPATH' in env else ''
+         env['PYTHONPATH'] = os.pathsep.join(python_paths) + existing_pp
+-    env['LD_LIBRARY_PATH'] = "${WRKSRC}/out/Release"
++    env['LD_LIBRARY_PATH'] = "@WRKSRC@/out/Release"
+     sys.exit(subprocess.call([sys.executable] + args, env=env))
+ 
+ 
 diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
 index a72d72e60c..8bc2b6fb1f 100644
 --- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
@@ -3962,6 +3988,21 @@ index d57b1c495f..7b9f5ccc05 100644
              }
          }
      },
+diff --git a/tools/protoc_wrapper/protoc_wrapper.py b/tools/protoc_wrapper/protoc_wrapper.py
+index b133f42c59..3bc1ad5de7 100755
+--- a/tools/protoc_wrapper/protoc_wrapper.py
++++ b/tools/protoc_wrapper/protoc_wrapper.py
+@@ -184,8 +184,8 @@ def main(argv):
+       protoc_cmd += ["--include_imports"]
+ 
+   nenv = os.environ.copy()
+-  nenv["PATH"] = "${WRKOBJDIR}/bin:" + nenv["PATH"]
+-  nenv["LD_LIBRARY_PATH"] = "${WRKSRC}/out/Release"
++#  nenv["PATH"] = "${WRKOBJDIR}/bin:" + nenv["PATH"]
++  nenv["LD_LIBRARY_PATH"] = "@WRKSRC@/out/Release"
+ 
+   dependency_file_data = None
+   if options.descriptor_set_out and options.descriptor_set_dependency_file:
 diff --git a/tools/v8_context_snapshot/BUILD.gn b/tools/v8_context_snapshot/BUILD.gn
 index f46bec2eb5..77275a194f 100644
 --- a/tools/v8_context_snapshot/BUILD.gn
@@ -4406,3 +4447,16 @@ index 0000000000..7cffa35b09
 +  os.utime(sys.argv[1], None)
 +
 +sys.exit(subprocess.call(sys.argv[2:]))
+diff --git a/v8/tools/run.py b/v8/tools/run.py
+index f8ec94c6bc..8879702b77 100755
+--- a/v8/tools/run.py
++++ b/v8/tools/run.py
+@@ -21,7 +21,7 @@ if cmd and cmd[0] == '--redirect-stdout':
+   kwargs = dict(stdout=subprocess.PIPE)
+   cmd = cmd[2:]
+ 
+-process = subprocess.Popen(cmd, env={"LD_LIBRARY_PATH":"${WRKSRC}/out/Release"}, **kwargs)
++process = subprocess.Popen(cmd, env={"LD_LIBRARY_PATH":"@WRKSRC@/out/Release"}, **kwargs)
+ stdout, _ = process.communicate()
+ if stdout_file:
+   with stdout_file.open('w') as f:
