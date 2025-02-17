@@ -4418,6 +4418,26 @@ index 948c1355c9..45156f7c1d 100644
  #include <string.h>
  
  #ifndef _WIN32
+diff --git a/third_party/electron_node/tools/generate_gn_filenames_json.py b/third_party/electron_node/tools/generate_gn_filenames_json.py
+index 37c1685900..53d5db1b98 100755
+--- a/third_party/electron_node/tools/generate_gn_filenames_json.py
++++ b/third_party/electron_node/tools/generate_gn_filenames_json.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python3
++#!@PYTHONBIN@
+ import json
+ import os
+ import sys
+diff --git a/third_party/engflow-reclient-configs/python/python_remote_wrapper.template b/third_party/engflow-reclient-configs/python/python_remote_wrapper.template
+index 54817e4f6f..98b9f59e40 100644
+--- a/third_party/engflow-reclient-configs/python/python_remote_wrapper.template
++++ b/third_party/engflow-reclient-configs/python/python_remote_wrapper.template
+@@ -1,4 +1,4 @@
+-#!/bin/bash
++#!@SH@
+ # Copyright (c) 2023 Contributors to the reclient-configs project. All rights reserved.
+ #
+ # Licensed under the Apache License, Version 2.0 (the "License");
 diff --git a/third_party/ffmpeg/configure b/third_party/ffmpeg/configure
 index 4fab369817..97f91efcb8 100755
 --- a/third_party/ffmpeg/configure
@@ -4912,6 +4932,16 @@ index b1e0e620f1..e3d79b311c 100644
  #ifdef SQLITE_USE_ALLOCA
  # define sqlite3StackAllocRaw(D,N)   alloca(N)
  # define sqlite3StackAllocRawNN(D,N) alloca(N)
+diff --git a/third_party/squirrel.mac/build/xcrun.py b/third_party/squirrel.mac/build/xcrun.py
+index a7aeeb7d3e..82598e69c7 100644
+--- a/third_party/squirrel.mac/build/xcrun.py
++++ b/third_party/squirrel.mac/build/xcrun.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python3
++#!@PYTHONBIN@
+ from __future__ import print_function
+ import os
+ import subprocess
 diff --git a/third_party/swiftshader/src/Reactor/Debug.cpp b/third_party/swiftshader/src/Reactor/Debug.cpp
 index 96695d65c7..3fc8049988 100644
 --- a/third_party/swiftshader/src/Reactor/Debug.cpp

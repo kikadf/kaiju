@@ -60431,11 +60431,11 @@ index af3646c65e..f1d9e76718 100644
    },
 diff --git a/third_party/electron_node/tools/generate_gn_filenames_json.py b/third_party/electron_node/tools/generate_gn_filenames_json.py
 new file mode 100755
-index 0000000000..37c1685900
+index 0000000000..53d5db1b98
 --- /dev/null
 +++ b/third_party/electron_node/tools/generate_gn_filenames_json.py
 @@ -0,0 +1,117 @@
-+#!/usr/bin/env python3
++#!@PYTHONBIN@
 +import json
 +import os
 +import sys
@@ -60864,11 +60864,11 @@ index 5948be95b6..34136aab6c 100755
          if not isinstance(source_files, (list, tuple)):
 diff --git a/third_party/engflow-reclient-configs/python/python_remote_wrapper.template b/third_party/engflow-reclient-configs/python/python_remote_wrapper.template
 new file mode 100644
-index 0000000000..54817e4f6f
+index 0000000000..98b9f59e40
 --- /dev/null
 +++ b/third_party/engflow-reclient-configs/python/python_remote_wrapper.template
 @@ -0,0 +1,29 @@
-+#!/bin/bash
++#!@SH@
 +# Copyright (c) 2023 Contributors to the reclient-configs project. All rights reserved.
 +#
 +# Licensed under the Apache License, Version 2.0 (the "License");
@@ -64353,11 +64353,11 @@ index 0000000000..bdfaf95f3e
 +}
 diff --git a/third_party/squirrel.mac/build/xcrun.py b/third_party/squirrel.mac/build/xcrun.py
 new file mode 100644
-index 0000000000..a7aeeb7d3e
+index 0000000000..82598e69c7
 --- /dev/null
 +++ b/third_party/squirrel.mac/build/xcrun.py
 @@ -0,0 +1,14 @@
-+#!/usr/bin/env python3
++#!@PYTHONBIN@
 +from __future__ import print_function
 +import os
 +import subprocess
