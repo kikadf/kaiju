@@ -81,7 +81,7 @@ index d1851b5f2d..f88007d102 100644
  void* GetStackTop() {
     pthread_attr_t attr;
 diff --git a/base/base_paths_posix.cc b/base/base_paths_posix.cc
-index bff1751810..ae7b37f75e 100644
+index bff1751810..5d45da8f3f 100644
 --- a/base/base_paths_posix.cc
 +++ b/base/base_paths_posix.cc
 @@ -58,6 +58,15 @@ bool PathProviderPosix(int key, FilePath* result) {
@@ -91,7 +91,7 @@ index bff1751810..ae7b37f75e 100644
 +#elif BUILDFLAG(IS_NETBSD)
 +      std::optional<std::string> bin_dir = StringSysctl({ CTL_KERN, KERN_PROC_ARGS, getpid(), KERN_PROC_PATHNAME });
 +      if (!bin_dir.has_value() || bin_dir.value().length() <= 1) {
-+        NOTREACHED_IN_MIGRATION() << "Unable to resolve path.";
++        NOTREACHED() << "Unable to resolve path.";
 +        return false;
 +      }
 +      *result = FilePath(bin_dir.value());
@@ -3347,6 +3347,19 @@ index 831b3a61d7..faaebde8b3 100644
    RandomBytesFromDevUrandom(destination);
  #elif BUILDFLAG(IS_NACL)
    while (!destination.empty()) {
+diff --git a/third_party/libc++/src/include/__locale_dir/locale_base_api/bsd_locale_defaults.h b/third_party/libc++/src/include/__locale_dir/locale_base_api/bsd_locale_defaults.h
+index 73ab635d28..a4db47196c 100644
+--- a/third_party/libc++/src/include/__locale_dir/locale_base_api/bsd_locale_defaults.h
++++ b/third_party/libc++/src/include/__locale_dir/locale_base_api/bsd_locale_defaults.h
+@@ -25,6 +25,8 @@
+ // what headers have been included up to that point.
+ #if defined(__APPLE__) || defined(__FreeBSD__)
+ #  include <xlocale.h>
++#elif defined(__NetBSD__)
++#  include <locale.h>
+ #endif
+ 
+ #include <__config>
 diff --git a/third_party/libc++/src/src/chrono.cpp b/third_party/libc++/src/src/chrono.cpp
 index 48eef6acd9..339b13d3e8 100644
 --- a/third_party/libc++/src/src/chrono.cpp

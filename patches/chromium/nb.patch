@@ -754,7 +754,7 @@ index 7b7efaaf74..1245f35102 100644
  // Atomically execute:
  //      result = *ptr;
 diff --git a/base/base_paths_posix.cc b/base/base_paths_posix.cc
-index 284e5382bf..ae7b37f75e 100644
+index 284e5382bf..5d45da8f3f 100644
 --- a/base/base_paths_posix.cc
 +++ b/base/base_paths_posix.cc
 @@ -15,6 +15,7 @@
@@ -780,30 +780,29 @@ index 284e5382bf..ae7b37f75e 100644
  #elif BUILDFLAG(IS_SOLARIS) || BUILDFLAG(IS_AIX)
  #include <stdlib.h>
  #endif
-@@ -47,13 +52,21 @@ bool PathProviderPosix(int key, FilePath* result) {
+@@ -47,12 +52,20 @@ bool PathProviderPosix(int key, FilePath* result) {
        *result = bin_dir;
        return true;
  #elif BUILDFLAG(IS_FREEBSD)
 -      int name[] = {CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1};
 -      std::optional<std::string> bin_dir = StringSysctl(name, std::size(name));
 +      std::optional<std::string> bin_dir = StringSysctl({ CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 });
-       if (!bin_dir.has_value() || bin_dir.value().length() <= 1) {
-         NOTREACHED() << "Unable to resolve path.";
-       }
-       *result = FilePath(bin_dir.value());
-       return true;
-+#elif BUILDFLAG(IS_NETBSD)
-+      std::optional<std::string> bin_dir = StringSysctl({ CTL_KERN, KERN_PROC_ARGS, getpid(), KERN_PROC_PATHNAME });
 +      if (!bin_dir.has_value() || bin_dir.value().length() <= 1) {
-+        NOTREACHED_IN_MIGRATION() << "Unable to resolve path.";
-+        return false;
++        NOTREACHED() << "Unable to resolve path.";
 +      }
 +      *result = FilePath(bin_dir.value());
-+      VLOG(1) << "PathProviderPosix result: " << bin_dir.value();
 +      return true;
++#elif BUILDFLAG(IS_NETBSD)
++      std::optional<std::string> bin_dir = StringSysctl({ CTL_KERN, KERN_PROC_ARGS, getpid(), KERN_PROC_PATHNAME });
+       if (!bin_dir.has_value() || bin_dir.value().length() <= 1) {
+         NOTREACHED() << "Unable to resolve path.";
++        return false;
+       }
+       *result = FilePath(bin_dir.value());
++      VLOG(1) << "PathProviderPosix result: " << bin_dir.value();
+       return true;
  #elif BUILDFLAG(IS_SOLARIS)
        char bin_dir[PATH_MAX + 1];
-       if (realpath(getexecname(), bin_dir) == NULL) {
 @@ -62,14 +75,65 @@ bool PathProviderPosix(int key, FilePath* result) {
        *result = FilePath(bin_dir);
        return true;
@@ -34378,6 +34377,19 @@ index 3b7c2d7c7a..ca724fdef1 100644
  // Define hwcap values ourselves: building with an old auxv header where these
  // hwcap values are not defined should not prevent features from being enabled.
  #define AOM_AARCH64_HWCAP_CRC32 (1 << 7)
+diff --git a/third_party/libc++/src/include/__locale_dir/locale_base_api/bsd_locale_defaults.h b/third_party/libc++/src/include/__locale_dir/locale_base_api/bsd_locale_defaults.h
+index 73ab635d28..a4db47196c 100644
+--- a/third_party/libc++/src/include/__locale_dir/locale_base_api/bsd_locale_defaults.h
++++ b/third_party/libc++/src/include/__locale_dir/locale_base_api/bsd_locale_defaults.h
+@@ -25,6 +25,8 @@
+ // what headers have been included up to that point.
+ #if defined(__APPLE__) || defined(__FreeBSD__)
+ #  include <xlocale.h>
++#elif defined(__NetBSD__)
++#  include <locale.h>
+ #endif
+ 
+ #include <__config>
 diff --git a/third_party/libc++/src/src/chrono.cpp b/third_party/libc++/src/src/chrono.cpp
 index dbc0f617b4..339b13d3e8 100644
 --- a/third_party/libc++/src/src/chrono.cpp
