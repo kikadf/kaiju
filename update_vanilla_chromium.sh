@@ -22,7 +22,7 @@ if [ "$1" != "" ]; then
 	c_ver="$1"
 else
 	echo "Error: not set chromium version"
-    echo "Usage: ./update_vanilla.sh <chromium version>"
+    echo "Usage: ./update_vanilla_chromium.sh <chromium version>"
 	exit 1
 fi
 

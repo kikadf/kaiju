@@ -20,8 +20,8 @@ _isend="0"
 if [ "$1" != "" ]; then
     e_ver="$1"
 else
-    echo "Error: not set chromium version"
-    echo "Usage: ./update_vanilla.sh <chromium version>"
+    echo "Error: not set electron version"
+    echo "Usage: ./update_vanilla_electron.sh <electron version>"
 	exit 1
 fi
 

@@ -300,7 +300,7 @@ index 483d4c5edc..0c8c2c3715 100644
  #else
    constexpr static size_t AllocationChunkSize = 4096;
 diff --git a/base/allocator/partition_allocator/partition_alloc.gni b/base/allocator/partition_allocator/partition_alloc.gni
-index a5b4c2fb3d..b4303117c8 100644
+index a5b4c2fb3d..99e56afef3 100644
 --- a/base/allocator/partition_allocator/partition_alloc.gni
 +++ b/base/allocator/partition_allocator/partition_alloc.gni
 @@ -39,7 +39,7 @@ if (is_nacl) {
@@ -312,6 +312,15 @@ index a5b4c2fb3d..b4303117c8 100644
  
  declare_args() {
    # Causes all the allocations to be routed via allocator_shim.cc. Usually,
+@@ -290,7 +290,7 @@ declare_args() {
+ declare_args() {
+   # Shadow metadata is still under development and only supports Linux
+   # for now.
+-  enable_shadow_metadata = is_linux && has_64_bit_pointers
++  enable_shadow_metadata = !is_bsd && is_linux && has_64_bit_pointers
+ }
+ 
+ declare_args() {
 @@ -433,7 +433,7 @@ assert(!use_asan_backup_ref_ptr || use_raw_ptr_hookable_impl,
  # dependencies that use partition_allocator are compiled in AOSP against a
  # version of glibc that does not include pkeys syscall numbers.
@@ -3111,10 +3120,10 @@ index d65c510bba..254fe845ae 100644
  }  // namespace base
 diff --git a/base/process/process_metrics_netbsd.cc b/base/process/process_metrics_netbsd.cc
 new file mode 100644
-index 0000000000..4aecb8cdcd
+index 0000000000..cfbb77da4f
 --- /dev/null
 +++ b/base/process/process_metrics_netbsd.cc
-@@ -0,0 +1,210 @@
+@@ -0,0 +1,228 @@
 +// Copyright 2013 The Chromium Authors
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
@@ -3128,6 +3137,8 @@ index 0000000000..4aecb8cdcd
 +#include <sys/sysctl.h>
 +#include <sys/vmmeter.h>
 +
++#include "base/files/dir_reader_posix.h" // DirReaderPosix
++#include "base/process/internal_linux.h" // GetProcPidDir()
 +#include "base/memory/ptr_util.h"
 +#include "base/types/expected.h"
 +#include "base/values.h"
@@ -3218,7 +3229,23 @@ index 0000000000..4aecb8cdcd
 +}
 +
 +int ProcessMetrics::GetOpenFdCount() const {
-+  return -1;
++  // Use /proc/<pid>/fd to count the number of entries there.
++  FilePath fd_path = internal::GetProcPidDir(process_).Append("fd");
++
++  DirReaderPosix dir_reader(fd_path.value().c_str());
++  if (!dir_reader.IsValid()) {
++    return -1;
++  }
++
++  int total_count = 0;
++  for (; dir_reader.Next();) {
++    const char* name = dir_reader.name();
++    if (strcmp(name, ".") != 0 && strcmp(name, "..") != 0) {
++      ++total_count;
++    }
++  }
++
++  return total_count;
 +}
 +
 +int ProcessMetrics::GetOpenFdSoftLimit() const {

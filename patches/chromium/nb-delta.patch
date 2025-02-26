@@ -25,6 +25,19 @@ index c0d0b960ae..c7e93ff51f 100644
    }
  
    # iOS
+diff --git a/base/allocator/partition_allocator/partition_alloc.gni b/base/allocator/partition_allocator/partition_alloc.gni
+index b4303117c8..99e56afef3 100644
+--- a/base/allocator/partition_allocator/partition_alloc.gni
++++ b/base/allocator/partition_allocator/partition_alloc.gni
+@@ -290,7 +290,7 @@ declare_args() {
+ declare_args() {
+   # Shadow metadata is still under development and only supports Linux
+   # for now.
+-  enable_shadow_metadata = is_linux && has_64_bit_pointers
++  enable_shadow_metadata = !is_bsd && is_linux && has_64_bit_pointers
+ }
+ 
+ declare_args() {
 diff --git a/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc b/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc
 index b72ae73956..794a468767 100644
 --- a/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc
@@ -524,10 +537,10 @@ index 0000000000..396da4f494
 +}  // namespace base
 diff --git a/base/process/process_metrics_netbsd.cc b/base/process/process_metrics_netbsd.cc
 new file mode 100644
-index 0000000000..4aecb8cdcd
+index 0000000000..cfbb77da4f
 --- /dev/null
 +++ b/base/process/process_metrics_netbsd.cc
-@@ -0,0 +1,210 @@
+@@ -0,0 +1,228 @@
 +// Copyright 2013 The Chromium Authors
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
@@ -541,6 +554,8 @@ index 0000000000..4aecb8cdcd
 +#include <sys/sysctl.h>
 +#include <sys/vmmeter.h>
 +
++#include "base/files/dir_reader_posix.h" // DirReaderPosix
++#include "base/process/internal_linux.h" // GetProcPidDir()
 +#include "base/memory/ptr_util.h"
 +#include "base/types/expected.h"
 +#include "base/values.h"
@@ -631,7 +646,23 @@ index 0000000000..4aecb8cdcd
 +}
 +
 +int ProcessMetrics::GetOpenFdCount() const {
-+  return -1;
++  // Use /proc/<pid>/fd to count the number of entries there.
++  FilePath fd_path = internal::GetProcPidDir(process_).Append("fd");
++
++  DirReaderPosix dir_reader(fd_path.value().c_str());
++  if (!dir_reader.IsValid()) {
++    return -1;
++  }
++
++  int total_count = 0;
++  for (; dir_reader.Next();) {
++    const char* name = dir_reader.name();
++    if (strcmp(name, ".") != 0 && strcmp(name, "..") != 0) {
++      ++total_count;
++    }
++  }
++
++  return total_count;
 +}
 +
 +int ProcessMetrics::GetOpenFdSoftLimit() const {
