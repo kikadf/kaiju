@@ -5286,6 +5286,34 @@ index 53fd68bf7a..7d72dba10a 100644
 -# use_qt6 => use_qt
 -assert(!use_qt6 || use_qt)
 +use_qt = use_qt5 || use_qt6
+diff --git a/ui/qt/qt_ui.cc b/ui/qt/qt_ui.cc
+index 438b2dc118..a64dc4198f 100644
+--- a/ui/qt/qt_ui.cc
++++ b/ui/qt/qt_ui.cc
+@@ -427,7 +427,8 @@ std::unique_ptr<ui::NavButtonProvider> QtUi::CreateNavButtonProvider() {
+ }
+ 
+ ui::WindowFrameProvider* QtUi::GetWindowFrameProvider(bool solid_frame,
+-                                                      bool tiled) {
++                                                      bool tiled,
++                                                      bool maximized) {
+   // QT prefers server-side decorations.
+   return nullptr;
+ }
+diff --git a/ui/qt/qt_ui.h b/ui/qt/qt_ui.h
+index 2e5a321413..2d6c367533 100644
+--- a/ui/qt/qt_ui.h
++++ b/ui/qt/qt_ui.h
+@@ -82,7 +82,8 @@ class QtUi : public ui::LinuxUiAndTheme, QtInterface::Delegate {
+   void SetAccentColor(std::optional<SkColor>) override;
+   std::unique_ptr<ui::NavButtonProvider> CreateNavButtonProvider() override;
+   ui::WindowFrameProvider* GetWindowFrameProvider(bool solid_frame,
+-                                                  bool tiled) override;
++                                                  bool tiled,
++                                                  bool maximized) override;
+ 
+   // QtInterface::Delegate:
+   void FontChanged() override;
 diff --git a/v8/BUILD.gn b/v8/BUILD.gn
 index 608199c033..15d1cf2430 100644
 --- a/v8/BUILD.gn
