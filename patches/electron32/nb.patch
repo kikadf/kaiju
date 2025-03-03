@@ -4543,10 +4543,10 @@ index 3750b6a2d6..49879f5d4c 100644
  }  // namespace base
 diff --git a/base/process/process_metrics_netbsd.cc b/base/process/process_metrics_netbsd.cc
 new file mode 100644
-index 0000000000..5580b05450
+index 0000000000..c42f1674b3
 --- /dev/null
 +++ b/base/process/process_metrics_netbsd.cc
-@@ -0,0 +1,175 @@
+@@ -0,0 +1,193 @@
 +// Copyright 2013 The Chromium Authors
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
@@ -4560,6 +4560,8 @@ index 0000000000..5580b05450
 +#include <sys/sysctl.h>
 +#include <sys/vmmeter.h>
 +
++#include "base/files/dir_reader_posix.h" // DirReaderPosix
++#include "base/process/internal_linux.h" // GetProcPidDir()
 +#include "base/memory/ptr_util.h"
 +#include "base/types/expected.h"
 +#include "base/values.h"
@@ -4615,7 +4617,23 @@ index 0000000000..5580b05450
 +}
 +
 +int ProcessMetrics::GetOpenFdCount() const {
-+  return -1;
++  // Use /proc/<pid>/fd to count the number of entries there.
++  FilePath fd_path = internal::GetProcPidDir(process_).Append("fd");
++
++  DirReaderPosix dir_reader(fd_path.value().c_str());
++  if (!dir_reader.IsValid()) {
++    return -1;
++  }
++
++  int total_count = 0;
++  for (; dir_reader.Next();) {
++    const char* name = dir_reader.name();
++    if (strcmp(name, ".") != 0 && strcmp(name, "..") != 0) {
++      ++total_count;
++    }
++  }
++
++  return total_count;
 +}
 +
 +int ProcessMetrics::GetOpenFdSoftLimit() const {
@@ -18760,6 +18778,37 @@ index 5da0d0f4f6..4534a86178 100644
    return named_system_lock::ScopedLock::Create(kLockName, timeout);
  #elif BUILDFLAG(IS_WIN)
    CSecurityAttributes sa =
+diff --git a/chrome/installer/linux/BUILD.gn b/chrome/installer/linux/BUILD.gn
+index 51f7c978a0..9c595eddc1 100644
+--- a/chrome/installer/linux/BUILD.gn
++++ b/chrome/installer/linux/BUILD.gn
+@@ -77,7 +77,7 @@ if (enable_swiftshader) {
+   packaging_files += [ "$root_out_dir/vk_swiftshader_icd.json" ]
+ }
+ 
+-if (use_qt) {
++if (use_qt5) {
+   # Even though this is a shared library, add it to `packaging_files` instead of
+   # `packaging_files_shlibs` to skip the dependency check.  This is intentional
+   # to prevent a hard dependency on QT for the package.
+@@ -208,7 +208,7 @@ if (build_with_internal_optimization_guide) {
+   }
+ }
+ 
+-if (use_qt) {
++if (use_qt5) {
+   strip_binary("strip_qt5_shim") {
+     binary_input = "$root_out_dir/libqt5_shim.so"
+     deps = [ "//ui/qt:qt5_shim" ]
+@@ -406,7 +406,7 @@ group("installer_deps") {
+       "//components/optimization_guide/internal:optimization_guide_internal",
+     ]
+   }
+-  if (use_qt) {
++  if (use_qt5) {
+     public_deps += [
+       ":strip_qt5_shim",
+       "//ui/qt:qt5_shim",
 diff --git a/chrome/renderer/pepper/chrome_renderer_pepper_host_factory.cc b/chrome/renderer/pepper/chrome_renderer_pepper_host_factory.cc
 index 8687c49c7b..983ef9a013 100644
 --- a/chrome/renderer/pepper/chrome_renderer_pepper_host_factory.cc
@@ -70453,7 +70502,7 @@ index 07a2eb346c..e1e2a72d9a 100644
    raw_ptr<gfx::ImageSkia> icon = nullptr;
    std::optional<SkColor> background_color;
 diff --git a/ui/qt/BUILD.gn b/ui/qt/BUILD.gn
-index 2da7845e2e..889d59f0f2 100644
+index 2da7845e2e..7118297773 100644
 --- a/ui/qt/BUILD.gn
 +++ b/ui/qt/BUILD.gn
 @@ -20,7 +20,7 @@ config("qt_internal_config") {
@@ -70465,19 +70514,69 @@ index 2da7845e2e..889d59f0f2 100644
  
    configs = [
      "//build/config/linux:runtime_library",
+@@ -101,10 +101,12 @@ template("qt_shim") {
+     }
+   }
+ }
+-qt_shim("qt5_shim") {
+-  qt_version = "5"
+-  if (!use_sysroot) {
+-    moc_qt_path = "$moc_qt5_path"
++if (use_qt5) {
++  qt_shim("qt5_shim") {
++    qt_version = "5"
++    if (!use_sysroot) {
++      moc_qt_path = "$moc_qt5_path"
++    }
+   }
+ }
+ if (use_qt6) {
+@@ -122,7 +124,10 @@ component("qt") {
+   defines = [ "IS_QT_IMPL" ]
+ 
+   # qt_shim is in data_deps since we want to load it manually.
+-  data_deps = [ ":qt5_shim" ]
++  data_deps = []
++  if (use_qt5) {
++    data_deps += [ ":qt5_shim" ]
++  }
+   if (use_qt6) {
+     data_deps += [ ":qt6_shim" ]
+   }
 diff --git a/ui/qt/qt.gni b/ui/qt/qt.gni
-index 53fd68bf7a..fa5e245cd3 100644
+index 53fd68bf7a..7d72dba10a 100644
 --- a/ui/qt/qt.gni
 +++ b/ui/qt/qt.gni
-@@ -14,7 +14,7 @@ declare_args() {
+@@ -9,24 +9,17 @@ import("//build/config/sysroot.gni")
+ declare_args() {
+   # TODO(crbug.com/40260415): Allow QT in MSAN builds once QT is
+   # added to the instrumented libraries.
+-  use_qt = is_linux && !is_castos && !is_msan
++  use_qt5 = use_sysroot && is_linux && !is_castos && !is_msan
++  use_qt6 = use_sysroot && is_linux && !is_castos && !is_msan
+ }
  
  declare_args() {
-   if (!use_sysroot && use_qt) {
+-  if (!use_sysroot && use_qt) {
 -    moc_qt5_path = ""
++  if (!use_sysroot && use_qt5) {
 +    moc_qt5_path = "@QTDIR@/bin"
+   }
+-}
+-
+-declare_args() {
+-  use_qt6 = use_qt && use_sysroot
+-}
+-
+-declare_args() {
+   if (!use_sysroot && use_qt6) {
+     moc_qt6_path = ""
    }
  }
  
+-# use_qt6 => use_qt
+-assert(!use_qt6 || use_qt)
++use_qt = use_qt5 || use_qt6
 diff --git a/ui/shell_dialogs/select_file_dialog.h b/ui/shell_dialogs/select_file_dialog.h
 index ab916846f3..21d26159fd 100644
 --- a/ui/shell_dialogs/select_file_dialog.h
