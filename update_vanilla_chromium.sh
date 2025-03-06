@@ -5,6 +5,7 @@
 
 c_tarball_url="https://commondatastorage.googleapis.com/chromium-browser-official"
 #c_tarball_url="https://nerd.hu/distfiles"
+_distfiles=/usr/pkgsrc/distfiles
 
 # func
 # die [what]
@@ -29,7 +30,9 @@ fi
 # get chromium
 if [ ! -f "../chromium-${c_ver}-download_done" ]; then
     cd .. || die
-    curl "${c_tarball_url}/chromium-${c_ver}.tar.xz" -o "chromium-${c_ver}.tar.xz" || die "curl chromium"
+    if [ ! -f "$_distfiles/chromium-${c_ver}.tar.xz" ]; then
+        curl "${c_tarball_url}/chromium-${c_ver}.tar.xz" -o "$_distfiles/chromium-${c_ver}.tar.xz" || die "curl chromium"
+    fi
     #curl "${c_tarball_url}/chrome-gn-${c_ver}-src.tar.xz" -o "chrome-gn-${c_ver}-src.tar.xz" || die "curl chrome-gn"
     curl "${c_tarball_url}/chromium-${c_ver}.tar.xz.hashes" -o "chromium-${c_ver}.tar.xz.hashes" || die "curl hashes"
     sed -n 's|sha256 *\(.*\)|\1|p' "chromium-${c_ver}.tar.xz.hashes" | sha256 -c || die checksum
@@ -41,7 +44,7 @@ fi
 if [ ! -f "../chromium-${c_ver}-extract_done" ]; then
     cd .. || die
     mkdir "chromium-netbsd-${c_ver}" || die
-    tar -xJf "chromium-${c_ver}.tar.xz" --strip-components=1 -C "chromium-netbsd-${c_ver}" || die "extract chromium"
+    tar -xJf "$_distfiles/chromium-${c_ver}.tar.xz" --strip-components=1 -C "chromium-netbsd-${c_ver}" || die "extract chromium"
     #tar -xJf "chrome-gn-${c_ver}-src.tar.xz" --strip-components=1 -C "chromium-netbsd-${c_ver}" || die "extract chrome-gn"
     sed -i'' 's/swiftshader/swiftshaderXXX/g' "chromium-netbsd-${c_ver}/third_party/.gitignore"
     sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "chromium-netbsd-${c_ver}/third_party/vulkan-deps/.gitignore"
@@ -92,7 +95,7 @@ cd "../chromium-netbsd-${c_ver}" || die
 if [ -e "../kaiju/patches/chromium/nb-delta.patch" ]; then
 
     # clean distfiles, status files
-    rm "../chromium-${c_ver}.tar.xz" || die
+    #rm "../chromium-${c_ver}.tar.xz" || die
     #rm "../chrome-gn-${c_ver}-src.tar.xz" || die
     rm "../chromium-${c_ver}.tar.xz.hashes" || die
     rm "../chromium-${c_ver}-download_done"
