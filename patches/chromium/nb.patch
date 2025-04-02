@@ -528,9 +528,20 @@ index 47e4368908..625ccdd890 100644
  
  #include <atomic>
 diff --git a/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_config.h b/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_config.h
-index 9cb3839f87..bee08cb938 100644
+index 9cb3839f87..669de7d445 100644
 --- a/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_config.h
 +++ b/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_config.h
+@@ -51,8 +51,8 @@ static_assert(sizeof(void*) != 8, "");
+ // POSIX is not only UNIX, e.g. macOS and other OSes. We do use Linux-specific
+ // features such as futex(2).
+ #define PA_CONFIG_HAS_LINUX_KERNEL()                      \
+-  (PA_BUILDFLAG(IS_LINUX) || PA_BUILDFLAG(IS_CHROMEOS) || \
+-   PA_BUILDFLAG(IS_ANDROID))
++  ((PA_BUILDFLAG(IS_LINUX) || PA_BUILDFLAG(IS_CHROMEOS) || \
++   PA_BUILDFLAG(IS_ANDROID)) && !PA_BUILDFLAG(IS_NETBSD))
+ 
+ // If defined, enables zeroing memory on Free() with roughly 1% probability.
+ // This applies only to normal buckets, as direct-map allocations are always
 @@ -170,7 +170,7 @@ constexpr bool kUseLazyCommit = false;
  // This may be required on more platforms in the future.
  #define PA_CONFIG_HAS_ATFORK_HANDLER()                 \
@@ -25062,7 +25073,7 @@ index 2a21dff5f5..1fbf46550c 100644
    }
  
 diff --git a/net/base/features.cc b/net/base/features.cc
-index fb4f185994..f5a6ae0244 100644
+index fb4f185994..7aa81de05d 100644
 --- a/net/base/features.cc
 +++ b/net/base/features.cc
 @@ -26,7 +26,7 @@ BASE_FEATURE(kCapReferrerToOriginOnCrossOrigin,
@@ -25078,7 +25089,7 @@ index fb4f185994..f5a6ae0244 100644
               "SpdyHeadersToHttpResponseUseBuilder",
               base::FEATURE_DISABLED_BY_DEFAULT);
  
-+#if BUILDFLAG(IS_OPENBSD)
++#if BUILDFLAG(IS_OPENBSD) || BUILDFLAG(IS_NETBSD)
 +// No IP_RECVTOS support
 +BASE_FEATURE(kReportEcn, "ReportEcn", base::FEATURE_DISABLED_BY_DEFAULT);
 +#else
@@ -32354,25 +32365,26 @@ index 095fa9825a..cfcce2b26e 100644
  
  #include <array>
 diff --git a/third_party/abseil-cpp/absl/base/config.h b/third_party/abseil-cpp/absl/base/config.h
-index 58077a2c58..e93a234644 100644
+index 58077a2c58..9fb9028674 100644
 --- a/third_party/abseil-cpp/absl/base/config.h
 +++ b/third_party/abseil-cpp/absl/base/config.h
-@@ -412,7 +412,7 @@ static_assert(ABSL_INTERNAL_INLINE_NAMESPACE_STR[0] != 'h' ||
+@@ -412,7 +412,8 @@ static_assert(ABSL_INTERNAL_INLINE_NAMESPACE_STR[0] != 'h' ||
  #ifdef ABSL_HAVE_SCHED_YIELD
  #error ABSL_HAVE_SCHED_YIELD cannot be directly set
  #elif defined(__linux__) || defined(__ros__) || defined(__native_client__) || \
 -    defined(__VXWORKS__)
-+    defined(__VXWORKS__) || defined(__OpenBSD__) || defined(__FreeBSD__)
++    defined(__VXWORKS__) || defined(__OpenBSD__) || defined(__FreeBSD__) || \
++    defined(__NetBSD__)
  #define ABSL_HAVE_SCHED_YIELD 1
  #endif
  
-@@ -427,7 +427,8 @@ static_assert(ABSL_INTERNAL_INLINE_NAMESPACE_STR[0] != 'h' ||
+@@ -427,7 +428,8 @@ static_assert(ABSL_INTERNAL_INLINE_NAMESPACE_STR[0] != 'h' ||
  // platforms.
  #ifdef ABSL_HAVE_SEMAPHORE_H
  #error ABSL_HAVE_SEMAPHORE_H cannot be directly set
 -#elif defined(__linux__) || defined(__ros__) || defined(__VXWORKS__)
 +#elif defined(__linux__) || defined(__ros__) || defined(__VXWORKS__) || \
-+    defined(__OpenBSD__) || defined(__FreeBSD__)
++    defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__NetBSD__)
  #define ABSL_HAVE_SEMAPHORE_H 1
  #endif
  
@@ -34635,14 +34647,14 @@ index e1f8870722..0b4ac06377 100644
  #endif
  
 diff --git a/third_party/libc++abi/src/src/cxa_guard_impl.h b/third_party/libc++abi/src/src/cxa_guard_impl.h
-index 191a589176..e4fc47b06b 100644
+index 191a589176..89c76a34dc 100644
 --- a/third_party/libc++abi/src/src/cxa_guard_impl.h
 +++ b/third_party/libc++abi/src/src/cxa_guard_impl.h
 @@ -425,6 +425,17 @@ void PlatformFutexWake(int* addr) {
    __tsan_release(addr);
    futex(reinterpret_cast<volatile uint32_t*>(addr), WAKE, INT_MAX, NULL, NULL);
  }
-+#elif defined(__NetBSD__)
++/*#elif defined(__NetBSD__)
 +void PlatformFutexWait(int* addr, int expect) {
 +  constexpr int WAIT = 0;
 +  syscall(SYS___futex, addr, WAIT, expect, NULL, NULL, 0, 0);
@@ -34652,7 +34664,7 @@ index 191a589176..e4fc47b06b 100644
 +  constexpr int WAKE = 1;
 +  __tsan_release(addr);
 +  syscall(SYS___futex, addr, WAKE, INT_MAX, NULL, NULL, 0, 0);
-+}
++}*/
  #elif defined(SYS_futex)
  void PlatformFutexWait(int* addr, int expect) {
    constexpr int WAIT = 0;
