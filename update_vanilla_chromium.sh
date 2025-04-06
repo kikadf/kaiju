@@ -35,7 +35,8 @@ if [ ! -f "../chromium-${c_ver}-download_done" ]; then
     fi
     #curl "${c_tarball_url}/chrome-gn-${c_ver}-src.tar.xz" -o "chrome-gn-${c_ver}-src.tar.xz" || die "curl chrome-gn"
     curl "${c_tarball_url}/chromium-${c_ver}.tar.xz.hashes" -o "chromium-${c_ver}.tar.xz.hashes" || die "curl hashes"
-    sed -n 's|sha256 *\(.*\)|\1|p' "chromium-${c_ver}.tar.xz.hashes" | sha256 -c || die checksum
+    cd "$_distfiles" || die
+    sed -n 's|sha256 *\(.*\)|\1|p' "$_startdir/../chromium-${c_ver}.tar.xz.hashes" | sha256 -c || die checksum
     cd "$_startdir" || die
     touch "../chromium-${c_ver}-download_done"
 fi
