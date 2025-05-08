@@ -4945,7 +4945,7 @@ index 0d648fa310..f1bd19715a 100644
    } else if (is_ios) {
      if (target_platform == "iphoneos") {
 diff --git a/build/config/compiler/BUILD.gn b/build/config/compiler/BUILD.gn
-index e7a60d56b5..f8fe5ad9e5 100644
+index e7a60d56b5..3f68e80ca8 100644
 --- a/build/config/compiler/BUILD.gn
 +++ b/build/config/compiler/BUILD.gn
 @@ -197,7 +197,7 @@ declare_args() {
@@ -5049,7 +5049,17 @@ index e7a60d56b5..f8fe5ad9e5 100644
        if (is_win) {
          # TODO(thakis): https://crbug.com/617318
          # Currently RBE can not handle case sensitiveness for windows well.
-@@ -2326,7 +2333,7 @@ config("export_dynamic") {
+@@ -1985,9 +1992,6 @@ config("default_warnings") {
+ 
+         # TODO(crbug.com/40284799): Fix and re-enable.
+         "-Wno-thread-safety-reference-return",
+-
+-        # TODO(crbug.com/376641662): Fix and re-enable.
+-        "-Wno-nontrivial-memcall",
+       ]
+ 
+       cflags_cc += [
+@@ -2326,7 +2330,7 @@ config("export_dynamic") {
  # 2. Remove the thin_archive config, so that the .a file actually contains all
  #    .o files, instead of just references to .o files in the build directoy
  config("thin_archive") {
@@ -5058,7 +5068,7 @@ index e7a60d56b5..f8fe5ad9e5 100644
      # The macOS and iOS linker ld64.ldd doesn't support thin archive without
      # symbol table, gcc on linux also throws the error `archive has no index`.
      # AIX does support -s option, not -S option.
-@@ -2776,7 +2783,7 @@ config("afdo_optimize_size") {
+@@ -2776,7 +2780,7 @@ config("afdo_optimize_size") {
  # There are some targeted places that AFDO regresses, so we provide a separate
  # config to allow AFDO to be disabled per-target.
  config("afdo") {
@@ -5067,7 +5077,7 @@ index e7a60d56b5..f8fe5ad9e5 100644
      cflags = []
      if (clang_emit_debug_info_for_profiling) {
        # Add the following flags to generate debug info for profiling.
-@@ -2803,7 +2810,7 @@ config("afdo") {
+@@ -2803,7 +2807,7 @@ config("afdo") {
        cflags += [ "-Wno-backend-plugin" ]
        inputs = [ _clang_sample_profile ]
      }
@@ -5076,7 +5086,7 @@ index e7a60d56b5..f8fe5ad9e5 100644
      cflags = [ "-fauto-profile=${auto_profile_path}" ]
      inputs = [ auto_profile_path ]
    }
-@@ -2980,7 +2987,7 @@ config("symbols") {
+@@ -2980,7 +2984,7 @@ config("symbols") {
      cflags += [ "-gomit-unreferenced-methods" ]
    }
  
@@ -37892,6 +37902,54 @@ index 34ae7b913a..f1fc2314f7 100644
  #elif defined(ARMV8_OS_FUCHSIA)
      uint32_t features;
      zx_status_t rc = zx_system_get_features(ZX_FEATURE_KIND_CPU, &features);
+diff --git a/tools/code_cache_generator/BUILD.gn b/tools/code_cache_generator/BUILD.gn
+index fd9a5bff00..c7c18c5bf4 100644
+--- a/tools/code_cache_generator/BUILD.gn
++++ b/tools/code_cache_generator/BUILD.gn
+@@ -15,8 +15,34 @@ if (is_android) {
+   import("//build/config/android/rules.gni")
+ }
+ 
+-executable("code_cache_generator") {
++group("code_cache_generator") {
++    deps = [ ":code_cache_generator_executable" ]
++    if (target_os == "netbsd") {
++      deps+= [ ":run_paxctl_code_cache_generator" ]
++    }
++}
++
++action("run_paxctl_code_cache_generator") {
++  deps = [ ":code_cache_generator_executable" ]
++
++  script = "//v8/tools/run-paxctl.py"
++  stamp = "$target_gen_dir/paxctl_stamp"
++  outputs = [ stamp ]
++
++  sources = []
++  data = []
++
++  args = [
++    rebase_path(stamp, root_build_dir),
++    "/usr/sbin/paxctl", "+m",
++    "./" + rebase_path(get_label_info(":code_cache_generator_executable", "root_out_dir") + "/code_cache_generator",
++    root_build_dir),
++  ]
++}
++
++executable("code_cache_generator_executable") {
+   sources = [ "code_cache_generator.cc" ]
++  output_name = "code_cache_generator"
+ 
+   deps = [
+     "//gin:gin",
+@@ -25,6 +51,7 @@ executable("code_cache_generator") {
+     "//tools/v8_context_snapshot:buildflags",
+     "//v8",
+   ]
++
+   data_deps = []
+   data = []
+ 
 diff --git a/tools/generate_shim_headers/generate_shim_headers.py b/tools/generate_shim_headers/generate_shim_headers.py
 index 8df3f14601..80b84b5cd6 100755
 --- a/tools/generate_shim_headers/generate_shim_headers.py
