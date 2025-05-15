@@ -3988,6 +3988,21 @@ index 872083e1cb..05bf464a76 100755
  ]
  
  _form_factors = [
+diff --git a/ui/ozone/platform/wayland/host/wayland_frame_manager.cc b/ui/ozone/platform/wayland/host/wayland_frame_manager.cc
+index 9d1ea0cfc4..bf3ffb7d60 100644
+--- a/ui/ozone/platform/wayland/host/wayland_frame_manager.cc
++++ b/ui/ozone/platform/wayland/host/wayland_frame_manager.cc
+@@ -461,8 +461,10 @@ std::optional<bool> WaylandFrameManager::ApplySurfaceConfigure(
+   surface->UpdateBufferDamageRegion(
+       gfx::ToEnclosingRectIgnoringError(surface_damage));
+ 
++#if !BUILDFLAG(IS_BSD)
+   if (!config.access_fence_handle.is_null())
+     surface->set_acquire_fence(std::move(config.access_fence_handle));
++#endif
+ 
+   bool needs_commit = false;
+ 
 diff --git a/v8/BUILD.gn b/v8/BUILD.gn
 index be89fdbeab..505d4c00a9 100644
 --- a/v8/BUILD.gn

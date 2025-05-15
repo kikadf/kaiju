@@ -40346,6 +40346,21 @@ index 3c63f36cb5..5fc103635a 100644
    }
  
    return vulkan_instance_.Initialize(path, required_extensions, {});
+diff --git a/ui/ozone/platform/wayland/host/wayland_frame_manager.cc b/ui/ozone/platform/wayland/host/wayland_frame_manager.cc
+index 9d1ea0cfc4..bf3ffb7d60 100644
+--- a/ui/ozone/platform/wayland/host/wayland_frame_manager.cc
++++ b/ui/ozone/platform/wayland/host/wayland_frame_manager.cc
+@@ -461,8 +461,10 @@ std::optional<bool> WaylandFrameManager::ApplySurfaceConfigure(
+   surface->UpdateBufferDamageRegion(
+       gfx::ToEnclosingRectIgnoringError(surface_damage));
+ 
++#if !BUILDFLAG(IS_BSD)
+   if (!config.access_fence_handle.is_null())
+     surface->set_acquire_fence(std::move(config.access_fence_handle));
++#endif
+ 
+   bool needs_commit = false;
+ 
 diff --git a/ui/ozone/platform/wayland/host/zwp_text_input_wrapper_v1.cc b/ui/ozone/platform/wayland/host/zwp_text_input_wrapper_v1.cc
 index d2ad95fcdb..9791be51b9 100644
 --- a/ui/ozone/platform/wayland/host/zwp_text_input_wrapper_v1.cc
