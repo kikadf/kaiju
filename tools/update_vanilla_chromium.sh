@@ -49,19 +49,19 @@ fi
 # extract tarballs
 if [ ! -f "$tools_workdir/chromium-${c_ver}-extract_done" ]; then
     cd "$tools_workdir" || die
-    mkdir "chromium-netbsd-${c_ver}" || die
-    tar -xJf "$distfiles/chromium-${c_ver}.tar.xz" --strip-components=1 -C "chromium-netbsd-${c_ver}" || die "extract chromium"
-    #tar -xJf "chrome-gn-${c_ver}-src.tar.xz" --strip-components=1 -C "chromium-netbsd-${c_ver}" || die "extract chrome-gn"
-    sed -i'' 's/swiftshader/swiftshaderXXX/g' "chromium-netbsd-${c_ver}/third_party/.gitignore"
-    sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "chromium-netbsd-${c_ver}/third_party/vulkan-deps/.gitignore"
-    sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "chromium-netbsd-${c_ver}/third_party/.gitignore"
+    mkdir "chromium-${c_ver}" || die
+    tar -xJf "$distfiles/chromium-${c_ver}.tar.xz" --strip-components=1 -C "chromium-${c_ver}" || die "extract chromium"
+    #tar -xJf "chrome-gn-${c_ver}-src.tar.xz" --strip-components=1 -C "chromium-${c_ver}" || die "extract chrome-gn"
+    sed -i'' 's/swiftshader/swiftshaderXXX/g' "chromium-${c_ver}/third_party/.gitignore"
+    sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "chromium-${c_ver}/third_party/vulkan-deps/.gitignore"
+    sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "chromium-${c_ver}/third_party/.gitignore"
     cd "$_startdir" || die
     touch "$tools_workdir/chromium-${c_ver}-extract_done"
 fi
 
 # init git repo
 if [ ! -f "$tools_workdir/chromium-${c_ver}-init_done" ]; then
-    cd "$tools_workdir/chromium-netbsd-${c_ver}" || die
+    cd "$tools_workdir/chromium-${c_ver}" || die
     git init || die
     git add . || die
     git commit -m "Chromium-${c_ver}" || die
@@ -87,7 +87,7 @@ if [ ! -f "$tools_workdir/chromium-${c_ver}-obpatches_done" ]; then
         exit 1
     fi
 
-    cd "chromium-netbsd-${c_ver}" || die
+    cd "chromium-${c_ver}" || die
     for _patch in "$p_dir"/patch-*; do
         if [ -e "$_patch" ]; then
             patch -Np0 -i "$_patch" || die "Apply OpenBSD patches"
@@ -101,7 +101,7 @@ if [ ! -f "$tools_workdir/chromium-${c_ver}-obpatches_done" ]; then
 fi
 
 # Apply NetBSD delta patch
-cd "$tools_workdir/chromium-netbsd-${c_ver}" || die
+cd "$tools_workdir/chromium-${c_ver}" || die
 if [ -e "$_startdir/patches/chromium/nb-delta.patch" ]; then
 
     # clean distfiles, status files

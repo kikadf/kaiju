@@ -263,7 +263,7 @@ if [ ! -f "$tools_workdir/electron${_e_main}-reused-${e_ver}-fixelectronpatches_
     touch "$tools_workdir/electron${_e_main}-reused-${e_ver}-fixelectronpatches_done"
 fi
 
-# Apply freebsd patchset in wip branch
+# Apply freebsd patchset
 if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-fbpatches_done" ]; then
     cd "$tools_workdir" || die
     if [ ! -d "freebsd-ports" ]; then
