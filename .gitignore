@@ -1,2 +1,16 @@
 .vscode
-build
+tools/build
+tools/sources
+
+# pkgsrc's work dir
+*/work
+# OBJHOSTNAME=yes use-case
+*/work.*
+
+# Temporary files
+*~
+\#*\#
+.\#*
+*.orig
+*.core
+*.*.swp

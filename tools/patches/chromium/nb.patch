@@ -6760,7 +6760,7 @@ index 805b422fd5..ae1861e5d7 100644
  #include "chrome/browser/ui/webui/connectors_internals/connectors_internals_ui.h"
  #include "chrome/browser/ui/webui/discards/discards.mojom.h"
 @@ -56,7 +56,7 @@
- #include "ui/webui/resources/cr_components/app_management/app_management.mojom.h"
+ #include "ui/webui/re$tools_workdir/cr_components/app_management/app_management.mojom.h"
  #endif
  
 -#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
@@ -8492,7 +8492,7 @@ index 3add544cef..c75333d6af 100644
  
 -#if BUILDFLAG(IS_LINUX)
 +#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
- #include "chrome/browser/feedback/system_logs/log_sources/ozone_platform_state_dump_source.h"
+ #include "chrome/browser/feedback/system_logs/log_$tools_workdir/ozone_platform_state_dump_source.h"
  #endif
  
 @@ -84,7 +84,7 @@ SystemLogsFetcher* BuildAboutSystemLogsFetcher(content::WebUI* web_ui) {
@@ -8514,7 +8514,7 @@ index c201759712..699cb0c3fb 100644
  
 -#if BUILDFLAG(IS_LINUX)
 +#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
- #include "chrome/browser/feedback/system_logs/log_sources/ozone_platform_state_dump_source.h"
+ #include "chrome/browser/feedback/system_logs/log_$tools_workdir/ozone_platform_state_dump_source.h"
  #endif
  
 @@ -101,7 +101,7 @@ SystemLogsFetcher* BuildChromeSystemLogsFetcher(Profile* profile,
@@ -10726,10 +10726,10 @@ index 46791928d8..47b7cfca27 100644
    content::UpdateFontRendererPreferencesFromSystemSettings(prefs);
  #endif
  
-diff --git a/chrome/browser/resources/settings/autofill_page/passwords_shared.css b/chrome/browser/resources/settings/autofill_page/passwords_shared.css
+diff --git a/chrome/browser/re$tools_workdir/settings/autofill_page/passwords_shared.css b/chrome/browser/re$tools_workdir/settings/autofill_page/passwords_shared.css
 index 1c31bf473c..a3574be1a7 100644
---- a/chrome/browser/resources/settings/autofill_page/passwords_shared.css
-+++ b/chrome/browser/resources/settings/autofill_page/passwords_shared.css
+--- a/chrome/browser/re$tools_workdir/settings/autofill_page/passwords_shared.css
++++ b/chrome/browser/re$tools_workdir/settings/autofill_page/passwords_shared.css
 @@ -100,7 +100,7 @@ cr-input.password-input::part(input),
     * necessary to prevent Chrome from using the operating system's font
     * instead of the Material Design font.
@@ -10739,10 +10739,10 @@ index 1c31bf473c..a3574be1a7 100644
    font-family: 'DejaVu Sans Mono', monospace;
  </if>
  <if expr="is_win">
-diff --git a/chrome/browser/resources/signin/signin_shared.css b/chrome/browser/resources/signin/signin_shared.css
+diff --git a/chrome/browser/re$tools_workdir/signin/signin_shared.css b/chrome/browser/re$tools_workdir/signin/signin_shared.css
 index cd7391e6bd..f1bdf63e06 100644
---- a/chrome/browser/resources/signin/signin_shared.css
-+++ b/chrome/browser/resources/signin/signin_shared.css
+--- a/chrome/browser/re$tools_workdir/signin/signin_shared.css
++++ b/chrome/browser/re$tools_workdir/signin/signin_shared.css
 @@ -54,7 +54,7 @@ a {
    border-radius: var(--scrollbar-width);
  }
@@ -13422,7 +13422,7 @@ index 017f8fc1ed..608bcd413a 100644
 +++ b/chrome/browser/ui/webui/app_settings/web_app_settings_ui.h
 @@ -14,13 +14,13 @@
  #include "ui/webui/mojo_web_ui_controller.h"
- #include "ui/webui/resources/cr_components/app_management/app_management.mojom-forward.h"
+ #include "ui/webui/re$tools_workdir/cr_components/app_management/app_management.mojom-forward.h"
  
 -#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
 +#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
@@ -13892,20 +13892,20 @@ index c9229f3389..ff37815170 100644
 @@ -111,7 +111,7 @@ const char* kMacShareIconResourceName =
  #elif BUILDFLAG(IS_WIN)
  const char* kWinShareIconResourceName =
-     "//resources/cr_components/searchbox/icons/win_share.svg";
+     "//re$tools_workdir/cr_components/searchbox/icons/win_share.svg";
 -#elif BUILDFLAG(IS_LINUX)
 +#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
  const char* kLinuxShareIconResourceName =
-     "//resources/cr_components/searchbox/icons/share.svg";
+     "//re$tools_workdir/cr_components/searchbox/icons/share.svg";
  #else
 @@ -171,7 +171,7 @@ static void DefineChromeRefreshRealboxIcons() {
  #elif BUILDFLAG(IS_WIN)
    kWinShareIconResourceName =
-       "//resources/cr_components/searchbox/icons/win_share_cr23.svg";
+       "//re$tools_workdir/cr_components/searchbox/icons/win_share_cr23.svg";
 -#elif BUILDFLAG(IS_LINUX)
 +#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
    kLinuxShareIconResourceName =
-       "//resources/cr_components/searchbox/icons/share_cr23.svg";
+       "//re$tools_workdir/cr_components/searchbox/icons/share_cr23.svg";
  #else
 @@ -607,7 +607,7 @@ std::string SearchboxHandler::ActionVectorIconToResourceName(
        icon.name == omnibox::kShareWinChromeRefreshIcon.name) {
@@ -17896,10 +17896,10 @@ index 02b28057ad..d6c8fd9104 100644
    EXPECT_EQ(DownloadFileType::ALLOW_ON_USER_GESTURE,
              file_type.platform_settings(0).danger_level());
    EXPECT_EQ(DownloadFileType::DISALLOW_AUTO_OPEN,
-diff --git a/components/safe_browsing/content/resources/gen_file_type_proto.py b/components/safe_browsing/content/resources/gen_file_type_proto.py
+diff --git a/components/safe_browsing/content/re$tools_workdir/gen_file_type_proto.py b/components/safe_browsing/content/re$tools_workdir/gen_file_type_proto.py
 index f33b8ec6af..222af8a869 100755
---- a/components/safe_browsing/content/resources/gen_file_type_proto.py
-+++ b/components/safe_browsing/content/resources/gen_file_type_proto.py
+--- a/components/safe_browsing/content/re$tools_workdir/gen_file_type_proto.py
++++ b/components/safe_browsing/content/re$tools_workdir/gen_file_type_proto.py
 @@ -37,6 +37,9 @@ def PlatformTypes():
          "chromeos":
          download_file_types_pb2.DownloadFileType.PLATFORM_TYPE_CHROME_OS,

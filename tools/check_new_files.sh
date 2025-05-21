@@ -4,7 +4,7 @@
 # Example: ./check_new_files.sh 120.6099.216
 
 find_chromium_dirs() {
-    find  ../ -maxdepth 1 -type d -name "chromium-netbsd-*" \
+    find  $tools_workdir/ -maxdepth 1 -type d -name "chromium-netbsd-*" \
         | cut -d'-' -f3 \
         | sort -t. -n -r -k1,1 -k2,2 -k3,3 -k4,4
 }
@@ -26,8 +26,8 @@ find_prev_chromium_dir() {
     fi
 }
 
-_curr_chromium_dir="../chromium-netbsd-$1"
-_prev_chromium_dir="../chromium-netbsd-$(find_prev_chromium_dir "$1")"
+_curr_chromium_dir="$tools_workdir/chromium-netbsd-$1"
+_prev_chromium_dir="$tools_workdir/chromium-netbsd-$(find_prev_chromium_dir "$1")"
 _checked_files="\
         base/process/process_handle_openbsd.cc \
         base/process/process_iterator_openbsd.cc \

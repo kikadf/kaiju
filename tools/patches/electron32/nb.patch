@@ -8121,7 +8121,7 @@ index 2730ad90d7..4afb7e2d46 100644
 -#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
 +#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
  #include "chrome/browser/ui/webui/app_settings/web_app_settings_ui.h"
- #include "ui/webui/resources/cr_components/app_management/app_management.mojom.h"
+ #include "ui/webui/re$tools_workdir/cr_components/app_management/app_management.mojom.h"
  #endif
 @@ -226,7 +226,7 @@
  #endif  // BUILDFLAG(IS_ANDROID)
@@ -13838,10 +13838,10 @@ index 3d174b9506..6fe9bceae3 100644
    content::UpdateFontRendererPreferencesFromSystemSettings(prefs);
  #endif
  
-diff --git a/chrome/browser/resources/pdf/pdf_viewer.ts b/chrome/browser/resources/pdf/pdf_viewer.ts
+diff --git a/chrome/browser/re$tools_workdir/pdf/pdf_viewer.ts b/chrome/browser/re$tools_workdir/pdf/pdf_viewer.ts
 index 8f516ab1d3..cf82067ba9 100644
---- a/chrome/browser/resources/pdf/pdf_viewer.ts
-+++ b/chrome/browser/resources/pdf/pdf_viewer.ts
+--- a/chrome/browser/re$tools_workdir/pdf/pdf_viewer.ts
++++ b/chrome/browser/re$tools_workdir/pdf/pdf_viewer.ts
 @@ -1012,7 +1012,15 @@ export class PdfViewerElement extends PdfViewerBaseElement {
        dataArray = [result.dataToSave];
      }
@@ -13890,10 +13890,10 @@ index 8f516ab1d3..cf82067ba9 100644
  
      // <if expr="enable_pdf_ink2">
      // Ink2 doesn't need to exit annotation mode after save.
-diff --git a/chrome/browser/resources/settings/autofill_page/passwords_shared.css b/chrome/browser/resources/settings/autofill_page/passwords_shared.css
+diff --git a/chrome/browser/re$tools_workdir/settings/autofill_page/passwords_shared.css b/chrome/browser/re$tools_workdir/settings/autofill_page/passwords_shared.css
 index 1c31bf473c..a3574be1a7 100644
---- a/chrome/browser/resources/settings/autofill_page/passwords_shared.css
-+++ b/chrome/browser/resources/settings/autofill_page/passwords_shared.css
+--- a/chrome/browser/re$tools_workdir/settings/autofill_page/passwords_shared.css
++++ b/chrome/browser/re$tools_workdir/settings/autofill_page/passwords_shared.css
 @@ -100,7 +100,7 @@ cr-input.password-input::part(input),
     * necessary to prevent Chrome from using the operating system's font
     * instead of the Material Design font.
@@ -13903,10 +13903,10 @@ index 1c31bf473c..a3574be1a7 100644
    font-family: 'DejaVu Sans Mono', monospace;
  </if>
  <if expr="is_win">
-diff --git a/chrome/browser/resources/signin/signin_shared.css b/chrome/browser/resources/signin/signin_shared.css
+diff --git a/chrome/browser/re$tools_workdir/signin/signin_shared.css b/chrome/browser/re$tools_workdir/signin/signin_shared.css
 index da3e853714..3d20339f4a 100644
---- a/chrome/browser/resources/signin/signin_shared.css
-+++ b/chrome/browser/resources/signin/signin_shared.css
+--- a/chrome/browser/re$tools_workdir/signin/signin_shared.css
++++ b/chrome/browser/re$tools_workdir/signin/signin_shared.css
 @@ -54,7 +54,7 @@ a {
    border-radius: var(--scrollbar-width);
  }
@@ -17453,20 +17453,20 @@ index 34bb7a0170..903c4463ba 100644
 @@ -108,7 +108,7 @@ const char* kMacShareIconResourceName =
  #elif BUILDFLAG(IS_WIN)
  const char* kWinShareIconResourceName =
-     "//resources/cr_components/searchbox/icons/win_share.svg";
+     "//re$tools_workdir/cr_components/searchbox/icons/win_share.svg";
 -#elif BUILDFLAG(IS_LINUX)
 +#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
  const char* kLinuxShareIconResourceName =
-     "//resources/cr_components/searchbox/icons/share.svg";
+     "//re$tools_workdir/cr_components/searchbox/icons/share.svg";
  #else
 @@ -168,7 +168,7 @@ static void DefineChromeRefreshRealboxIcons() {
  #elif BUILDFLAG(IS_WIN)
    kWinShareIconResourceName =
-       "//resources/cr_components/searchbox/icons/win_share_cr23.svg";
+       "//re$tools_workdir/cr_components/searchbox/icons/win_share_cr23.svg";
 -#elif BUILDFLAG(IS_LINUX)
 +#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
    kLinuxShareIconResourceName =
-       "//resources/cr_components/searchbox/icons/share_cr23.svg";
+       "//re$tools_workdir/cr_components/searchbox/icons/share_cr23.svg";
  #else
 @@ -675,7 +675,7 @@ std::string SearchboxHandler::ActionVectorIconToResourceName(
        icon.name == omnibox::kShareWinChromeRefreshIcon.name) {
@@ -20492,10 +20492,10 @@ index 7e81b059e6..36c2018eaf 100644
    static std::unique_ptr<ScopedLock> Create(const std::string& name,
                                              base::TimeDelta timeout);
  #elif BUILDFLAG(IS_WIN)
-diff --git a/components/neterror/resources/neterror.js b/components/neterror/resources/neterror.js
+diff --git a/components/neterror/re$tools_workdir/neterror.js b/components/neterror/re$tools_workdir/neterror.js
 index 5c777452a6..3801933e96 100644
---- a/components/neterror/resources/neterror.js
-+++ b/components/neterror/resources/neterror.js
+--- a/components/neterror/re$tools_workdir/neterror.js
++++ b/components/neterror/re$tools_workdir/neterror.js
 @@ -142,7 +142,7 @@ function detailsButtonClick() {
  
  let primaryControlOnLeft = true;
@@ -21811,10 +21811,10 @@ index 9c60259436..f21caf53de 100644
    EXPECT_EQ(DownloadFileType::ALLOW_ON_USER_GESTURE,
              file_type.platform_settings(0).danger_level());
    EXPECT_EQ(DownloadFileType::DISALLOW_AUTO_OPEN,
-diff --git a/components/safe_browsing/content/resources/gen_file_type_proto.py b/components/safe_browsing/content/resources/gen_file_type_proto.py
+diff --git a/components/safe_browsing/content/re$tools_workdir/gen_file_type_proto.py b/components/safe_browsing/content/re$tools_workdir/gen_file_type_proto.py
 index f33b8ec6af..222af8a869 100755
---- a/components/safe_browsing/content/resources/gen_file_type_proto.py
-+++ b/components/safe_browsing/content/resources/gen_file_type_proto.py
+--- a/components/safe_browsing/content/re$tools_workdir/gen_file_type_proto.py
++++ b/components/safe_browsing/content/re$tools_workdir/gen_file_type_proto.py
 @@ -37,6 +37,9 @@ def PlatformTypes():
          "chromeos":
          download_file_types_pb2.DownloadFileType.PLATFORM_TYPE_CHROME_OS,
@@ -22758,7 +22758,7 @@ index 0000000000..25c427e337
 +#include "base/threading/thread_checker.h"
 +#include "base/trace_event/trace_event.h"
 +#include "build/build_config.h"
-+#include "components/viz/common/resources/resource_sizes.h"
++#include "components/viz/common/re$tools_workdir/resource_sizes.h"
 +#include "components/viz/service/display_embedder/output_device_backing.h"
 +#include "mojo/public/cpp/system/platform_handle.h"
 +#include "services/viz/privileged/mojom/compositing/layered_window_updater.mojom.h"
@@ -63695,7 +63695,7 @@ index 0000000000..68beb3d105
 +  sources = []
 +  public_deps = [ ":squirrel_shipit" ]
 +  sources += [ "$root_out_dir/ShipIt" ]
-+  outputs = [ "{{bundle_contents_dir}}/Resources/{{source_file_part}}" ]
++  outputs = [ "{{bundle_contents_dir}}/Re$tools_workdir/{{source_file_part}}" ]
 +}
 +
 +bundle_data("squirrel_framework_headers") {
