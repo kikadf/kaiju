@@ -3,6 +3,9 @@
 # Usage: ./check_new_files.sh <chromium version>
 # Example: ./check_new_files.sh 120.6099.216
 
+_startdir=$(pwd)
+. "$_startdir/kaiju.conf"
+
 find_chromium_dirs() {
     find  $tools_workdir/ -maxdepth 1 -type d -name "chromium-netbsd-*" \
         | cut -d'-' -f3 \

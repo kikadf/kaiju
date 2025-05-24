@@ -1,0 +1,140 @@
+commit 542d12d0ee205937e5a0e08ba5567e407b063ca8
+Author: kikadf <kikadf.01@gmail.com>
+Date:   Thu May 22 12:48:21 2025 +0200
+
+    Fix electron patchset
+
+diff --git a/chrome/browser/process_singleton.h b/chrome/browser/process_singleton.h
+index 81c41f4608..4305ba61d2 100644
+--- a/chrome/browser/process_singleton.h
++++ b/chrome/browser/process_singleton.h
+@@ -102,21 +102,24 @@ class ProcessSingleton {
+   // should handle it (i.e., because the current process is shutting down).
+   using NotificationCallback =
+       base::RepeatingCallback<bool(base::CommandLine command_line,
+-                                   const base::FilePath& current_directory)>;
++                                   const base::FilePath& current_directory,
++                                   const std::vector<uint8_t> additional_data)>;
+ 
+ #if BUILDFLAG(IS_WIN)
+   ProcessSingleton(const std::string& program_name,
+                    const base::FilePath& user_data_dir,
++                   const base::raw_span<const uint8_t> additional_data,
+                    bool is_sandboxed,
+                    const NotificationCallback& notification_callback);
+ #else
+   ProcessSingleton(const base::FilePath& user_data_dir,
++                   const base::raw_span<const uint8_t> additional_data,
+                    const NotificationCallback& notification_callback);
++#endif
+ 
+   ProcessSingleton(const ProcessSingleton&) = delete;
+   ProcessSingleton& operator=(const ProcessSingleton&) = delete;
+ 
+-#endif
+   ~ProcessSingleton();
+ 
+   // Notify another process, if available. Otherwise sets ourselves as the
+diff --git a/chrome/browser/process_singleton_win.cc b/chrome/browser/process_singleton_win.cc
+index dc4b352c93..255160d6bd 100644
+--- a/chrome/browser/process_singleton_win.cc
++++ b/chrome/browser/process_singleton_win.cc
+@@ -299,9 +299,11 @@ bool ProcessSingleton::EscapeVirtualization(
+ ProcessSingleton::ProcessSingleton(
+     const std::string& program_name,
+     const base::FilePath& user_data_dir,
++    const base::raw_span<const uint8_t> additional_data,
+     bool is_app_sandboxed,
+     const NotificationCallback& notification_callback)
+     : notification_callback_(notification_callback),
++      additional_data_(additional_data),
+       program_name_(program_name),
+       is_app_sandboxed_(is_app_sandboxed),
+       is_virtualized_(false),
+diff --git a/third_party/electron_node/common.gypi b/third_party/electron_node/common.gypi
+index 98aab200b4..cd3700f529 100644
+--- a/third_party/electron_node/common.gypi
++++ b/third_party/electron_node/common.gypi
+@@ -86,6 +86,8 @@
+     'v8_use_perfetto': 0,
+     'tsan%': 0,
+ 
++    'using_electron_config_gypi%': 0,
++
+     ##### end V8 defaults #####
+ 
+     # When building native modules using 'npm install' with the system npm,
+diff --git a/third_party/electron_node/lib/internal/modules/cjs/loader.js b/third_party/electron_node/lib/internal/modules/cjs/loader.js
+index 82a3b80f6f..6e2802ab49 100644
+--- a/third_party/electron_node/lib/internal/modules/cjs/loader.js
++++ b/third_party/electron_node/lib/internal/modules/cjs/loader.js
+@@ -1530,6 +1530,13 @@ Module.prototype._compile = function(content, filename, format) {
+   this[kIsExecuting] = true;
+   if (this[kIsMainSymbol] && getOptionValue('--inspect-brk')) {
+     const { callAndPauseOnStart } = internalBinding('inspector');
++    // process._firstFileName is used by Embedders to tell node what
++    // the first "real" file is when they use themselves as the entry
++    // point
++    if (process._firstFileName) {
++      resolvedArgv = process._firstFileName;
++      delete process._firstFileName;
++    }
+     result = callAndPauseOnStart(compiledWrapper, thisValue, exports,
+                                  require, module, filename, dirname,
+                                  process, localGlobal, localBuffer);
+diff --git a/third_party/electron_node/src/node_contextify.cc b/third_party/electron_node/src/node_contextify.cc
+index de50880b0c..9f38cdf60f 100644
+--- a/third_party/electron_node/src/node_contextify.cc
++++ b/third_party/electron_node/src/node_contextify.cc
+@@ -486,14 +486,15 @@ bool ContextifyContext::IsStillInitializing(const ContextifyContext* ctx) {
+ }
+ 
+ // static
+-void ContextifyContext::PropertyGetterCallback(
+-    Local<Name> property,
+-    const PropertyCallbackInfo<Value>& args) {
++Intercepted ContextifyContext::PropertyGetterCallback(
++    Local<Name> property, const PropertyCallbackInfo<Value>& args) {
+   Environment* env = Environment::GetCurrent(args);
+   ContextifyContext* ctx = ContextifyContext::Get(args);
+ 
+   // Still initializing
+-  if (IsStillInitializing(ctx)) return;
++  if (IsStillInitializing(ctx)) {
++    return Intercepted::kNo;
++  }
+ 
+   Local<Context> context = ctx->context();
+   Local<Object> sandbox = ctx->sandbox();
+diff --git a/third_party/electron_node/src/node_external_reference.h b/third_party/electron_node/src/node_external_reference.h
+index c4aba23510..6d9988810b 100644
+--- a/third_party/electron_node/src/node_external_reference.h
++++ b/third_party/electron_node/src/node_external_reference.h
+@@ -66,16 +66,17 @@ class ExternalReferenceRegistry {
+   V(v8::FunctionCallback)                                                      \
+   V(v8::AccessorNameGetterCallback)                                            \
+   V(v8::AccessorNameSetterCallback)                                            \
+-  V(v8::GenericNamedPropertyDefinerCallback)                                   \
+-  V(v8::GenericNamedPropertyDeleterCallback)                                   \
+-  V(v8::GenericNamedPropertyEnumeratorCallback)                                \
+-  V(v8::GenericNamedPropertyQueryCallback)                                     \
+-  V(v8::GenericNamedPropertySetterCallback)                                    \
+-  V(v8::IndexedPropertySetterCallback)                                         \
+-  V(v8::IndexedPropertyDefinerCallback)                                        \
+-  V(v8::IndexedPropertyDeleterCallback)                                        \
+-  V(v8::IndexedPropertyQueryCallback)                                          \
+-  V(v8::IndexedPropertyDescriptorCallback)                                     \
++  V(v8::NamedPropertyGetterCallback)                                           \
++  V(v8::NamedPropertyDefinerCallback)                                          \
++  V(v8::NamedPropertyDeleterCallback)                                          \
++  V(v8::NamedPropertyEnumeratorCallback)                                       \
++  V(v8::NamedPropertyQueryCallback)                                            \
++  V(v8::NamedPropertySetterCallback)                                           \
++  V(v8::IndexedPropertyGetterCallbackV2)                                       \
++  V(v8::IndexedPropertySetterCallbackV2)                                       \
++  V(v8::IndexedPropertyDefinerCallbackV2)                                      \
++  V(v8::IndexedPropertyDeleterCallbackV2)                                      \
++  V(v8::IndexedPropertyQueryCallbackV2)                                        \
+   V(const v8::String::ExternalStringResourceBase*)
+ 
+ #define V(ExternalReferenceType)                                               \

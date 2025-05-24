@@ -3,20 +3,11 @@
 # Usage: ./update_vanila_electron.sh <electron version>
 # Example: ./update_vanilla_electron.sh 32.2.7
 
-# shellcheck source=kaiju.conf
-. kaiju.conf
-
-# func
-# die [what]
-die () {
-    _errc=$?
-    if [ -n "$1" ]; then
-        echo ">>> $1 failed ($_errc)"
-    fi
-    exit $_errc
-}
-
 _startdir=$(pwd)
+
+. "$_startdir/kaiju.conf"
+. "$_startdir/../include/kaiju.sh"
+
 _isend="0"
 
 if [ "$1" != "" ]; then
@@ -82,7 +73,7 @@ if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-download_done" ]; then
     for c_num in 0 1 2; do
         if [ ! -f "$distfiles/chromium-${_c_ver}.tar.xz.${c_num}" ]; then
             curl -L "${c_tarball_url}/chromium-${_c_ver}.tar.xz.${c_num}" \
-                 -o "chromium-${_c_ver}.tar.xz.${c_num}" \
+                 -o "$distfiles/chromium-${_c_ver}.tar.xz.${c_num}" \
                  || die "curl chromium.${c_num}"
         fi
     done
@@ -129,7 +120,7 @@ fi
 if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-extract_done" ]; then
     cd "$tools_workdir" || die
     echo "Extract distfiles to electron${_e_main}-netbsd-${e_ver}..."
-    mkdir "electron${_e_main}-netbsd-${e_ver}" || die
+    mkdir -p "electron${_e_main}-netbsd-${e_ver}" || die
     cat "$distfiles"/chromium-"${_c_ver}".tar.xz.? > "chromium-${_c_ver}.tar.xz" || die "cat chromium.?"
     tar -xJf "chromium-${_c_ver}.tar.xz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}" || die "extract chromium"
     echo "*.rej" >> "electron${_e_main}-netbsd-${e_ver}/.gitignore" 
@@ -154,7 +145,7 @@ if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-extract_done" ]; then
     if [ -f "$distfiles/chromium-netbsd-${_c_ver}.tar.xz" ]; then
         echo "Extract distfiles to electron${_e_main}-netbsd-reused-${e_ver}..."
         mkdir "electron${_e_main}-netbsd-reused-${e_ver}" || die
-        tar -xJf "chromium-netbsd-${_c_ver}.tar.xz" --strip-components=1 -C "electron${_e_main}-netbsd-reused-${e_ver}" || die "extract chromium"
+        tar -xJf "$distfiles/chromium-netbsd-${_c_ver}.tar.xz" --strip-components=1 -C "electron${_e_main}-netbsd-reused-${e_ver}" || die "extract chromium"
         echo "*.rej" >> "electron${_e_main}-netbsd-reused-${e_ver}/.gitignore" 
         sed -i'' 's/swiftshader/swiftshaderXXX/g' "electron${_e_main}-netbsd-reused-${e_ver}/third_party/.gitignore"
         sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "electron${_e_main}-netbsd-reused-${e_ver}/third_party/vulkan-deps/.gitignore"
@@ -180,18 +171,31 @@ if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-extract_done" ]; then
 fi
 
 # init git repo
-if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-init_done" ]; then
-    cd "$tools_workdir/electron${_e_main}-netbsd-${e_ver}" || die
+init_repo() {
+    cd "$1" || die
     git init || die
     git add . || die
-    git commit -m "Electron-${e_ver}" || die
+    git commit -m "$2" || die
+    cd .. || die
+}
+
+if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-init_done" ]; then
+    cd "$tools_workdir" || die
+    init_repo "electron${_e_main}-netbsd-${e_ver}" "Electron-${e_ver}"
     cd "$_startdir" || die
     touch "$tools_workdir/electron${_e_main}-${e_ver}-init_done"
 fi
 
+if [ ! -f "$tools_workdir/electron${_e_main}-reused-${e_ver}-init_done" ]; then
+    cd "$tools_workdir" || die
+    init_repo "electron${_e_main}-netbsd-reused-${e_ver}" "Electron-${e_ver}"
+    cd "$_startdir" || die
+    touch "$tools_workdir/electron${_e_main}-reused-${e_ver}-init_done"
+fi
+
 # Apply electron shipped patchset
 apply_electron_patches() {
-    cd "$tools_workdir/$1" || die
+    cd "$1" || die
     _bd=$(pwd)
 
     for _dirs in $(sed -n 's|.*patch_dir": "src\(.*\)", "repo": "src\(.*\)".*|.\1:.\2|p' < "$_bd"/electron/patches/config.json); do
@@ -212,20 +216,24 @@ apply_electron_patches() {
     sed -i'' 's/vendor/vendorXXX/g' third_party/squirrel.mac/.gitignore
     sed -i'' 's/nacl/naclXXX/g' buildtools/reclient_cfgs/.gitignore
 
-    git add . || die
-    git commit -m "Apply Electron patchset" || die
-    cd "$_startdir" || die
+    git add .
+    git commit -m "Apply Electron patchset"
+    cd .. || die
 }
 
 if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-electronpatches_done" ]; then
+    cd "$tools_workdir" || die
     apply_electron_patches "electron${_e_main}-netbsd-${e_ver}"
+    cd "$_startdir" || die
     touch "$tools_workdir/electron${_e_main}-${e_ver}-electronpatches_done"
 fi
 
 if [ ! -f "$tools_workdir/electron${_e_main}-reused-${e_ver}-electronpatches_done" ]; then
+    cd "$tools_workdir" || die
     if [ -f "$distfiles/chromium-netbsd-${_c_ver}.tar.xz" ]; then
         apply_electron_patches "electron${_e_main}-netbsd-reused-${e_ver}"
     fi
+    cd "$_startdir" || die
     touch "$tools_workdir/electron${_e_main}-reused-${e_ver}-electronpatches_done"
 fi
 
@@ -258,7 +266,8 @@ fi
 
 if [ ! -f "$tools_workdir/electron${_e_main}-reused-${e_ver}-fixelectronpatches_done" ]; then
     if [ -f "$distfiles/chromium-netbsd-${_c_ver}.tar.xz" ]; then
-        fix_electron_patches "electron${_e_main}-netbsd-reused-${e_ver}"
+        #fix_electron_patches "electron${_e_main}-netbsd-reused-${e_ver}" # not needed?
+        echo "skip fix_electron_patches"
     fi
     touch "$tools_workdir/electron${_e_main}-reused-${e_ver}-fixelectronpatches_done"
 fi
@@ -266,14 +275,7 @@ fi
 # Apply freebsd patchset
 if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-fbpatches_done" ]; then
     cd "$tools_workdir" || die
-    if [ ! -d "freebsd-ports" ]; then
-        mkdir freebsd-ports || die
-        git clone https://github.com/freebsd/freebsd-ports.git freebsd-ports || die "clone FreeBSD-ports"
-    else
-        cd freebsd-ports || die
-        git pull || die "FreeBSD-ports update: "
-        cd ..
-    fi
+    fetch_freebsd_ports
     if [ -d "freebsd-ports/devel/electron${_e_main}/files" ]; then
         p_dir="../freebsd-ports/devel/electron${_e_main}/files"
     else
@@ -292,6 +294,9 @@ if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-fbpatches_done" ]; then
     git commit -m "Apply FreeBSD patchset" || die
     cd "$_startdir" || die
     touch "$tools_workdir/electron${_e_main}-${e_ver}-fbpatches_done"
+#    if [ -f "$distfiles/chromium-netbsd-${_c_ver}.tar.xz" ]; then
+#        cp -af "$tools_workdir/electron${_e_main}-netbsd-${e_ver}/electron" "$tools_workdir/electron${_e_main}-netbsd-reused-${e_ver}/"
+#    fi
     hasrej "$tools_workdir/electron${_e_main}-netbsd-${e_ver}" && exit 1
 fi
 
@@ -301,14 +306,8 @@ if [ -e "$tools_workdir/kaiju/patches/electron${_e_main}/nb-delta.patch" ]; then
     _isend="1"
     # clean status files
     rm "../chromium-${_c_ver}.tar.xz"
-    rm "../electron${_e_main}-${e_ver}-download_done"
-    rm "../electron${_e_main}-${e_ver}-extract_done"
-    rm "../electron${_e_main}-${e_ver}-init_done"
-    rm "../electron${_e_main}-${e_ver}-electronpatches_done"
-    rm "../electron${_e_main}-reused-${e_ver}-electronpatches_done"
-    rm "../electron${_e_main}-${e_ver}-fixelectronpatches_done"
-    rm "../electron${_e_main}-reused-${e_ver}-fixelectronpatches_done"
-    rm "../electron${_e_main}-${e_ver}-fbpatches_done"
+    rm "../electron${_e_main}-${e_ver}"*_done
+    rm "../electron${_e_main}-reused-${e_ver}"*_done
 
     git apply --reject "$_startdir/patches/electron${_e_main}/nb-delta.patch"
     hasrej && exit 1

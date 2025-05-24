@@ -3,8 +3,8 @@
 # Usage: ./release_chromium_netbsd.sh <chromium version>
 # Example: ./release_chromium_netbsd.sh 120.0.6099.216
 
-# shellcheck source=kaiju.conf
-. kaiju.conf
+_startdir=$(pwd)
+. "$_startdir/kaiju.conf"
 
 # func
 # die [what]
@@ -15,8 +15,6 @@ die () {
     fi
     exit $_errc
 }
-
-_startdir=$(pwd)
 
 if [ "$1" != "" ]; then
 	c_ver="$1"
@@ -40,7 +38,7 @@ if [ ! -f "$tools_workdir/cn_release-${c_ver}-download_done" ]; then
     for c_num in 0 1 2; do
         if [ ! -f "$distfiles/chromium-${c_ver}.tar.xz.${c_num}" ]; then
             curl -L "${c_tarball_url}/chromium-${c_ver}.tar.xz.${c_num}" \
-                 -o "chromium-${c_ver}.tar.xz.${c_num}" \
+                 -o "$distfiles/chromium-${c_ver}.tar.xz.${c_num}" \
                  || die "curl chromium.${c_num}"
         fi
     done
@@ -52,7 +50,7 @@ fi
 if [ ! -f "$tools_workdir/cn_release-${c_ver}-extract_done" ]; then
     cd "$tools_workdir" || die
     echo "Extract distfiles to ..."
-    mkdir "chromium-netbsd-${c_ver}" || die
+    mkdir -p "chromium-netbsd-${c_ver}" || die
     cat "$distfiles"/chromium-"${c_ver}".tar.xz.? > "chromium-${c_ver}.tar.xz" || die "cat chromium.?"
     tar -xJf "chromium-${c_ver}.tar.xz" --strip-components=1 -C "chromium-netbsd-${c_ver}" || die "extract chromium"
     echo "*.rej" >> "chromium-netbsd-${c_ver}/.gitignore" 
@@ -67,7 +65,7 @@ fi
 # Apply NetBSD patch
 if [ ! -f "$tools_workdir/cn_release-${c_ver}-patch_done" ]; then
     cd "$tools_workdir/chromium-netbsd-${c_ver}" || die
-    patch -Np0 -i "$_startdir/patches/chromium${c_main}/nb.patch" || die "Apply NetBSD patches"
+    patch -Np1 -i "$_startdir/patches/chromium${c_main}/nb.patch" || die "Apply NetBSD patches"
 
     cd "$_startdir" || die
     touch "$tools_workdir/cn_release-${c_ver}-patch_done"
@@ -90,12 +88,13 @@ if [ -f "$tools_workdir/cn_release-${c_ver}-patch_done" ]; then
     fi
 
     cd ..
-    tar -cJf "../chromium-netbsd-${c_ver}.tar.xz" "chromium-netbsd-${c_ver}" || die "create tarball"
+    find "chromium-netbsd-${c_ver}" -type f \( -name "*.orig" -o -name "*.rej" \) -delete
+    tar -cJf "chromium-netbsd-${c_ver}.tar.xz" "chromium-netbsd-${c_ver}" || die "create tarball"
 
     # clean distfiles, status files
-    rm "../cn_release-${c_ver}-download_done"
-    rm "../cn_release-${c_ver}-extract_done"
-    rm "../cn_release-${c_ver}-patch_done"
+    rm "cn_release-${c_ver}-download_done"
+    rm "cn_release-${c_ver}-extract_done"
+    rm "cn_release-${c_ver}-patch_done"
 fi
 
 exit 0

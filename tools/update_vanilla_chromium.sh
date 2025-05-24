@@ -3,8 +3,8 @@
 # Usage: ./update_vanila_chromium.sh <chromium version>
 # Example: ./update_vanilla_chromium.sh 120.6099.216
 
-# shellcheck source=kaiju.conf
-. kaiju.conf
+_startdir=$(pwd)
+. "$_startdir/kaiju.conf"
 
 c_tarball_url="https://commondatastorage.googleapis.com/chromium-browser-official"
 #c_tarball_url="https://nerd.hu/distfiles"
@@ -18,8 +18,6 @@ die () {
     fi
     exit $_errc
 }
-
-_startdir=$(pwd)
 
 if [ "$1" != "" ]; then
 	c_ver="$1"
