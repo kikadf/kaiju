@@ -105,6 +105,7 @@ done
 if [ "$_pkg" = "chromium" ]; then
     patch -p1 -s -i "$_kaiju_repo"/patches/"$_pkgd"/nb.patch || die patch
 else
+    find . -type f \( -name "*.orig" -o -name "*.rej" \) -delete
     patch -p1 -s -i "$_kaiju_repo"/patches/"$_pkgd"/nb-reused.patch || die patch
 fi
 echo ">>> Generate new patches with mkpatches"
