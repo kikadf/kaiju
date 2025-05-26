@@ -35037,7 +35037,7 @@ index e36e93cf20..83a455723e 100644
  
  # Internal grouping of the configs necessary to support sub-folders having their
 diff --git a/media/audio/BUILD.gn b/media/audio/BUILD.gn
-index 45847b155e..6f3ff73cca 100644
+index 45847b155e..90fc38dbc6 100644
 --- a/media/audio/BUILD.gn
 +++ b/media/audio/BUILD.gn
 @@ -198,6 +198,7 @@ source_set("audio") {
@@ -35048,7 +35048,7 @@ index 45847b155e..6f3ff73cca 100644
    }
  
    if (is_ios) {
-@@ -269,10 +270,46 @@ source_set("audio") {
+@@ -269,10 +270,35 @@ source_set("audio") {
      deps += [ "//media/base/android:media_jni_headers" ]
    }
  
@@ -35068,17 +35068,6 @@ index 45847b155e..6f3ff73cca 100644
 +      "sndio/sndio_input.h",
 +      "sndio/sndio_output.cc",
 +      "sndio/sndio_output.h"
-+    ]
-+   }
-+
-+  if (use_audioio) {
-+    sources += [
-+      "audioio/audio_manager_audioio.cc",
-+      "audioio/audio_manager_audioio.h",
-+      "audioio/audioio_input.cc",
-+      "audioio/audioio_input.h",
-+      "audioio/audioio_output.cc",
-+      "audioio/audioio_output.h"
 +    ]
 +   }
 +
@@ -41327,7 +41316,7 @@ index eb81a70e4d..9921ccb10d 100644
  
  }  // namespace sandbox
 diff --git a/sandbox/policy/BUILD.gn b/sandbox/policy/BUILD.gn
-index 4fe53b047b..d9c2a4329a 100644
+index 4fe53b047b..c83d2cdc60 100644
 --- a/sandbox/policy/BUILD.gn
 +++ b/sandbox/policy/BUILD.gn
 @@ -50,7 +50,7 @@ component("policy") {
@@ -41339,7 +41328,7 @@ index 4fe53b047b..d9c2a4329a 100644
      sources += [
        "linux/bpf_audio_policy_linux.cc",
        "linux/bpf_audio_policy_linux.h",
-@@ -129,6 +129,49 @@ component("policy") {
+@@ -129,6 +129,38 @@ component("policy") {
        "//sandbox/linux:suid_sandbox_client",
      ]
    }
@@ -41347,17 +41336,6 @@ index 4fe53b047b..d9c2a4329a 100644
 +    sources += [
 +      "openbsd/sandbox_openbsd.cc",
 +      "openbsd/sandbox_openbsd.h",
-+    ]
-+    deps += [
-+      "//sandbox:sandbox_buildflags",
-+      "//ui/gfx/x",
-+    ]
-+    libs = [ "util" ]
-+  }
-+  if (is_netbsd) {
-+    sources += [
-+      "netbsd/sandbox_netbsd.cc",
-+      "netbsd/sandbox_netbsd.h",
 +    ]
 +    deps += [
 +      "//sandbox:sandbox_buildflags",
@@ -83085,10 +83063,10 @@ index d339b3458d..3bc1ad5de7 100755
      if ret <= -100:
        # Windows error codes such as 0xC0000005 and 0xC0000409 are much easier to
 diff --git a/tools/v8_context_snapshot/BUILD.gn b/tools/v8_context_snapshot/BUILD.gn
-index f46bec2eb5..89a10a5775 100644
+index f46bec2eb5..77275a194f 100644
 --- a/tools/v8_context_snapshot/BUILD.gn
 +++ b/tools/v8_context_snapshot/BUILD.gn
-@@ -36,6 +36,42 @@ buildflag_header("buildflags") {
+@@ -36,6 +36,24 @@ buildflag_header("buildflags") {
    ]
  }
  
@@ -83110,28 +83088,10 @@ index f46bec2eb5..89a10a5775 100644
 +  ]
 +}
 +
-+action("run_paxctl_v8_context_snapshot_generator") {
-+  deps = [ ":v8_context_snapshot_generator($v8_snapshot_toolchain)" ]
-+
-+  script = "//v8/tools/run-paxctl.py"
-+  stamp = "$target_gen_dir/paxctl_stamp"
-+  outputs = [ stamp ]
-+
-+  sources = []
-+  data = []
-+
-+  args = [
-+    rebase_path(stamp, root_build_dir),
-+    "/usr/sbin/paxctl", "+m",
-+    "./" + rebase_path(get_label_info(":v8_context_snapshot_generator", "root_out_dir") + "/v8_context_snapshot_generator",
-+    root_build_dir),
-+  ]
-+}
-+
  if (use_v8_context_snapshot) {
    if (v8_snapshot_toolchain == current_toolchain) {
      action("generate_v8_context_snapshot") {
-@@ -57,6 +93,9 @@ if (use_v8_context_snapshot) {
+@@ -57,6 +75,9 @@ if (use_v8_context_snapshot) {
          ":v8_context_snapshot_generator",
          "//v8:run_mksnapshot_default",
        ]
