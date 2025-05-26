@@ -102,7 +102,11 @@ for _unwant in $_unwanted; do
         mv "$_unwant".orig "$_unwant".origy
     fi
 done
-patch -p1 -s -i "$_kaiju_repo"/patches/"$_pkgd"/nb.patch || die patch
+if [ "$_pkg" = "chromium" ]; then
+    patch -p1 -s -i "$_kaiju_repo"/patches/"$_pkgd"/nb.patch || die patch
+else
+    patch -p1 -s -i "$_kaiju_repo"/patches/"$_pkgd"/nb-reused.patch || die patch
+fi
 echo ">>> Generate new patches with mkpatches"
 cd "$_path" || die
 mkpatches || die mkpatches
