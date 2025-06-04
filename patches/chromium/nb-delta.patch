@@ -3926,6 +3926,16 @@ index 6c29521da5..7b83bbaf67 100755
  ]
  
  _form_factors = [
+diff --git a/ui/qt/moc_wrapper.py b/ui/qt/moc_wrapper.py
+index ffbe56813c..6e5d2a93c0 100755
+--- a/ui/qt/moc_wrapper.py
++++ b/ui/qt/moc_wrapper.py
+@@ -20,4 +20,4 @@ args = parser.parse_args()
+ if args.path is None:
+     subprocess.check_call(["moc", args.input, "-o", args.output])
+ else:
+-    subprocess.check_call([args.path, args.input, "-o", args.output])
++    subprocess.check_call([args.path + "/moc", args.input, "-o", args.output])
 diff --git a/v8/BUILD.gn b/v8/BUILD.gn
 index ca78c2c171..944245074a 100644
 --- a/v8/BUILD.gn

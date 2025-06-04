@@ -40594,16 +40594,6 @@ index 136a859c43..cf7fff4dde 100644
  
    configs = [
      "//build/config/linux:runtime_library",
-diff --git a/ui/qt/moc_wrapper.py b/ui/qt/moc_wrapper.py
-index 6e5d2a93c0..ffbe56813c 100755
---- a/ui/qt/moc_wrapper.py
-+++ b/ui/qt/moc_wrapper.py
-@@ -20,4 +20,4 @@ args = parser.parse_args()
- if args.path is None:
-     subprocess.check_call(["moc", args.input, "-o", args.output])
- else:
--    subprocess.check_call([args.path + "/moc", args.input, "-o", args.output])
-+    subprocess.check_call([args.path, args.input, "-o", args.output])
 diff --git a/ui/strings/translations/app_locale_settings_bn.xtb b/ui/strings/translations/app_locale_settings_bn.xtb
 index 3a62e6f48d..e6526f215e 100644
 --- a/ui/strings/translations/app_locale_settings_bn.xtb
