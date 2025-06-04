@@ -3291,10 +3291,19 @@ index dbe55d59f7..7553f29e79 100644
  #if HAVE_UNISTD_H
  #include <unistd.h>
  #endif
-diff --git a/third_party/libc++/src/include/__locale_dir/.locale_base_api.h.kate-swp b/third_party/libc++/src/include/__locale_dir/.locale_base_api.h.kate-swp
-new file mode 100644
-index 0000000000..aef8041b1f
-Binary files /dev/null and b/third_party/libc++/src/include/__locale_dir/.locale_base_api.h.kate-swp differ
+diff --git a/third_party/libc++/src/include/__locale_dir/locale_base_api.h b/third_party/libc++/src/include/__locale_dir/locale_base_api.h
+index bbc30b1cfe..ef12f4523b 100644
+--- a/third_party/libc++/src/include/__locale_dir/locale_base_api.h
++++ b/third_party/libc++/src/include/__locale_dir/locale_base_api.h
+@@ -115,7 +115,7 @@
+ 
+ #  if defined(__APPLE__)
+ #    include <__locale_dir/support/apple.h>
+-#  elif defined(__FreeBSD__)
++#  elif defined(__FreeBSD__) || defined(__NetBSD__)
+ #    include <__locale_dir/support/freebsd.h>
+ #  elif defined(_LIBCPP_MSVCRT_LIKE)
+ #    include <__locale_dir/support/windows.h>
 diff --git a/third_party/libc++/src/include/__locale_dir/support/bsd_like.h b/third_party/libc++/src/include/__locale_dir/support/bsd_like.h
 index 54eb397358..76578963fe 100644
 --- a/third_party/libc++/src/include/__locale_dir/support/bsd_like.h
