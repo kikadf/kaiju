@@ -2780,7 +2780,7 @@ index 03b08c51e1..be143e418e 100644
    }
  
 diff --git a/services/resource_coordinator/public/cpp/memory_instrumentation/os_metrics_bsd.cc b/services/resource_coordinator/public/cpp/memory_instrumentation/os_metrics_bsd.cc
-index 8420decc95..102c9586a7 100644
+index 3b0d81d2b7..c328ca05d0 100644
 --- a/services/resource_coordinator/public/cpp/memory_instrumentation/os_metrics_bsd.cc
 +++ b/services/resource_coordinator/public/cpp/memory_instrumentation/os_metrics_bsd.cc
 @@ -12,7 +12,7 @@
@@ -2792,7 +2792,7 @@ index 8420decc95..102c9586a7 100644
  #define vm_rssize info.p_vm_rssize
  #elif BUILDFLAG(IS_FREEBSD)
  #include <sys/user.h>
-@@ -28,13 +28,21 @@ bool OSMetrics::FillOSMemoryDump(base::ProcessId pid,
+@@ -29,13 +29,21 @@ bool OSMetrics::FillOSMemoryDump(base::ProcessId pid,
                                ? base::Process::Current()
                                : base::Process::Open(pid);
    const size_t kPageSize = base::GetPageSize();
