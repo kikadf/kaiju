@@ -5948,10 +5948,10 @@ index 7cc74f595f..1266a1eb40 100644
        // process is launched via nacl_helper instead.
        {switches::kNaClLoaderProcess, NaClMain},
 diff --git a/chrome/browser/BUILD.gn b/chrome/browser/BUILD.gn
-index ad39862fdd..8d0987636b 100644
+index 76d6f00ba2..c42a0dc578 100644
 --- a/chrome/browser/BUILD.gn
 +++ b/chrome/browser/BUILD.gn
-@@ -6911,6 +6911,13 @@ static_library("browser") {
+@@ -6913,6 +6913,13 @@ static_library("browser") {
            [ "//third_party/webrtc/modules/desktop_capture:pipewire_config" ]
      }
  
@@ -12157,10 +12157,10 @@ index f5e9958f5a..fdedf80f5f 100644
    // the user explicitly allowed it.
    if (headless::IsHeadlessMode() && url.SchemeIs(content::kChromeUIScheme)) {
 diff --git a/chrome/browser/ui/tab_helpers.cc b/chrome/browser/ui/tab_helpers.cc
-index 4384aae739..15398031c0 100644
+index 8a12e9d7d8..2f6fe6de77 100644
 --- a/chrome/browser/ui/tab_helpers.cc
 +++ b/chrome/browser/ui/tab_helpers.cc
-@@ -218,7 +218,7 @@
+@@ -220,7 +220,7 @@
  #endif
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -12169,7 +12169,7 @@ index 4384aae739..15398031c0 100644
  #include "chrome/browser/ui/blocked_content/framebust_block_tab_helper.h"
  #include "chrome/browser/ui/browser_finder.h"
  #include "chrome/browser/ui/hats/hats_helper.h"
-@@ -697,12 +697,12 @@ void TabHelpers::AttachTabHelpers(WebContents* web_contents) {
+@@ -705,12 +705,12 @@ void TabHelpers::AttachTabHelpers(WebContents* web_contents) {
    webapps::PreRedirectionURLObserver::CreateForWebContents(web_contents);
  #endif
  
@@ -12665,10 +12665,10 @@ index 23b286ccb2..652daa403a 100644
          frame, browser_view);
  #else
 diff --git a/chrome/browser/ui/views/frame/browser_view.cc b/chrome/browser/ui/views/frame/browser_view.cc
-index 3c0e53b5ad..d00dbb78df 100644
+index f96bac3e04..b0238b6763 100644
 --- a/chrome/browser/ui/views/frame/browser_view.cc
 +++ b/chrome/browser/ui/views/frame/browser_view.cc
-@@ -2632,7 +2632,7 @@ void BrowserView::ToolbarSizeChanged(bool is_animating) {
+@@ -2635,7 +2635,7 @@ void BrowserView::ToolbarSizeChanged(bool is_animating) {
  }
  
  void BrowserView::TabDraggingStatusChanged(bool is_dragging) {
@@ -12677,7 +12677,7 @@ index 3c0e53b5ad..d00dbb78df 100644
    GetContentsWebView()->SetFastResize(is_dragging);
    if (multi_contents_view_) {
      multi_contents_view_->GetInactiveContentsView()->SetFastResize(is_dragging);
-@@ -5961,7 +5961,7 @@ void BrowserView::MaybeShowProfileSwitchIPH() {
+@@ -5964,7 +5964,7 @@ void BrowserView::MaybeShowProfileSwitchIPH() {
  }
  
  void BrowserView::MaybeShowSupervisedUserProfileSignInIPH() {
@@ -14603,7 +14603,7 @@ index c1366e177f..39ef31d58e 100644
  #if BUILDFLAG(GOOGLE_CHROME_BRANDING)
    // Google Chrome packaged as a snap is a special case: the application name
 diff --git a/chrome/common/chrome_features.cc b/chrome/common/chrome_features.cc
-index c948e61ad5..64ab18e696 100644
+index 842e51f67b..66bc860ba2 100644
 --- a/chrome/common/chrome_features.cc
 +++ b/chrome/common/chrome_features.cc
 @@ -81,7 +81,7 @@ BASE_FEATURE(kUseAdHocSigningForWebAppShims,
@@ -14634,7 +14634,7 @@ index c948e61ad5..64ab18e696 100644
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
 @@ -264,7 +264,7 @@ BASE_FEATURE(kDisplayEdgeToEdgeFullscreen,
-              base::FEATURE_ENABLED_BY_DEFAULT);
+              base::FEATURE_DISABLED_BY_DEFAULT);
  #endif
  
 -#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
@@ -34626,7 +34626,7 @@ index 6edc7e9359..ebf8814f69 100644
            profile.profile == media::VideoCodecProfile::H264PROFILE_BASELINE;
  #endif
 diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
-index 773ed8ed9a..20e54b2470 100644
+index 9a0b22b160..3f2d1f81e5 100644
 --- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
 +++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
 @@ -484,7 +484,7 @@
@@ -34683,7 +34683,7 @@ index 773ed8ed9a..20e54b2470 100644
      },
      // Enables using policy-controlled feature "usb-unrestricted" to allow
      // isolated context to access protected USB interface classes and to
-@@ -4993,7 +4993,7 @@
+@@ -4997,7 +4997,7 @@
      {
        name: "WebAppScopeExtensions",
        origin_trial_feature_name: "WebAppScopeExtensions",
@@ -34692,7 +34692,7 @@ index 773ed8ed9a..20e54b2470 100644
        status: "experimental",
        base_feature: "none",
      },
-@@ -5261,7 +5261,7 @@
+@@ -5265,7 +5265,7 @@
      {
        name: "WebIdentityDigitalCredentials",
        origin_trial_feature_name: "WebIdentityDigitalCredentials",
@@ -41465,20 +41465,10 @@ index 84555e388d..81b2cd86c9 100644
      OS::Address boundary_start, OS::Address boundary_end, size_t minimum_size,
      size_t alignment) {
 diff --git a/v8/src/base/platform/platform-posix.cc b/v8/src/base/platform/platform-posix.cc
-index 2d351f67b9..328389fa3a 100644
+index 2d351f67b9..13582f64bc 100644
 --- a/v8/src/base/platform/platform-posix.cc
 +++ b/v8/src/base/platform/platform-posix.cc
-@@ -27,6 +27,9 @@
-     defined(__NetBSD__) || defined(__OpenBSD__)
- #include <sys/sysctl.h>  // for sysctl
- #endif
-+#if defined(__NetBSD__)
-+#include <lwp.h>
-+#endif
- 
- #if defined(ANDROID) && !defined(V8_ANDROID_LOG_STDOUT)
- #define LOG_TAG "v8"
-@@ -76,9 +79,11 @@
+@@ -76,9 +76,11 @@
  #include <sys/syscall.h>
  #endif
  
@@ -41491,7 +41481,7 @@ index 2d351f67b9..328389fa3a 100644
  
  #if defined(V8_OS_SOLARIS)
  #if (defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE > 2) || defined(__EXTENSIONS__)
-@@ -315,6 +320,13 @@ void OS::SetRandomMmapSeed(int64_t seed) {
+@@ -315,6 +317,13 @@ void OS::SetRandomMmapSeed(int64_t seed) {
    }
  }
  
@@ -41505,7 +41495,7 @@ index 2d351f67b9..328389fa3a 100644
  // static
  void* OS::GetRandomMmapAddr() {
    uintptr_t raw_addr;
-@@ -413,6 +425,7 @@ void* OS::GetRandomMmapAddr() {
+@@ -413,6 +422,7 @@ void* OS::GetRandomMmapAddr() {
  #endif
    return reinterpret_cast<void*>(raw_addr);
  }
@@ -41513,7 +41503,7 @@ index 2d351f67b9..328389fa3a 100644
  
  // TODO(bbudge) Move Cygwin and Fuchsia stuff into platform-specific files.
  #if !V8_OS_CYGWIN && !V8_OS_FUCHSIA
-@@ -701,7 +714,7 @@ void OS::DestroySharedMemoryHandle(PlatformSharedMemoryHandle handle) {
+@@ -701,7 +711,7 @@ void OS::DestroySharedMemoryHandle(PlatformSharedMemoryHandle handle) {
  #if !V8_OS_ZOS
  // static
  bool OS::HasLazyCommits() {
@@ -41522,16 +41512,7 @@ index 2d351f67b9..328389fa3a 100644
    return true;
  #else
    // TODO(bbudge) Return true for all POSIX platforms.
-@@ -855,6 +868,8 @@ int OS::GetCurrentThreadIdInternal() {
-   return static_cast<int>(thread_self());
- #elif V8_OS_FUCHSIA
-   return static_cast<int>(zx_thread_self());
-+#elif V8_OS_NETBSD
-+  return static_cast<int>(_lwp_self());
- #elif V8_OS_SOLARIS
-   return static_cast<int>(pthread_self());
- #elif V8_OS_ZOS
-@@ -1156,7 +1171,11 @@ Thread::Thread(const Options& options)
+@@ -1156,7 +1166,11 @@ Thread::Thread(const Options& options)
        stack_size_(options.stack_size()),
        priority_(options.priority()),
        start_semaphore_(nullptr) {
@@ -41543,7 +41524,7 @@ index 2d351f67b9..328389fa3a 100644
    if (stack_size_ > 0) stack_size_ = std::max(stack_size_, min_stack_size);
    set_name(options.name());
  }
-@@ -1171,7 +1190,7 @@ static void SetThreadName(const char* name) {
+@@ -1171,7 +1185,7 @@ static void SetThreadName(const char* name) {
    pthread_set_name_np(pthread_self(), name);
  #elif V8_OS_NETBSD
    static_assert(Thread::kMaxThreadNameLength <= PTHREAD_MAX_NAMELEN_NP);
@@ -41552,7 +41533,7 @@ index 2d351f67b9..328389fa3a 100644
  #elif V8_OS_DARWIN
    // pthread_setname_np is only available in 10.6 or later, so test
    // for it at runtime.
-@@ -1346,7 +1365,7 @@ void Thread::SetThreadLocal(LocalStorageKey key, void* value) {
+@@ -1346,7 +1360,7 @@ void Thread::SetThreadLocal(LocalStorageKey key, void* value) {
  // keep this version in POSIX as most Linux-compatible derivatives will
  // support it. MacOS and FreeBSD are different here.
  #if !defined(V8_OS_FREEBSD) && !defined(V8_OS_DARWIN) && !defined(_AIX) && \
