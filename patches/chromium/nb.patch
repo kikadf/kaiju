@@ -40441,7 +40441,7 @@ index 37bb48273c..03abe26bd4 100644
  }
  
 diff --git a/ui/gtk/ime_compat_check.cc b/ui/gtk/ime_compat_check.cc
-index 3c33ab502b..678fab8b90 100644
+index 3c33ab502b..c86a40670b 100644
 --- a/ui/gtk/ime_compat_check.cc
 +++ b/ui/gtk/ime_compat_check.cc
 @@ -35,6 +35,10 @@ struct InputMethod {
@@ -40450,7 +40450,7 @@ index 3c33ab502b..678fab8b90 100644
    std::vector<base::FilePath> search_path;
 +#if BUILDFLAG(IS_BSD)
 +  // We really only care about this search path.
-+  search_path.emplace_back("/usr/local/lib");
++  search_path.emplace_back("@PREFIX@/lib");
 +#else
    void* handle = dlopen("libc.so.6", RTLD_GLOBAL | RTLD_LAZY | RTLD_NOLOAD);
    if (!handle) {

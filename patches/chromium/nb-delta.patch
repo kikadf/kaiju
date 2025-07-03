@@ -3935,6 +3935,19 @@ index 6c29521da5..7b83bbaf67 100755
  ]
  
  _form_factors = [
+diff --git a/ui/gtk/ime_compat_check.cc b/ui/gtk/ime_compat_check.cc
+index 678fab8b90..c86a40670b 100644
+--- a/ui/gtk/ime_compat_check.cc
++++ b/ui/gtk/ime_compat_check.cc
+@@ -37,7 +37,7 @@ std::vector<base::FilePath> GetLibrarySearchPaths() {
+   std::vector<base::FilePath> search_path;
+ #if BUILDFLAG(IS_BSD)
+   // We really only care about this search path.
+-  search_path.emplace_back("/usr/local/lib");
++  search_path.emplace_back("@PREFIX@/lib");
+ #else
+   void* handle = dlopen("libc.so.6", RTLD_GLOBAL | RTLD_LAZY | RTLD_NOLOAD);
+   if (!handle) {
 diff --git a/ui/qt/moc_wrapper.py b/ui/qt/moc_wrapper.py
 index ffbe56813c..6e5d2a93c0 100755
 --- a/ui/qt/moc_wrapper.py
