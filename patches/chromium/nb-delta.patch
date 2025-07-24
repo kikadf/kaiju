@@ -1176,7 +1176,7 @@ index 0000000000..27240dd95a
 +  }
 +}
 diff --git a/chrome/browser/about_flags.cc b/chrome/browser/about_flags.cc
-index 51ed346457..2cdc228b6d 100644
+index e025517bd6..0e154f354e 100644
 --- a/chrome/browser/about_flags.cc
 +++ b/chrome/browser/about_flags.cc
 @@ -905,6 +905,8 @@ const FeatureEntry::FeatureParam kAudioBackendPulseAudio[] = {
@@ -1212,10 +1212,10 @@ index 4dcfc1cd6f..1b69f63cd3 100644
      info->os = extensions::api::runtime::PlatformOs::kAndroid;
    } else {
 diff --git a/chrome/browser/flag_descriptions.cc b/chrome/browser/flag_descriptions.cc
-index f82391da2f..2e7a0a23ad 100644
+index 9f9a931c28..076b2f6ace 100644
 --- a/chrome/browser/flag_descriptions.cc
 +++ b/chrome/browser/flag_descriptions.cc
-@@ -8157,6 +8157,8 @@ const char kAudioBackendName[] =
+@@ -8164,6 +8164,8 @@ const char kAudioBackendName[] =
  const char kAudioBackendDescription[] =
  #if BUILDFLAG(IS_OPENBSD)
      "Select the desired audio backend to use. The default is sndio.";
@@ -3090,7 +3090,7 @@ index 703e54a7b8..b24d91923d 100755
  
  
 diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
-index efcb805c10..893f07ac90 100644
+index 118ea7c8f3..e4f02e1683 100644
 --- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
 +++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
 @@ -501,7 +501,7 @@
@@ -3935,19 +3935,6 @@ index 6c29521da5..7b83bbaf67 100755
  ]
  
  _form_factors = [
-diff --git a/ui/gtk/ime_compat_check.cc b/ui/gtk/ime_compat_check.cc
-index 678fab8b90..c86a40670b 100644
---- a/ui/gtk/ime_compat_check.cc
-+++ b/ui/gtk/ime_compat_check.cc
-@@ -37,7 +37,7 @@ std::vector<base::FilePath> GetLibrarySearchPaths() {
-   std::vector<base::FilePath> search_path;
- #if BUILDFLAG(IS_BSD)
-   // We really only care about this search path.
--  search_path.emplace_back("/usr/local/lib");
-+  search_path.emplace_back("@PREFIX@/lib");
- #else
-   void* handle = dlopen("libc.so.6", RTLD_GLOBAL | RTLD_LAZY | RTLD_NOLOAD);
-   if (!handle) {
 diff --git a/ui/qt/moc_wrapper.py b/ui/qt/moc_wrapper.py
 index ffbe56813c..6e5d2a93c0 100755
 --- a/ui/qt/moc_wrapper.py
