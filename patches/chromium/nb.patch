@@ -25181,7 +25181,7 @@ index 6a0d5f51ba..ea297820b3 100755
  
      # Should be run on Mac, unless we're cross-compiling on Linux.
 diff --git a/media/ffmpeg/scripts/robo_lib/config.py b/media/ffmpeg/scripts/robo_lib/config.py
-index d1c03220d9..a42afa02d0 100644
+index d1c03220d9..b4900b85a2 100644
 --- a/media/ffmpeg/scripts/robo_lib/config.py
 +++ b/media/ffmpeg/scripts/robo_lib/config.py
 @@ -56,19 +56,13 @@ class RoboConfiguration:
@@ -25212,7 +25212,7 @@ index d1c03220d9..a42afa02d0 100644
 +        elif platform.machine() == "x86_64" or platform.machine() == "AMD64" or platform.machine() == "amd64":
              self._host_architecture = "x64"
 -        elif platform.machine() == "aarch64":
-+        elif platform.machine() == "aarch64" or platform.machine() == "arm64":
++        elif platform.machine() == "aarch64" or platform.machine() == "arm64" or platform.machine() == "evbarm":
              self._host_architecture = "arm64"
          elif platform.machine() == "mips32":
              self._host_architecture = "mipsel"
