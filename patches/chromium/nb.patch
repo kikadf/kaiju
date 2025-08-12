@@ -32392,7 +32392,7 @@ index 0000000000..9f5d405a84
 +#endif  // DEVICE_HID_HID_SERVICE_FREEBSD_H_
 diff --git a/services/device/hid/hid_service_netbsd.cc b/services/device/hid/hid_service_netbsd.cc
 new file mode 100644
-index 0000000000..628957f185
+index 0000000000..2f79bdca05
 --- /dev/null
 +++ b/services/device/hid/hid_service_netbsd.cc
 @@ -0,0 +1,27 @@
@@ -32402,7 +32402,7 @@ index 0000000000..628957f185
 +
 +#include "services/device/hid/hid_service_netbsd.h"
 +
-+#include "base/notreached.h"
++#include "base/notimplemented.h"
 +#include "services/device/hid/hid_connection.h"
 +
 +namespace device {
