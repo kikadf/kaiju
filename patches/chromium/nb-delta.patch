@@ -1002,6 +1002,23 @@ index 375ab50311..8485a0a00a 100644
  if ret != 0:
    if ret <= -100:
      # Windows error codes such as 0xC0000005 and 0xC0000409 are much easier to
+diff --git a/build/rust/allocator/lib.rs b/build/rust/allocator/lib.rs
+index 29b3af1274..142c6e6084 100644
+--- a/build/rust/allocator/lib.rs
++++ b/build/rust/allocator/lib.rs
+@@ -90,6 +90,12 @@ mod both_allocators {
+     #[linkage = "weak"]
+     fn __rust_no_alloc_shim_is_unstable_v2() {}
+ 
++    // TODO(crbug.com/422538133) Remove after rolling past
++    // https://github.com/rust-lang/rust/pull/141061
++    #[no_mangle]
++    #[linkage = "weak"]
++    static __rust_no_alloc_shim_is_unstable: u8 = 0;
++
+     // Mangle the symbol name as rustc expects.
+     #[rustc_std_internal_symbol]
+     #[allow(non_upper_case_globals)]
 diff --git a/build/rust/rust_bindgen.gni b/build/rust/rust_bindgen.gni
 index 25f6891b92..ddcae42f65 100644
 --- a/build/rust/rust_bindgen.gni
@@ -1909,9 +1926,18 @@ index a2297d091b..619b0d056a 100644
    return nullptr;
  }
 diff --git a/net/base/network_change_notifier.h b/net/base/network_change_notifier.h
-index 8801c263de..c90bcff828 100644
+index 8801c263de..1df5f7e73e 100644
 --- a/net/base/network_change_notifier.h
 +++ b/net/base/network_change_notifier.h
+@@ -20,7 +20,7 @@
+ #include "net/base/network_handle.h"
+ #include "third_party/perfetto/include/perfetto/tracing/track.h"
+ 
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
+ #include "net/base/address_map_linux.h"
+ #endif
+ 
 @@ -452,7 +452,7 @@ class NET_EXPORT NetworkChangeNotifier {
    // packets sent lazily.
    static bool IsDefaultNetworkActive();
@@ -2098,10 +2124,10 @@ index 22f6b00353..904239ac28 100644
  
 diff --git a/sandbox/policy/netbsd/sandbox_netbsd.cc b/sandbox/policy/netbsd/sandbox_netbsd.cc
 new file mode 100644
-index 0000000000..c0e2a643cc
+index 0000000000..9492ab48d7
 --- /dev/null
 +++ b/sandbox/policy/netbsd/sandbox_netbsd.cc
-@@ -0,0 +1,211 @@
+@@ -0,0 +1,210 @@
 +// Copyright (c) 2012 The Chromium Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
@@ -2138,7 +2164,6 @@ index 0000000000..c0e2a643cc
 +#include "base/time/time.h"
 +#include "build/build_config.h"
 +#include "crypto/crypto_buildflags.h"
-+#include "ppapi/buildflags/buildflags.h"
 +#include "sandbox/constants.h"
 +#include "sandbox/linux/services/credentials.h"
 +#include "sandbox/linux/services/namespace_sandbox.h"
