@@ -2714,7 +2714,7 @@ index 74fdfd8df7..da34ea08fa 100644
          done = true;
        }
 diff --git a/base/process/process_metrics.cc b/base/process/process_metrics.cc
-index f885e56399..348bb80b2f 100644
+index f885e56399..a6901c1b76 100644
 --- a/base/process/process_metrics.cc
 +++ b/base/process/process_metrics.cc
 @@ -17,7 +17,7 @@ namespace base {
@@ -2735,6 +2735,15 @@ index f885e56399..348bb80b2f 100644
    GetSystemMemoryInfo(&system_metrics.memory_info_);
    GetVmStatInfo(&system_metrics.vmstat_info_);
    GetSystemDiskInfo(&system_metrics.disk_info_);
+@@ -79,7 +79,7 @@ std::unique_ptr<ProcessMetrics> ProcessMetrics::CreateCurrentProcessMetrics() {
+ #endif  // !BUILDFLAG(IS_MAC)
+ }
+ 
+-#if !BUILDFLAG(IS_FREEBSD) || !BUILDFLAG(IS_POSIX)
++#if BUILDFLAG(IS_POSIX)
+ double ProcessMetrics::GetPlatformIndependentCPUUsage(
+     TimeDelta cumulative_cpu) {
+   TimeTicks time = TimeTicks::Now();
 @@ -112,7 +112,7 @@ ProcessMetrics::GetPlatformIndependentCPUUsage() {
  #endif
  
@@ -6622,7 +6631,7 @@ index 61c77dbc7d..c26ce218a8 100644
        !render_frame_host->GetParentOrOuterDocument()) {
      // The service binder will reject non-primary main frames, but we still need
 diff --git a/chrome/browser/chrome_browser_interface_binders_webui.cc b/chrome/browser/chrome_browser_interface_binders_webui.cc
-index e7f9386e8e..3a65d4c969 100644
+index 67b72c8aab..d85ee37821 100644
 --- a/chrome/browser/chrome_browser_interface_binders_webui.cc
 +++ b/chrome/browser/chrome_browser_interface_binders_webui.cc
 @@ -51,18 +51,18 @@
@@ -6673,7 +6682,7 @@ index e7f9386e8e..3a65d4c969 100644
        WhatsNewUI,
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
        NewTabPageUI>(map);
-@@ -1192,7 +1192,7 @@ void PopulateChromeWebUIFrameBinders(
+@@ -1193,7 +1193,7 @@ void PopulateChromeWebUIFrameBinders(
  #endif  // BUILDFLAG(IS_CHROMEOS)
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -17647,7 +17656,7 @@ index 08b0b01cec..4adf932ee4 100644
        client->MaybeShowSavePasswordPrimingPromo(observed_form.url);
      }
 diff --git a/components/password_manager/core/browser/password_form_manager.cc b/components/password_manager/core/browser/password_form_manager.cc
-index d312447b71..d0fa9c31c0 100644
+index decea06040..e47b94eb44 100644
 --- a/components/password_manager/core/browser/password_form_manager.cc
 +++ b/components/password_manager/core/browser/password_form_manager.cc
 @@ -66,7 +66,7 @@
@@ -28888,10 +28897,10 @@ index 4786faa56a..0a4da6af4d 100644
  // Enables a fine-grained seccomp-BPF syscall filter for the network service.
 diff --git a/sandbox/policy/freebsd/sandbox_freebsd.cc b/sandbox/policy/freebsd/sandbox_freebsd.cc
 new file mode 100644
-index 0000000000..2c10ae4391
+index 0000000000..eb94f21861
 --- /dev/null
 +++ b/sandbox/policy/freebsd/sandbox_freebsd.cc
-@@ -0,0 +1,211 @@
+@@ -0,0 +1,210 @@
 +// Copyright (c) 2012 The Chromium Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
@@ -28928,7 +28937,6 @@ index 0000000000..2c10ae4391
 +#include "base/time/time.h"
 +#include "build/build_config.h"
 +#include "crypto/crypto_buildflags.h"
-+#include "ppapi/buildflags/buildflags.h"
 +#include "sandbox/constants.h"
 +#include "sandbox/linux/services/credentials.h"
 +#include "sandbox/linux/services/namespace_sandbox.h"
@@ -35271,7 +35279,7 @@ index 6edc7e9359..ebf8814f69 100644
            profile.profile == media::VideoCodecProfile::H264PROFILE_BASELINE;
  #endif
 diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
-index f4784c62cc..33953a9739 100644
+index 485025e439..866e62a7d1 100644
 --- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
 +++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
 @@ -324,7 +324,7 @@
@@ -38083,7 +38091,7 @@ index 3a275c99da..9609843664 100644
  #endif
  
 diff --git a/third_party/test_fonts/fontconfig/BUILD.gn b/third_party/test_fonts/fontconfig/BUILD.gn
-index 6c940bb32f..4737d9ce6b 100644
+index 7cba32523c..95012bd96c 100644
 --- a/third_party/test_fonts/fontconfig/BUILD.gn
 +++ b/third_party/test_fonts/fontconfig/BUILD.gn
 @@ -26,7 +26,11 @@ if (is_linux || is_chromeos) {
@@ -38110,7 +38118,7 @@ index 6c940bb32f..4737d9ce6b 100644
 +        inputs = [ "$root_out_dir/etc/fonts/fonts.conf" ]
 +      }
        outputs = [
-         "$root_out_dir/fontconfig_caches/fb5c91b2895aa445d23aebf7f9e2189c-le64.cache-10",
+         "$root_out_dir/fontconfig_caches/fb5c91b2895aa445d23aebf7f9e2189c-le64.cache-reindex1-10",
          "$root_out_dir/fontconfig_caches/CACHEDIR.TAG",
 diff --git a/third_party/test_fonts/fontconfig/fontconfig_util_linux.cc b/third_party/test_fonts/fontconfig/fontconfig_util_linux.cc
 index 289f566b40..ed4c230f6c 100644
@@ -38142,7 +38150,7 @@ index 289f566b40..ed4c230f6c 100644
  
  void SetUpFontconfig() {
 diff --git a/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc b/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc
-index cb7af737d8..68d65ed278 100644
+index 284569f922..68d65ed278 100644
 --- a/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc
 +++ b/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc
 @@ -28,7 +28,7 @@ int main() {
@@ -38158,7 +38166,7 @@ index cb7af737d8..68d65ed278 100644
    FcFini();
  
    // Check existence of intended fontconfig cache file.
--  auto cache = fontconfig_caches + "/" + kCacheKey + "-le64.cache-10";
+-  auto cache = fontconfig_caches + "/" + kCacheKey + "-le64.cache-reindex1-10";
 +  auto cache = fontconfig_caches + "/" + kCacheKey + "-x86_64.cache-" + FC_CACHE_VERSION;
    bool cache_exists = access(cache.c_str(), F_OK) == 0;
    return !cache_exists;
@@ -38334,6 +38342,20 @@ index f3b7dea04f..abcfde618d 100644
  
    int major, minor;
    Bool have_pixmaps;
+diff --git a/third_party/webrtc/modules/portal/pipewire_utils.h b/third_party/webrtc/modules/portal/pipewire_utils.h
+index c3d4f347a8..07ed92dee0 100644
+--- a/third_party/webrtc/modules/portal/pipewire_utils.h
++++ b/third_party/webrtc/modules/portal/pipewire_utils.h
+@@ -11,7 +11,9 @@
+ #ifndef MODULES_PORTAL_PIPEWIRE_UTILS_H_
+ #define MODULES_PORTAL_PIPEWIRE_UTILS_H_
+ 
++#if defined(__linux__)
+ #include <asm-generic/ioctl.h>
++#endif
+ #include <sys/ioctl.h>
+ #include <sys/mman.h>
+ 
 diff --git a/third_party/webrtc/rtc_base/byte_order.h b/third_party/webrtc/rtc_base/byte_order.h
 index 3a9bfe46e0..ee6f985b49 100644
 --- a/third_party/webrtc/rtc_base/byte_order.h
@@ -38348,19 +38370,20 @@ index 3a9bfe46e0..ee6f985b49 100644
  #include <endian.h>
  #else
 diff --git a/third_party/webrtc/rtc_base/cpu_info.cc b/third_party/webrtc/rtc_base/cpu_info.cc
-index 32e2eb35b2..119594fb6c 100644
+index 32e2eb35b2..a1f6ecb3a8 100644
 --- a/third_party/webrtc/rtc_base/cpu_info.cc
 +++ b/third_party/webrtc/rtc_base/cpu_info.cc
-@@ -36,7 +36,7 @@
- #if defined(WEBRTC_ARCH_X86_FAMILY) && defined(_MSC_VER)
+@@ -37,7 +37,9 @@
  #include <intrin.h>
  #endif
--#if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_LINUX)
-+#if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_LINUX) && !defined(WEBRTC_BSD)
+ #if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_LINUX)
++#if !defined(WEBRTC_BSD)
  #include <asm/hwcap.h>
++#endif
  #include <sys/auxv.h>
  #endif
-@@ -178,7 +178,11 @@ bool Supports(ISA instruction_set_architecture) {
+ 
+@@ -178,7 +180,11 @@ bool Supports(ISA instruction_set_architecture) {
      return 0 != (android_getCpuFeatures() & ANDROID_CPU_ARM_FEATURE_NEON);
  #elif defined(WEBRTC_LINUX)
      uint64_t hwcap = 0;
@@ -39115,10 +39138,10 @@ index 1526e24ed0..7b83bbaf67 100755
  
  _form_factors = [
 diff --git a/ui/accessibility/accessibility_features.cc b/ui/accessibility/accessibility_features.cc
-index 6da6d22d80..85b1a8a7b7 100644
+index 09846475c1..5a84511a78 100644
 --- a/ui/accessibility/accessibility_features.cc
 +++ b/ui/accessibility/accessibility_features.cc
-@@ -507,7 +507,7 @@ bool IsScreenAITestModeEnabled() {
+@@ -516,7 +516,7 @@ bool IsScreenAITestModeEnabled() {
    return base::FeatureList::IsEnabled(::features::kScreenAITestMode);
  }
  
@@ -39127,7 +39150,7 @@ index 6da6d22d80..85b1a8a7b7 100644
  BASE_FEATURE(kScreenAIPartitionAllocAdvancedChecksEnabled,
               "ScreenAIPartitionAllocAdvancedChecksEnabled",
               base::FEATURE_DISABLED_BY_DEFAULT);
-@@ -549,7 +549,7 @@ bool IsBlockRootWindowAccessibleNameChangeEventEnabled() {
+@@ -558,7 +558,7 @@ bool IsBlockRootWindowAccessibleNameChangeEventEnabled() {
  }
  #endif  // BUILDFLAG(IS_MAC)
  
@@ -39137,10 +39160,10 @@ index 6da6d22d80..85b1a8a7b7 100644
               "WasmTtsComponentUpdaterV3Enabled",
               base::FEATURE_DISABLED_BY_DEFAULT);
 diff --git a/ui/accessibility/accessibility_features.h b/ui/accessibility/accessibility_features.h
-index 2cf20742af..42b207558b 100644
+index 84844c8a01..89e6c4bbe4 100644
 --- a/ui/accessibility/accessibility_features.h
 +++ b/ui/accessibility/accessibility_features.h
-@@ -339,7 +339,7 @@ AX_BASE_EXPORT bool IsScreenAIOCREnabled();
+@@ -345,7 +345,7 @@ AX_BASE_EXPORT bool IsScreenAIOCREnabled();
  AX_BASE_EXPORT BASE_DECLARE_FEATURE(kScreenAITestMode);
  AX_BASE_EXPORT bool IsScreenAITestModeEnabled();
  
@@ -39149,7 +39172,7 @@ index 2cf20742af..42b207558b 100644
  // Enables advanced partition allocation checks in ScreenAI service.
  // TODO(crbug.com/418199684): Remove when the bug is fixed.
  AX_BASE_EXPORT BASE_DECLARE_FEATURE(
-@@ -366,7 +366,7 @@ AX_BASE_EXPORT BASE_DECLARE_FEATURE(kBlockRootWindowAccessibleNameChangeEvent);
+@@ -372,7 +372,7 @@ AX_BASE_EXPORT BASE_DECLARE_FEATURE(kBlockRootWindowAccessibleNameChangeEvent);
  AX_BASE_EXPORT bool IsBlockRootWindowAccessibleNameChangeEventEnabled();
  #endif  // BUILDFLAG(IS_MAC)
  
@@ -41385,7 +41408,7 @@ index 3885f2eb20..949a5f9292 100644
        "//ui/base/cursor/mojom:cursor_type_shared",
        "//ui/events",
 diff --git a/ui/views/accessibility/view_accessibility.cc b/ui/views/accessibility/view_accessibility.cc
-index 143fa2a79a..ecc70cdbb8 100644
+index bd122db4cf..1656f85931 100644
 --- a/ui/views/accessibility/view_accessibility.cc
 +++ b/ui/views/accessibility/view_accessibility.cc
 @@ -34,7 +34,7 @@

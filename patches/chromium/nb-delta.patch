@@ -1002,23 +1002,6 @@ index 375ab50311..8485a0a00a 100644
  if ret != 0:
    if ret <= -100:
      # Windows error codes such as 0xC0000005 and 0xC0000409 are much easier to
-diff --git a/build/rust/allocator/lib.rs b/build/rust/allocator/lib.rs
-index 29b3af1274..142c6e6084 100644
---- a/build/rust/allocator/lib.rs
-+++ b/build/rust/allocator/lib.rs
-@@ -90,6 +90,12 @@ mod both_allocators {
-     #[linkage = "weak"]
-     fn __rust_no_alloc_shim_is_unstable_v2() {}
- 
-+    // TODO(crbug.com/422538133) Remove after rolling past
-+    // https://github.com/rust-lang/rust/pull/141061
-+    #[no_mangle]
-+    #[linkage = "weak"]
-+    static __rust_no_alloc_shim_is_unstable: u8 = 0;
-+
-     // Mangle the symbol name as rustc expects.
-     #[rustc_std_internal_symbol]
-     #[allow(non_upper_case_globals)]
 diff --git a/build/rust/rust_bindgen.gni b/build/rust/rust_bindgen.gni
 index 25f6891b92..ddcae42f65 100644
 --- a/build/rust/rust_bindgen.gni
@@ -3172,7 +3155,7 @@ index 703e54a7b8..b24d91923d 100755
  
  
 diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
-index b8f1270844..33953a9739 100644
+index 4f74dc9dc8..866e62a7d1 100644
 --- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
 +++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
 @@ -324,7 +324,7 @@
@@ -3899,7 +3882,7 @@ index b87ab0b41b..9609843664 100644
    pthread_setname_np(pthread_self(), name);
  #endif
 diff --git a/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc b/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc
-index 47b5b51412..68d65ed278 100644
+index aa4b72acfa..68d65ed278 100644
 --- a/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc
 +++ b/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc
 @@ -28,7 +28,7 @@ int main() {
@@ -3915,7 +3898,7 @@ index 47b5b51412..68d65ed278 100644
    FcFini();
  
    // Check existence of intended fontconfig cache file.
--  auto cache = fontconfig_caches + "/" + kCacheKey + "-le64.cache-" + FC_CACHE_VERSION;
+-  auto cache = fontconfig_caches + "/" + kCacheKey + "-le64.cache-reindex1-" + FC_CACHE_VERSION;
 +  auto cache = fontconfig_caches + "/" + kCacheKey + "-x86_64.cache-" + FC_CACHE_VERSION;
    bool cache_exists = access(cache.c_str(), F_OK) == 0;
    return !cache_exists;
