@@ -1,0 +1,135 @@
+diff -Naur chromium/Makefile chromium-wip/Makefile
+--- chromium/Makefile	2025-09-13 15:10:07.744141783 +0200
++++ chromium-wip/Makefile	2025-09-13 15:15:50.602787247 +0200
+@@ -11,6 +11,9 @@
+ # audioio source
+ A_VERSION=			140.0
+ GITHUB_SUBMODULES=		kikadf chromium-audioio v${A_VERSION} media/audio/audioio
++# HID support
++H_VERSION=			67bdbb470e207a13e9b2f550e59cf0855135b777
++GITHUB_SUBMODULES+=		kikadf chromium-hid-netbsd ${H_VERSION} services/device/hid
+ 
+ # LLVM_MAJOR_VERSION
+ LLVM_MV=			19
+@@ -165,7 +168,7 @@
+ GN_ARGS+=	use_system_libdrm=true
+ GN_ARGS+=	use_system_libjpeg=true #libjpeg-turbo
+ GN_ARGS+=	use_thin_lto=false
+-GN_ARGS+=	use_udev=false
++GN_ARGS+=	use_udev=true
+ GN_ARGS+=	use_vaapi=false
+ GN_ARGS+=	v8_enable_cet_ibt=true
+ 
+@@ -370,4 +373,5 @@
+ .include "../../x11/libXScrnSaver/buildlink3.mk"
+ .include "../../x11/libXtst/buildlink3.mk"
+ .include "../../x11/qt6-qtbase/buildlink3.mk"
++.include "../../wip/libudev-bsd/buildlink3.mk"
+ .include "../../mk/bsd.pkg.mk"
+diff -Naur chromium/patches/patch-services_device_hid_BUILD.gn chromium-wip/patches/patch-services_device_hid_BUILD.gn
+--- chromium/patches/patch-services_device_hid_BUILD.gn	2025-09-12 13:43:23.379373772 +0200
++++ chromium-wip/patches/patch-services_device_hid_BUILD.gn	2025-09-13 15:12:37.437189951 +0200
+@@ -6,7 +6,7 @@
+ 
+ --- services/device/hid/BUILD.gn.orig	2025-09-08 23:21:33.000000000 +0000
+ +++ services/device/hid/BUILD.gn
+-@@ -34,7 +34,33 @@ source_set("hid") {
++@@ -34,7 +34,35 @@ source_set("hid") {
+      "//services/device/public/mojom",
+    ]
+  
+@@ -32,6 +32,8 @@
+ +
+ +  if (is_netbsd) {
+ +    sources += [
+++      "hid_connection_netbsd.cc",
+++      "hid_connection_netbsd.h",
+ +      "hid_service_netbsd.cc",
+ +      "hid_service_netbsd.h",
+ +    ]
+diff -Naur chromium/patches/patch-services_device_hid_hid__service__netbsd.cc chromium-wip/patches/patch-services_device_hid_hid__service__netbsd.cc
+--- chromium/patches/patch-services_device_hid_hid__service__netbsd.cc	2025-09-12 13:43:23.380278825 +0200
++++ chromium-wip/patches/patch-services_device_hid_hid__service__netbsd.cc	1970-01-01 01:00:00.000000000 +0100
+@@ -1,36 +0,0 @@
+-$NetBSD$
+-
+-* Part of patchset to build chromium on NetBSD
+-* Based on OpenBSD's chromium patches, and
+-  pkgsrc's qt5-qtwebengine patches
+-
+---- services/device/hid/hid_service_netbsd.cc.orig	2025-09-12 07:32:06.462573772 +0000
+-+++ services/device/hid/hid_service_netbsd.cc
+-@@ -0,0 +1,27 @@
+-+// Copyright 2022 The Chromium Authors
+-+// Use of this source code is governed by a BSD-style license that can be
+-+// found in the LICENSE file.
+-+
+-+#include "services/device/hid/hid_service_netbsd.h"
+-+
+-+#include "base/notimplemented.h"
+-+#include "services/device/hid/hid_connection.h"
+-+
+-+namespace device {
+-+
+-+HidServiceNetBSD::HidServiceNetBSD() = default;
+-+HidServiceNetBSD::~HidServiceNetBSD() = default;
+-+
+-+void HidServiceNetBSD::Connect(const std::string& device_id,
+-+                                bool allow_protected_reports,
+-+                                bool allow_fido_reports,
+-+                                ConnectCallback callback) {
+-+  NOTIMPLEMENTED_LOG_ONCE();
+-+  std::move(callback).Run(nullptr);
+-+}
+-+
+-+base::WeakPtr<HidService> HidServiceNetBSD::GetWeakPtr() {
+-+  return weak_factory_.GetWeakPtr();
+-+}
+-+
+-+}  // namespace device
+diff -Naur chromium/patches/patch-services_device_hid_hid__service__netbsd.h chromium-wip/patches/patch-services_device_hid_hid__service__netbsd.h
+--- chromium/patches/patch-services_device_hid_hid__service__netbsd.h	2025-09-12 13:43:23.380364852 +0200
++++ chromium-wip/patches/patch-services_device_hid_hid__service__netbsd.h	1970-01-01 01:00:00.000000000 +0100
+@@ -1,42 +0,0 @@
+-$NetBSD$
+-
+-* Part of patchset to build chromium on NetBSD
+-* Based on OpenBSD's chromium patches, and
+-  pkgsrc's qt5-qtwebengine patches
+-
+---- services/device/hid/hid_service_netbsd.h.orig	2025-09-12 07:32:06.462693207 +0000
+-+++ services/device/hid/hid_service_netbsd.h
+-@@ -0,0 +1,33 @@
+-+// Copyright 2022 The Chromium Authors
+-+// Use of this source code is governed by a BSD-style license that can be
+-+// found in the LICENSE file.
+-+
+-+#ifndef SERVICES_DEVICE_HID_HID_SERVICE_NETBSD_H_
+-+#define SERVICES_DEVICE_HID_HID_SERVICE_NETBSD_H_
+-+
+-+#include "services/device/hid/hid_service.h"
+-+
+-+namespace device {
+-+
+-+class HidServiceNetBSD : public HidService {
+-+ public:
+-+  HidServiceNetBSD();
+-+  ~HidServiceNetBSD() override;
+-+
+-+  HidServiceNetBSD(const HidServiceNetBSD&) = delete;
+-+  HidServiceNetBSD& operator=(const HidServiceNetBSD&) = delete;
+-+
+-+ private:
+-+  // HidService implementation.
+-+  void Connect(const std::string& device_id,
+-+               bool allow_protected_reports,
+-+               bool allow_fido_reports,
+-+               ConnectCallback callback) override;
+-+  base::WeakPtr<HidService> GetWeakPtr() override;
+-+
+-+  base::WeakPtrFactory<HidServiceNetBSD> weak_factory_{this};
+-+};
+-+
+-+}  // namespace device
+-+
+-+#endif  // SERVICES_DEVICE_HID_HID_SERVICE_NETBSD_H_
