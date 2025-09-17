@@ -1,0 +1,242 @@
+diff --git a/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread.h b/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread.h
+index a4631f5a25..7d3070897a 100644
+--- a/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread.h
++++ b/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread.h
+@@ -33,6 +33,9 @@
+ #include <pthread.h>
+ #include <unistd.h>
+ #endif
++#if defined(__NetBSD__)
++#include <lwp.h>
++#endif
+ 
+ namespace partition_alloc::internal::base {
+ 
+@@ -43,6 +46,8 @@ typedef DWORD PlatformThreadId;
+ typedef zx_handle_t PlatformThreadId;
+ #elif PA_BUILDFLAG(IS_APPLE)
+ typedef mach_port_t PlatformThreadId;
++#elif defined(__NetBSD__)
++typedef lwpid_t PlatformThreadId;
+ #elif PA_BUILDFLAG(IS_BSD)
+ typedef uint64_t PlatformThreadId;
+ #elif PA_BUILDFLAG(IS_POSIX)
+diff --git a/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_posix.cc b/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_posix.cc
+index 974d038ce2..efa602f17b 100644
+--- a/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_posix.cc
++++ b/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_posix.cc
+@@ -32,6 +32,10 @@
+ #include <zircon/process.h>
+ #endif
+ 
++#if PA_BUILDFLAG(IS_NETBSD)
++#include <lwp.h>
++#endif
++
+ namespace partition_alloc::internal::base {
+ 
+ #if PA_BUILDFLAG(IS_LINUX) || PA_BUILDFLAG(IS_CHROMEOS)
+@@ -126,6 +130,8 @@ PlatformThreadId PlatformThread::CurrentId() {
+   return pthread_self();
+ #elif PA_BUILDFLAG(IS_POSIX) && PA_BUILDFLAG(IS_AIX)
+   return pthread_self();
++#elif PA_BUILDFLAG(IS_NETBSD)
++  return PlatformThreadId(_lwp_self());
+ #elif PA_BUILDFLAG(IS_POSIX) && !PA_BUILDFLAG(IS_AIX)
+   return reinterpret_cast<int64_t>(pthread_self());
+ #endif
+diff --git a/base/threading/platform_thread.h b/base/threading/platform_thread.h
+index 11df43c42c..6181db4c9d 100644
+--- a/base/threading/platform_thread.h
++++ b/base/threading/platform_thread.h
+@@ -33,6 +33,9 @@
+ #include <pthread.h>
+ #include <unistd.h>
+ #endif
++#if defined(__NetBSD__)
++#include <lwp.h>
++#endif
+ 
+ #if BUILDFLAG(IS_CHROMEOS)
+ #include "base/feature_list.h"
+@@ -55,6 +58,8 @@ class BASE_EXPORT PlatformThreadId {
+   using UnderlyingType = zx_koid_t;
+ #elif BUILDFLAG(IS_APPLE)
+   using UnderlyingType = uint64_t;
++#elif BUILDFLAG(IS_NETBSD)
++  using UnderlyingType = lwpid_t;
+ #elif BUILDFLAG(IS_BSD)
+   using UnderlyingType = uint64_t;
+ #elif BUILDFLAG(IS_POSIX)
+diff --git a/base/threading/platform_thread_posix.cc b/base/threading/platform_thread_posix.cc
+index aa19295eee..ff162b399d 100644
+--- a/base/threading/platform_thread_posix.cc
++++ b/base/threading/platform_thread_posix.cc
+@@ -46,6 +46,10 @@
+ #include <sys/resource.h>
+ #endif
+ 
++#if BUILDFLAG(IS_NETBSD)
++#include <lwp.h>
++#endif
++
+ #if PA_BUILDFLAG(USE_PARTITION_ALLOC_AS_MALLOC)
+ #include "partition_alloc/stack/stack.h"  // nogncheck
+ #endif
+@@ -268,6 +272,8 @@ PlatformThreadId PlatformThreadBase::CurrentId() {
+ 
+ #elif BUILDFLAG(IS_POSIX) && BUILDFLAG(IS_AIX)
+   return PlatformThreadId(pthread_self());
++#elif BUILDFLAG(IS_NETBSD)
++  return PlatformThreadId(_lwp_self());
+ #elif BUILDFLAG(IS_BSD)
+   return PlatformThreadId(reinterpret_cast<uint64_t>(pthread_self()));
+ #elif BUILDFLAG(IS_POSIX) && !BUILDFLAG(IS_AIX)
+diff --git a/content/browser/child_thread_type_switcher_linux.cc b/content/browser/child_thread_type_switcher_linux.cc
+index dc9f705c54..382f408e26 100644
+--- a/content/browser/child_thread_type_switcher_linux.cc
++++ b/content/browser/child_thread_type_switcher_linux.cc
+@@ -75,7 +75,7 @@ void ChildThreadTypeSwitcher::SetPid(base::ProcessId child_pid) {
+   }
+ }
+ 
+-void ChildThreadTypeSwitcher::SetThreadType(uint64_t ns_tid,
++void ChildThreadTypeSwitcher::SetThreadType(int32_t ns_tid,
+                                             base::ThreadType thread_type) {
+   // This function is only used on platforms with 32-bit thread ids.
+   static_assert(sizeof(ns_tid) == sizeof(base::PlatformThreadId));
+diff --git a/content/browser/child_thread_type_switcher_linux.h b/content/browser/child_thread_type_switcher_linux.h
+index 33ed5bfa59..2c32755d55 100644
+--- a/content/browser/child_thread_type_switcher_linux.h
++++ b/content/browser/child_thread_type_switcher_linux.h
+@@ -36,7 +36,7 @@ class ChildThreadTypeSwitcher : public mojom::ThreadTypeSwitcher {
+   void SetPid(base::ProcessId child_pid);
+ 
+   // mojom::ThreadTypeSwitcher:
+-  void SetThreadType(uint64_t ns_tid, base::ThreadType thread_type) override;
++  void SetThreadType(int32_t ns_tid, base::ThreadType thread_type) override;
+ 
+  private:
+   base::ProcessId child_pid_ = base::kNullProcessHandle;
+diff --git a/content/common/thread_type_switcher.mojom b/content/common/thread_type_switcher.mojom
+index a82a17862e..99d424f179 100644
+--- a/content/common/thread_type_switcher.mojom
++++ b/content/common/thread_type_switcher.mojom
+@@ -10,6 +10,6 @@ import "mojo/public/mojom/base/thread_type.mojom";
+ // occur in a child process due to its sandbox, e.g. on Linux and ChromeOS.
+ interface ThreadTypeSwitcher {
+   // Asks the browser to change the type of thread.
+-  SetThreadType(uint64 platform_thread_id,
++  SetThreadType(int32 platform_thread_id,
+                 mojo_base.mojom.ThreadType thread_type);
+ };
+diff --git a/services/viz/public/mojom/BUILD.gn b/services/viz/public/mojom/BUILD.gn
+index 18c7fbaf0d..7ef9243fb5 100644
+--- a/services/viz/public/mojom/BUILD.gn
++++ b/services/viz/public/mojom/BUILD.gn
+@@ -51,7 +51,7 @@ mojom("mojom") {
+ 
+   # Used in thread.mojom
+   enabled_features = []
+-  if (is_fuchsia || is_apple || is_bsd) {
++  if (is_fuchsia || is_apple || (is_bsd && !is_netbsd)) {
+     enabled_features += [ "thread_id_is_64_bit" ]
+   } else {
+     enabled_features += [ "thread_id_is_32_bit" ]
+diff --git a/third_party/ipcz/src/standalone/base/logging.cc b/third_party/ipcz/src/standalone/base/logging.cc
+index 72c3b5d794..2472fa17c3 100644
+--- a/third_party/ipcz/src/standalone/base/logging.cc
++++ b/third_party/ipcz/src/standalone/base/logging.cc
+@@ -29,6 +29,10 @@
+ #include "third_party/abseil-cpp/absl/synchronization/mutex.h"
+ #endif
+ 
++#if BUILDFLAG(IS_NETBSD)
++#include <lwp.h>
++#endif
++
+ namespace ipcz::standalone {
+ 
+ namespace {
+@@ -55,6 +59,9 @@ LogMessage::LogMessage(const char* file, int line, Level level) {
+ #elif BUILDFLAG(IS_ANDROID)
+   stream_ << getpid() << ":" << gettid() << ":";
+   const char* trimmed_file = strrchr(file, '/') + 1;
++#elif BUILDFLAG(IS_NETBSD)
++  stream_ << getpid() << ":" << _lwp_self() << ":";
++  const char* trimmed_file = strrchr(file, '/') + 1;
+ #elif BUILDFLAG(IS_BSD)
+   stream_ << getpid() << ":" << pthread_self() << ":";
+   const char* trimmed_file = strrchr(file, '/') + 1;
+diff --git a/third_party/perfetto/include/perfetto/base/thread_utils.h b/third_party/perfetto/include/perfetto/base/thread_utils.h
+index 7cfab2e81a..90c2c89a14 100644
+--- a/third_party/perfetto/include/perfetto/base/thread_utils.h
++++ b/third_party/perfetto/include/perfetto/base/thread_utils.h
+@@ -41,6 +41,9 @@ __declspec(dllimport) unsigned long __stdcall GetCurrentThreadId();
+ #else
+ #include <pthread.h>
+ #endif
++#if defined(__NetBSD__)
++#include <lwp.h>
++#endif
+ 
+ namespace perfetto {
+ namespace base {
+@@ -51,6 +54,11 @@ using PlatformThreadId = pid_t;
+ inline PlatformThreadId GetThreadId() {
+   return gettid();
+ }
++#elif defined(__NetBSD__)
++using PlatformThreadId = lwpid_t;
++inline PlatformThreadId GetThreadId() {
++  return _lwp_self();
++}
+ #elif PERFETTO_BUILDFLAG(PERFETTO_OS_BSD)
+ using PlatformThreadId = uint64_t;
+ inline PlatformThreadId GetThreadId() {
+diff --git a/third_party/webrtc/rtc_base/platform_thread_types.cc b/third_party/webrtc/rtc_base/platform_thread_types.cc
+index 33a921af9c..983705ab93 100644
+--- a/third_party/webrtc/rtc_base/platform_thread_types.cc
++++ b/third_party/webrtc/rtc_base/platform_thread_types.cc
+@@ -17,6 +17,9 @@
+ #include <sys/prctl.h>
+ #endif
+ #include <sys/syscall.h>
++#if defined(__NetBSD__)
++#include <lwp.h>
++#endif
+ 
+ #if !defined(WEBRTC_ARCH_ARM) && !defined(WEBRTC_ARCH_ARM64) && !defined(WEBRTC_BSD)
+ #include <asm/unistd_64.h>
+@@ -52,6 +55,8 @@ PlatformThreadId CurrentThreadId() {
+   return gettid();
+ #elif defined(WEBRTC_FUCHSIA)
+   return zx_thread_self();
++#elif defined(__NetBSD__)
++  return _lwp_self();
+ #elif defined(WEBRTC_BSD)
+   return reinterpret_cast<uint64_t>(pthread_self());
+ #elif defined(WEBRTC_LINUX)
+diff --git a/v8/src/base/platform/platform-posix.cc b/v8/src/base/platform/platform-posix.cc
+index 4dc214da93..4abb6b72bf 100644
+--- a/v8/src/base/platform/platform-posix.cc
++++ b/v8/src/base/platform/platform-posix.cc
+@@ -29,6 +29,9 @@
+     defined(__NetBSD__) || defined(__OpenBSD__)
+ #include <sys/sysctl.h>  // for sysctl
+ #endif
++#if defined(__NetBSD__)
++#include <lwp.h>
++#endif
+ 
+ #if defined(ANDROID) && !defined(V8_ANDROID_LOG_STDOUT)
+ #define LOG_TAG "v8"
+@@ -907,6 +910,8 @@ int OS::GetCurrentThreadIdInternal() {
+   return static_cast<int>(pthread_self());
+ #elif V8_OS_ZOS
+   return gettid();
++#elif V8_OS_NETBSD
++  return static_cast<int>(_lwp_self());
+ #else
+   return static_cast<int>(reinterpret_cast<intptr_t>(pthread_self()));
+ #endif
