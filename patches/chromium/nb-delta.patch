@@ -114,6 +114,18 @@ index bff1751810..5d45da8f3f 100644
          return true;
  #if !BUILDFLAG(IS_AIX)
        }
+diff --git a/base/compiler_specific.h b/base/compiler_specific.h
+index c2cc60e7e1..f80b427a2d 100644
+--- a/base/compiler_specific.h
++++ b/base/compiler_specific.h
+@@ -734,6 +734,7 @@ inline constexpr bool AnalyzerAssumeTrue(bool arg) {
+     (defined(ARCH_CPU_ARM64) || defined(ARCH_CPU_X86_64)) && \
+     !defined(COMPONENT_BUILD) &&                             \
+     !BUILDFLAG(IS_OPENBSD) &&                                \
++    !BUILDFLAG(IS_NETBSD) &&                                 \
+     !(BUILDFLAG(IS_WIN) && defined(ARCH_CPU_ARM64))
+ #define PRESERVE_MOST [[clang::preserve_most]]
+ #else
 diff --git a/base/debug/debugger_posix.cc b/base/debug/debugger_posix.cc
 index c331181cae..003d806ad0 100644
 --- a/base/debug/debugger_posix.cc
@@ -1940,18 +1952,47 @@ index 8801c263de..1df5f7e73e 100644
    virtual AddressMapOwnerLinux* GetAddressMapOwnerInternal();
  #endif
 diff --git a/net/dns/dns_reloader.cc b/net/dns/dns_reloader.cc
-index d07385e531..702591e6d7 100644
+index d07385e531..275794e827 100644
 --- a/net/dns/dns_reloader.cc
 +++ b/net/dns/dns_reloader.cc
-@@ -32,7 +32,7 @@
- // an old musl bug that was fixed by musl c8fdcfe5, but Fuchsia's SDK doesn't
- // have that change.
- #if defined(__RES) && __RES >= 19991006 && !BUILDFLAG(IS_APPLE) && \
--    !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_FUCHSIA)
-+    !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_FUCHSIA) && !BUILDFLAG(IS_NETBSD)
- // We define this so we don't need to restate the complex condition here twice
- // below - it would be easy for the copies below to get out of sync.
- #define USE_RES_NINIT
+@@ -89,20 +89,37 @@ class DnsReloader : public NetworkChangeNotifier::DNSObserver {
+     if (!reload_state) {
+       auto new_reload_state = std::make_unique<ReloadState>();
+       new_reload_state->resolver_generation = resolver_generation_;
++#if BUILDFLAG(IS_NETBSD)
++      memset(&new_reload_state->res, 0, sizeof(new_reload_state->res));
++      res_ninit(&new_reload_state->res);
++#else
+       res_ninit(&_res);
++#endif
+       tls_reload_state_.Set(std::move(new_reload_state));
+     } else if (reload_state->resolver_generation != resolver_generation_) {
+       reload_state->resolver_generation = resolver_generation_;
+       // It is safe to call res_nclose here since we know res_ninit will have
+       // been called above.
++#if BUILDFLAG(IS_NETBSD)
++      res_nclose(&reload_state->res);
++      //memset(&reload_state->res, 0, sizeof(reload_state->res));
++      res_ninit(&reload_state->res);
++#else
+       res_nclose(&_res);
+       res_ninit(&_res);
++#endif
+     }
+   }
+ 
+  private:
+   struct ReloadState {
++#if BUILDFLAG(IS_NETBSD)
++    ~ReloadState() { res_nclose(&res); }
++
++    struct __res_state res;
++#else
+     ~ReloadState() { res_nclose(&_res); }
++#endif
+ 
+     int resolver_generation;
+   };
 diff --git a/net/dns/public/resolv_reader.cc b/net/dns/public/resolv_reader.cc
 index 3d5095a740..7b0ffd4a52 100644
 --- a/net/dns/public/resolv_reader.cc
@@ -1978,6 +2019,29 @@ index 6f60261edb..a1d4cafaff 100644
    res_ndestroy(&res_);
  #else
    res_nclose(&res_);
+diff --git a/net/socket/tcp_socket_posix.cc b/net/socket/tcp_socket_posix.cc
+index 3ad6ef5ae7..838f75e5f7 100644
+--- a/net/socket/tcp_socket_posix.cc
++++ b/net/socket/tcp_socket_posix.cc
+@@ -6,6 +6,9 @@
+ 
+ #include <errno.h>
+ #include <netinet/tcp.h>
++#if BUILDFLAG(IS_NETBSD)
++#include <netinet/in.h>
++#endif
+ #include <sys/socket.h>
+ 
+ #include <algorithm>
+@@ -99,7 +102,7 @@ bool SetTCPKeepAlive(int fd, bool enable, int delay) {
+       PLOG(ERROR) << "Failed to set TCP_KEEPALIVE on fd: " << fd;
+       return false;
+     }
+-#elif BUILDFLAG(IS_FREEBSD)
++#elif BUILDFLAG(IS_FREEBSD) || BUILDFLAG(IS_NETBSD)
+   // Set seconds until first TCP keep alive.
+   if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &delay, sizeof(delay))) {
+     PLOG(ERROR) << "Failed to set TCP_KEEPIDLE on fd: " << fd;
 diff --git a/net/socket/udp_socket_posix.cc b/net/socket/udp_socket_posix.cc
 index 5b43376049..8444db1445 100644
 --- a/net/socket/udp_socket_posix.cc
@@ -4190,7 +4254,7 @@ index 8649bd040f..eca273b6cd 100644
      sources += [
        "src/base/debug/stack_trace_posix.cc",
 diff --git a/v8/include/v8config.h b/v8/include/v8config.h
-index 1eb59a7d39..4b1bd38d55 100644
+index 1eb59a7d39..ec30551d85 100644
 --- a/v8/include/v8config.h
 +++ b/v8/include/v8config.h
 @@ -209,6 +209,7 @@ path. Add it with -I<path> to the command line
@@ -4222,6 +4286,14 @@ index 1eb59a7d39..4b1bd38d55 100644
  #ifdef V8_OS_MACOS
  # define V8_TARGET_OS_MACOS
  #endif
+@@ -410,6 +418,7 @@ path. Add it with -I<path> to the command line
+      || ((defined(__AARCH64EL__) || defined(_M_ARM64)) /* arm64, but ... */    \
+          && !defined(_WIN32)))                         /* not on windows */    \
+      && !defined(__OpenBSD__)                          /* not on OpenBSD */    \
++     && !defined(__NetBSD__)                           /* not on NetBSD */     \
+      && !defined(COMPONENT_BUILD)                      /* no component build */\
+      && __clang_major__ >= 17                          /* clang >= 17 */
+ # define V8_HAS_ATTRIBUTE_PRESERVE_MOST (__has_attribute(preserve_most))
 diff --git a/v8/src/api/api.cc b/v8/src/api/api.cc
 index 8956962af2..40c8ffd4d2 100644
 --- a/v8/src/api/api.cc

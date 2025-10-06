@@ -903,14 +903,15 @@ index 284e5382bf..5d45da8f3f 100644
      }
      case DIR_SRC_TEST_DATA_ROOT: {
 diff --git a/base/compiler_specific.h b/base/compiler_specific.h
-index 6e6a641697..c2cc60e7e1 100644
+index 6e6a641697..f80b427a2d 100644
 --- a/base/compiler_specific.h
 +++ b/base/compiler_specific.h
-@@ -733,6 +733,7 @@ inline constexpr bool AnalyzerAssumeTrue(bool arg) {
+@@ -733,6 +733,8 @@ inline constexpr bool AnalyzerAssumeTrue(bool arg) {
  #if __has_cpp_attribute(clang::preserve_most) &&             \
      (defined(ARCH_CPU_ARM64) || defined(ARCH_CPU_X86_64)) && \
      !defined(COMPONENT_BUILD) &&                             \
 +    !BUILDFLAG(IS_OPENBSD) &&                                \
++    !BUILDFLAG(IS_NETBSD) &&                                 \
      !(BUILDFLAG(IS_WIN) && defined(ARCH_CPU_ARM64))
  #define PRESERVE_MOST [[clang::preserve_most]]
  #else
@@ -26596,7 +26597,7 @@ index 70d5665ad7..8ca3a9e3ff 100644
      if (!config_watcher_.Watch(base::BindRepeating(&Watcher::OnConfigChanged,
                                                     base::Unretained(this)))) {
 diff --git a/net/dns/dns_reloader.cc b/net/dns/dns_reloader.cc
-index e95bf654c6..702591e6d7 100644
+index e95bf654c6..275794e827 100644
 --- a/net/dns/dns_reloader.cc
 +++ b/net/dns/dns_reloader.cc
 @@ -10,6 +10,7 @@
@@ -26607,15 +26608,44 @@ index e95bf654c6..702591e6d7 100644
  #include <resolv.h>
  
  // This code only works on systems where the C library provides res_ninit(3) and
-@@ -31,7 +32,7 @@
- // an old musl bug that was fixed by musl c8fdcfe5, but Fuchsia's SDK doesn't
- // have that change.
- #if defined(__RES) && __RES >= 19991006 && !BUILDFLAG(IS_APPLE) && \
--    !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_FUCHSIA)
-+    !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_FUCHSIA) && !BUILDFLAG(IS_NETBSD)
- // We define this so we don't need to restate the complex condition here twice
- // below - it would be easy for the copies below to get out of sync.
- #define USE_RES_NINIT
+@@ -88,20 +89,37 @@ class DnsReloader : public NetworkChangeNotifier::DNSObserver {
+     if (!reload_state) {
+       auto new_reload_state = std::make_unique<ReloadState>();
+       new_reload_state->resolver_generation = resolver_generation_;
++#if BUILDFLAG(IS_NETBSD)
++      memset(&new_reload_state->res, 0, sizeof(new_reload_state->res));
++      res_ninit(&new_reload_state->res);
++#else
+       res_ninit(&_res);
++#endif
+       tls_reload_state_.Set(std::move(new_reload_state));
+     } else if (reload_state->resolver_generation != resolver_generation_) {
+       reload_state->resolver_generation = resolver_generation_;
+       // It is safe to call res_nclose here since we know res_ninit will have
+       // been called above.
++#if BUILDFLAG(IS_NETBSD)
++      res_nclose(&reload_state->res);
++      //memset(&reload_state->res, 0, sizeof(reload_state->res));
++      res_ninit(&reload_state->res);
++#else
+       res_nclose(&_res);
+       res_ninit(&_res);
++#endif
+     }
+   }
+ 
+  private:
+   struct ReloadState {
++#if BUILDFLAG(IS_NETBSD)
++    ~ReloadState() { res_nclose(&res); }
++
++    struct __res_state res;
++#else
+     ~ReloadState() { res_nclose(&_res); }
++#endif
+ 
+     int resolver_generation;
+   };
 diff --git a/net/dns/dns_util.cc b/net/dns/dns_util.cc
 index 4ebbfe0c52..75cdf32b07 100644
 --- a/net/dns/dns_util.cc
@@ -26922,14 +26952,24 @@ index 3eeeb7e204..5fb8cd24a7 100644
  
  const unsigned int SOCKS5ClientSocket::kGreetReadHeaderSize = 2;
 diff --git a/net/socket/tcp_socket_posix.cc b/net/socket/tcp_socket_posix.cc
-index 5aedb12b4b..3ad6ef5ae7 100644
+index 5aedb12b4b..838f75e5f7 100644
 --- a/net/socket/tcp_socket_posix.cc
 +++ b/net/socket/tcp_socket_posix.cc
-@@ -99,6 +99,17 @@ bool SetTCPKeepAlive(int fd, bool enable, int delay) {
+@@ -6,6 +6,9 @@
+ 
+ #include <errno.h>
+ #include <netinet/tcp.h>
++#if BUILDFLAG(IS_NETBSD)
++#include <netinet/in.h>
++#endif
+ #include <sys/socket.h>
+ 
+ #include <algorithm>
+@@ -99,6 +102,17 @@ bool SetTCPKeepAlive(int fd, bool enable, int delay) {
        PLOG(ERROR) << "Failed to set TCP_KEEPALIVE on fd: " << fd;
        return false;
      }
-+#elif BUILDFLAG(IS_FREEBSD)
++#elif BUILDFLAG(IS_FREEBSD) || BUILDFLAG(IS_NETBSD)
 +  // Set seconds until first TCP keep alive.
 +  if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &delay, sizeof(delay))) {
 +    PLOG(ERROR) << "Failed to set TCP_KEEPIDLE on fd: " << fd;
@@ -41946,7 +41986,7 @@ index 1259a220e7..6c1d5b4b73 100644
  // virtual address space for userspace. As such, limit the sandbox to 128GB (a
  // quarter of the total available address space).
 diff --git a/v8/include/v8config.h b/v8/include/v8config.h
-index 7f75a2c481..4b1bd38d55 100644
+index 7f75a2c481..ec30551d85 100644
 --- a/v8/include/v8config.h
 +++ b/v8/include/v8config.h
 @@ -207,6 +207,9 @@ path. Add it with -I<path> to the command line
@@ -41992,11 +42032,12 @@ index 7f75a2c481..4b1bd38d55 100644
  #ifdef V8_OS_MACOS
  # define V8_TARGET_OS_MACOS
  #endif
-@@ -395,6 +417,7 @@ path. Add it with -I<path> to the command line
+@@ -395,6 +417,8 @@ path. Add it with -I<path> to the command line
  #if (defined(_M_X64) || defined(__x86_64__)            /* x64 (everywhere) */  \
       || ((defined(__AARCH64EL__) || defined(_M_ARM64)) /* arm64, but ... */    \
           && !defined(_WIN32)))                         /* not on windows */    \
 +     && !defined(__OpenBSD__)                          /* not on OpenBSD */    \
++     && !defined(__NetBSD__)                           /* not on NetBSD */     \
       && !defined(COMPONENT_BUILD)                      /* no component build */\
       && __clang_major__ >= 17                          /* clang >= 17 */
  # define V8_HAS_ATTRIBUTE_PRESERVE_MOST (__has_attribute(preserve_most))
