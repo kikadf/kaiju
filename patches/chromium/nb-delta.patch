@@ -1533,13 +1533,15 @@ index 84846365aa..46a0ab0b3f 100644
    "webRequest": [
      {
 diff --git a/extensions/common/api/runtime.json b/extensions/common/api/runtime.json
-index f0960a1d5b..229fa478b7 100644
+index f0960a1d5b..c65a2f85c6 100644
 --- a/extensions/common/api/runtime.json
 +++ b/extensions/common/api/runtime.json
-@@ -87,6 +87,7 @@
+@@ -86,7 +86,8 @@
+             {"name": "cros", "description": "Specifies the Chrome operating system."},
              {"name": "linux", "description": "Specifies the Linux operating system."},
              {"name": "openbsd", "description": "Specifies the OpenBSD operating system."},
-             {"name": "freebsd", "description": "Specifies the FreeBSD operating system."}
+-            {"name": "freebsd", "description": "Specifies the FreeBSD operating system."}
++            {"name": "freebsd", "description": "Specifies the FreeBSD operating system."},
 +            {"name": "netbsd", "description": "Specifies the NetBSD operating system."}
          ]
        },
