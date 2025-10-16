@@ -127,6 +127,891 @@ index 6fdf2d20f1..7ab343ab03 100644
        } else {
          ++iter;
        }
+diff --git a/audio/sndio/audio_manager_sndio.cc b/audio/sndio/audio_manager_sndio.cc
+new file mode 100644
+index 0000000000..517a2cb2e8
+--- /dev/null
++++ b/audio/sndio/audio_manager_sndio.cc
+@@ -0,0 +1,215 @@
++// Copyright (c) 2012 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "base/command_line.h"
++#include "base/metrics/histogram_macros.h"
++#include "base/memory/ptr_util.h"
++
++#include "base/logging.h"
++
++#include "media/audio/sndio/audio_manager_sndio.h"
++
++#include "media/audio/audio_device_description.h"
++#include "media/audio/audio_output_dispatcher.h"
++#if defined(USE_SNDIO)
++#include "media/audio/sndio/sndio_input.h"
++#include "media/audio/sndio/sndio_output.h"
++#endif
++#if defined(USE_PULSEAUDIO)
++#include "media/audio/pulse/audio_manager_pulse.h"
++#include "media/audio/pulse/pulse_util.h"
++#endif
++#if defined(USE_ALSA)
++#include "media/audio/alsa/audio_manager_alsa.h"
++#endif
++#include "media/audio/fake_audio_manager.h"
++#include "media/base/limits.h"
++#include "media/base/media_switches.h"
++
++namespace media {
++
++#if defined(USE_SNDIO)
++// Maximum number of output streams that can be open simultaneously.
++static const int kMaxOutputStreams = 50;
++
++// Default sample rate for input and output streams.
++static const int kDefaultSampleRate = 48000;
++
++void AddDefaultDevice(AudioDeviceNames* device_names) {
++  DCHECK(device_names->empty());
++  device_names->push_front(AudioDeviceName::CreateDefault());
++}
++
++bool AudioManagerSndio::HasAudioOutputDevices() {
++  return true;
++}
++
++bool AudioManagerSndio::HasAudioInputDevices() {
++  return true;
++}
++
++void AudioManagerSndio::GetAudioInputDeviceNames(
++    AudioDeviceNames* device_names) {
++  DCHECK(device_names->empty());
++  AddDefaultDevice(device_names);
++}
++
++void AudioManagerSndio::GetAudioOutputDeviceNames(
++    AudioDeviceNames* device_names) {
++  AddDefaultDevice(device_names);
++}
++
++#if defined(USE_SNDIO)
++const std::string_view AudioManagerSndio::GetName() {
++  return "SNDIO";
++}
++#endif
++
++AudioParameters AudioManagerSndio::GetInputStreamParameters(
++    const std::string& device_id) {
++  static const int kDefaultInputBufferSize = 1024;
++
++  int user_buffer_size = GetUserBufferSize();
++  int buffer_size = user_buffer_size ?
++      user_buffer_size : kDefaultInputBufferSize;
++
++  return AudioParameters(
++      AudioParameters::AUDIO_PCM_LOW_LATENCY, ChannelLayoutConfig::Stereo(),
++      kDefaultSampleRate, buffer_size);
++}
++
++AudioManagerSndio::AudioManagerSndio(std::unique_ptr<AudioThread> audio_thread,
++                                         AudioLogFactory* audio_log_factory)
++    : AudioManagerBase(std::move(audio_thread),
++                       audio_log_factory) {
++  DLOG(WARNING) << "AudioManagerSndio";
++  SetMaxOutputStreamsAllowed(kMaxOutputStreams);
++}
++
++AudioManagerSndio::~AudioManagerSndio() = default;
++
++AudioOutputStream* AudioManagerSndio::MakeLinearOutputStream(
++    const AudioParameters& params,
++    const LogCallback& log_callback) {
++  DCHECK_EQ(AudioParameters::AUDIO_PCM_LINEAR, params.format());
++  return MakeOutputStream(params);
++}
++
++AudioOutputStream* AudioManagerSndio::MakeLowLatencyOutputStream(
++    const AudioParameters& params,
++    const std::string& device_id,
++    const LogCallback& log_callback) {
++  DLOG_IF(ERROR, !device_id.empty()) << "Not implemented!";
++  DCHECK_EQ(AudioParameters::AUDIO_PCM_LOW_LATENCY, params.format());
++  return MakeOutputStream(params);
++}
++
++AudioInputStream* AudioManagerSndio::MakeLinearInputStream(
++    const AudioParameters& params,
++    const std::string& device_id,
++    const LogCallback& log_callback) {
++  DCHECK_EQ(AudioParameters::AUDIO_PCM_LINEAR, params.format());
++  return MakeInputStream(params);
++}
++
++AudioInputStream* AudioManagerSndio::MakeLowLatencyInputStream(
++    const AudioParameters& params,
++    const std::string& device_id,
++    const LogCallback& log_callback) {
++  DCHECK_EQ(AudioParameters::AUDIO_PCM_LOW_LATENCY, params.format());
++  return MakeInputStream(params);
++}
++
++AudioParameters AudioManagerSndio::GetPreferredOutputStreamParameters(
++    const std::string& output_device_id,
++    const AudioParameters& input_params) {
++  // TODO(tommi): Support |output_device_id|.
++  DLOG_IF(ERROR, !output_device_id.empty()) << "Not implemented!";
++  static const int kDefaultOutputBufferSize = 2048;
++
++  ChannelLayoutConfig channel_layout_config = ChannelLayoutConfig::Stereo();
++  int sample_rate = kDefaultSampleRate;
++  int buffer_size = kDefaultOutputBufferSize;
++  if (input_params.IsValid()) {
++    sample_rate = input_params.sample_rate();
++    channel_layout_config = input_params.channel_layout_config();
++    buffer_size = std::min(buffer_size, input_params.frames_per_buffer());
++  }
++
++  int user_buffer_size = GetUserBufferSize();
++  if (user_buffer_size)
++    buffer_size = user_buffer_size;
++
++  return AudioParameters(
++      AudioParameters::AUDIO_PCM_LOW_LATENCY,
++      channel_layout_config, sample_rate, buffer_size);
++}
++
++AudioInputStream* AudioManagerSndio::MakeInputStream(
++    const AudioParameters& params) {
++  DLOG(WARNING) << "MakeInputStream";
++  return new SndioAudioInputStream(this,
++             AudioDeviceDescription::kDefaultDeviceId, params);
++}
++
++AudioOutputStream* AudioManagerSndio::MakeOutputStream(
++    const AudioParameters& params) {
++  DLOG(WARNING) << "MakeOutputStream";
++  return new SndioAudioOutputStream(params, this);
++}
++#endif
++
++std::unique_ptr<media::AudioManager> CreateAudioManager(
++    std::unique_ptr<AudioThread> audio_thread,
++    AudioLogFactory* audio_log_factory) {
++  DLOG(WARNING) << "CreateAudioManager";
++
++  auto _ab = kAudioBackendParam.Get();
++
++  // For testing allow audio output to be disabled.
++  if (base::CommandLine::ForCurrentProcess()->HasSwitch(
++          switches::kDisableAudioOutput) ||
++	  !base::FeatureList::IsEnabled(media::kAudioBackend)) {
++    return std::make_unique<FakeAudioManager>(std::move(audio_thread),
++                                              audio_log_factory);
++  }
++
++#if defined(USE_PULSEAUDIO)
++  pa_threaded_mainloop* pa_mainloop = nullptr;
++  pa_context* pa_context = nullptr;
++  if (_ab != AudioBackend::kSndio && _ab != AudioBackend::kAlsa &&
++          pulse::InitPulse(&pa_mainloop, &pa_context)) {
++    return std::make_unique<AudioManagerPulse>(
++        std::move(audio_thread), audio_log_factory, pa_mainloop, pa_context);
++  } else if (_ab == AudioBackend::kAuto) {
++    LOG(WARNING) << "Falling back to SNDIO for audio output. PulseAudio is not "
++                    "available or could not be initialized.";
++  }
++#endif
++
++#if defined(USE_SNDIO)
++  if (_ab != AudioBackend::kPulseAudio && _ab != AudioBackend::kAlsa) {
++    return std::make_unique<AudioManagerSndio>(std::move(audio_thread),
++                                              audio_log_factory);
++  } else if (_ab == AudioBackend::kAuto) {
++    LOG(WARNING) << "Falling back to ALSA audio output. SNDIO is not "
++                    "available or could not be initialized.";
++  }
++#endif
++
++#if defined(USE_ALSA)
++  if (_ab != AudioBackend::kPulseAudio && _ab != AudioBackend::kSndio) {
++    return std::make_unique<AudioManagerAlsa>(std::move(audio_thread),
++                                              audio_log_factory);
++  } else if (_ab == AudioBackend::kAuto) {
++    LOG(WARNING) << "Falling back to fake audio output. ALSA is not "
++                    "available or could not be initialized.";
++  }
++#endif
++
++  return std::make_unique<FakeAudioManager>(std::move(audio_thread),
++                                            audio_log_factory);
++}
++
++}  // namespace media
+diff --git a/audio/sndio/audio_manager_sndio.h b/audio/sndio/audio_manager_sndio.h
+new file mode 100644
+index 0000000000..c2e7095ebe
+--- /dev/null
++++ b/audio/sndio/audio_manager_sndio.h
+@@ -0,0 +1,66 @@
++// Copyright (c) 2012 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef MEDIA_AUDIO_SNDIO_AUDIO_MANAGER_SNDIO_H_
++#define MEDIA_AUDIO_SNDIO_AUDIO_MANAGER_SNDIO_H_
++
++#include <set>
++
++#include "base/compiler_specific.h"
++#include "base/memory/ref_counted.h"
++#include "base/threading/thread.h"
++#include "media/audio/audio_manager_base.h"
++
++namespace media {
++
++class MEDIA_EXPORT AudioManagerSndio : public AudioManagerBase {
++ public:
++  AudioManagerSndio(std::unique_ptr<AudioThread> audio_thread,
++                   AudioLogFactory* audio_log_factory);
++
++  AudioManagerSndio(const AudioManagerSndio&) = delete;
++  AudioManagerSndio& operator=(const AudioManagerSndio&) = delete;
++
++  ~AudioManagerSndio() override;
++
++  // Implementation of AudioManager.
++  bool HasAudioOutputDevices() override;
++  bool HasAudioInputDevices() override;
++  void GetAudioInputDeviceNames(AudioDeviceNames* device_names) override;
++  void GetAudioOutputDeviceNames(AudioDeviceNames* device_names) override;
++  AudioParameters GetInputStreamParameters(
++      const std::string& device_id) override;
++  const std::string_view GetName() override;
++
++  // Implementation of AudioManagerBase.
++  AudioOutputStream* MakeLinearOutputStream(
++      const AudioParameters& params,
++      const LogCallback& log_callback) override;
++  AudioOutputStream* MakeLowLatencyOutputStream(
++      const AudioParameters& params,
++      const std::string& device_id,
++      const LogCallback& log_callback) override;
++  AudioInputStream* MakeLinearInputStream(
++      const AudioParameters& params,
++      const std::string& device_id,
++      const LogCallback& log_callback) override;
++  AudioInputStream* MakeLowLatencyInputStream(
++      const AudioParameters& params,
++      const std::string& device_id,
++      const LogCallback& log_callback) override;
++
++ protected:
++  AudioParameters GetPreferredOutputStreamParameters(
++      const std::string& output_device_id,
++      const AudioParameters& input_params) override;
++
++ private:
++  // Called by MakeLinearOutputStream and MakeLowLatencyOutputStream.
++  AudioOutputStream* MakeOutputStream(const AudioParameters& params);
++  AudioInputStream* MakeInputStream(const AudioParameters& params);
++};
++
++}  // namespace media
++
++#endif  // MEDIA_AUDIO_SNDIO_AUDIO_MANAGER_SNDIO_H_
+diff --git a/audio/sndio/sndio_input.cc b/audio/sndio/sndio_input.cc
+new file mode 100644
+index 0000000000..80109ee58f
+--- /dev/null
++++ b/audio/sndio/sndio_input.cc
+@@ -0,0 +1,201 @@
++// Copyright 2013 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "base/logging.h"
++#include "media/base/audio_sample_types.h"
++#include "media/base/audio_timestamp_helper.h"
++#include "media/audio/sndio/audio_manager_sndio.h"
++#include "media/audio/audio_manager.h"
++#include "media/audio/sndio/sndio_input.h"
++
++namespace media {
++
++static const SampleFormat kSampleFormat = kSampleFormatS16;
++
++void SndioAudioInputStream::OnMoveCallback(void *arg, int delta)
++{
++  SndioAudioInputStream* self = static_cast<SndioAudioInputStream*>(arg);
++
++  self->hw_delay += delta;
++}
++
++void *SndioAudioInputStream::ThreadEntry(void *arg) {
++  SndioAudioInputStream* self = static_cast<SndioAudioInputStream*>(arg);
++
++  self->ThreadLoop();
++  return NULL;
++}
++
++SndioAudioInputStream::SndioAudioInputStream(AudioManagerBase* manager,
++                                             const std::string& device_name,
++                                             const AudioParameters& params)
++    : manager(manager),
++      params(params),
++      audio_bus(AudioBus::Create(params)),
++      state(kClosed) {
++}
++
++SndioAudioInputStream::~SndioAudioInputStream() {
++  if (state != kClosed)
++    Close();
++}
++
++AudioInputStream::OpenOutcome SndioAudioInputStream::Open() {
++  struct sio_par par;
++  int sig;
++
++  if (state != kClosed)
++    return OpenOutcome::kFailed;
++
++  if (params.format() != AudioParameters::AUDIO_PCM_LINEAR &&
++      params.format() != AudioParameters::AUDIO_PCM_LOW_LATENCY) {
++    LOG(WARNING) << "Unsupported audio format.";
++    return OpenOutcome::kFailed;
++  }
++
++  sio_initpar(&par);
++  par.rate = params.sample_rate();
++  par.rchan = params.channels();
++  par.bits = SampleFormatToBitsPerChannel(kSampleFormat);
++  par.bps = par.bits / 8;
++  par.sig = sig = par.bits != 8 ? 1 : 0;
++  par.le = SIO_LE_NATIVE;
++  par.appbufsz = params.frames_per_buffer();
++
++  hdl = sio_open(SIO_DEVANY, SIO_REC, 0);
++
++  if (hdl == NULL) {
++    LOG(ERROR) << "Couldn't open audio device.";
++    return OpenOutcome::kFailed;
++  }
++
++  if (!sio_setpar(hdl, &par) || !sio_getpar(hdl, &par)) {
++    LOG(ERROR) << "Couldn't set audio parameters.";
++    goto bad_close;
++  }
++
++  if (par.rate  != (unsigned int)params.sample_rate() ||
++      par.rchan != (unsigned int)params.channels() ||
++      par.bits  != (unsigned int)SampleFormatToBitsPerChannel(kSampleFormat) ||
++      par.sig   != (unsigned int)sig ||
++      (par.bps > 1 && par.le != SIO_LE_NATIVE) ||
++      (par.bits != par.bps * 8)) {
++    LOG(ERROR) << "Unsupported audio parameters.";
++    goto bad_close;
++  }
++  state = kStopped;
++  buffer = new char[audio_bus->frames() * params.GetBytesPerFrame(kSampleFormat)];
++  sio_onmove(hdl, &OnMoveCallback, this);
++  return OpenOutcome::kSuccess;
++bad_close:
++  sio_close(hdl);
++  return OpenOutcome::kFailed;
++}
++
++void SndioAudioInputStream::Start(AudioInputCallback* cb) {
++
++  StartAgc();
++
++  state = kRunning;
++  hw_delay = 0;
++  callback = cb;
++  sio_start(hdl);
++  if (pthread_create(&thread, NULL, &ThreadEntry, this) != 0) {
++    LOG(ERROR) << "Failed to create real-time thread for recording.";
++    sio_stop(hdl);
++    state = kStopped;
++  }
++}
++
++void SndioAudioInputStream::Stop() {
++
++  if (state == kStopped)
++    return;
++
++  state = kStopWait;
++  pthread_join(thread, NULL);
++  sio_stop(hdl);
++  state = kStopped;
++
++  StopAgc();
++}
++
++void SndioAudioInputStream::Close() {
++
++  if (state == kClosed)
++    goto release;
++
++  if (state == kRunning)
++    Stop();
++
++  state = kClosed;
++  delete [] buffer;
++  sio_close(hdl);
++
++release:
++  manager->ReleaseInputStream(this);
++}
++
++double SndioAudioInputStream::GetMaxVolume() {
++  // Not supported
++  return 0.0;
++}
++
++void SndioAudioInputStream::SetVolume(double volume) {
++  // Not supported. Do nothing.
++}
++
++double SndioAudioInputStream::GetVolume() {
++  // Not supported.
++  return 0.0;
++}
++
++bool SndioAudioInputStream::IsMuted() {
++  // Not supported.
++  return false;
++}
++
++void SndioAudioInputStream::SetOutputDeviceForAec(
++    const std::string& output_device_id) {
++  // Not supported.
++}
++
++void SndioAudioInputStream::ThreadLoop(void) {
++  size_t todo, n;
++  char *data;
++  unsigned int nframes;
++  double normalized_volume = 0.0;
++
++  nframes = audio_bus->frames();
++
++  while (state == kRunning && !sio_eof(hdl)) {
++
++    GetAgcVolume(&normalized_volume);
++
++    // read one block
++    todo = nframes * params.GetBytesPerFrame(kSampleFormat);
++    data = buffer;
++    while (todo > 0) {
++      n = sio_read(hdl, data, todo);
++      if (n == 0)
++        return;	// unrecoverable I/O error
++      todo -= n;
++      data += n;
++    }
++    hw_delay -= nframes;
++
++    // convert frames count to TimeDelta
++    const base::TimeDelta delay = AudioTimestampHelper::FramesToTime(hw_delay,
++      params.sample_rate());
++
++    // push into bus
++    audio_bus->FromInterleaved<SignedInt16SampleTypeTraits>(reinterpret_cast<int16_t*>(buffer), nframes);
++
++
++    // invoke callback
++    callback->OnData(audio_bus.get(), base::TimeTicks::Now() - delay, 1., {});
++  }
++}
++
++}  // namespace media
+diff --git a/audio/sndio/sndio_input.h b/audio/sndio/sndio_input.h
+new file mode 100644
+index 0000000000..af1fcab309
+--- /dev/null
++++ b/audio/sndio/sndio_input.h
+@@ -0,0 +1,91 @@
++// Copyright 2013 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef MEDIA_AUDIO_SNDIO_SNDIO_INPUT_H_
++#define MEDIA_AUDIO_SNDIO_SNDIO_INPUT_H_
++
++#include <stdint.h>
++#include <string>
++#include <sndio.h>
++
++#include "base/compiler_specific.h"
++#include "base/memory/weak_ptr.h"
++#include "base/time/time.h"
++#include "media/audio/agc_audio_stream.h"
++#include "media/audio/audio_io.h"
++#include "media/audio/audio_device_description.h"
++#include "media/base/audio_parameters.h"
++
++namespace media {
++
++class AudioManagerBase;
++
++// Implementation of AudioOutputStream using sndio(7)
++class SndioAudioInputStream : public AgcAudioStream<AudioInputStream> {
++ public:
++  // Pass this to the constructor if you want to attempt auto-selection
++  // of the audio recording device.
++  static const char kAutoSelectDevice[];
++
++  // Create a PCM Output stream for the SNDIO device identified by
++  // |device_name|. If unsure of what to use for |device_name|, use
++  // |kAutoSelectDevice|.
++  SndioAudioInputStream(AudioManagerBase* audio_manager,
++                     const std::string& device_name,
++                     const AudioParameters& params);
++
++  SndioAudioInputStream(const SndioAudioInputStream&) = delete;
++  SndioAudioInputStream& operator=(const SndioAudioInputStream&) = delete;
++
++  ~SndioAudioInputStream() override;
++
++  // Implementation of AudioInputStream.
++  OpenOutcome Open() override;
++  void Start(AudioInputCallback* callback) override;
++  void Stop() override;
++  void Close() override;
++  double GetMaxVolume() override;
++  void SetVolume(double volume) override;
++  double GetVolume() override;
++  bool IsMuted() override;
++  void SetOutputDeviceForAec(const std::string& output_device_id) override;
++
++ private:
++
++  enum StreamState {
++    kClosed,            // Not opened yet
++    kStopped,           // Device opened, but not started yet
++    kRunning,           // Started, device playing
++    kStopWait           // Stopping, waiting for the real-time thread to exit
++  };
++
++  // C-style call-backs
++  static void OnMoveCallback(void *arg, int delta);
++  static void* ThreadEntry(void *arg);
++
++  // Continuously moves data from the device to the consumer
++  void ThreadLoop();
++  // Our creator, the audio manager needs to be notified when we close.
++  AudioManagerBase* manager;
++  // Parameters of the source
++  AudioParameters params;
++  // We store data here for consumer
++  std::unique_ptr<AudioBus> audio_bus;
++  // Call-back that consumes recorded data
++  AudioInputCallback* callback;  // Valid during a recording session.
++  // Handle of the audio device
++  struct sio_hdl* hdl;
++  // Current state of the stream
++  enum StreamState state;
++  // High priority thread running ThreadLoop()
++  pthread_t thread;
++  // Number of frames buffered in the hardware
++  int hw_delay;
++  // Temporary buffer where data is stored sndio-compatible format
++  char* buffer;
++};
++
++}  // namespace media
++
++#endif  // MEDIA_AUDIO_SNDIO_SNDIO_INPUT_H_
+diff --git a/audio/sndio/sndio_output.cc b/audio/sndio/sndio_output.cc
+new file mode 100644
+index 0000000000..2d63d13016
+--- /dev/null
++++ b/audio/sndio/sndio_output.cc
+@@ -0,0 +1,188 @@
++// Copyright (c) 2012 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "base/logging.h"
++#include "base/time/time.h"
++#include "base/time/default_tick_clock.h"
++#include "media/audio/audio_manager_base.h"
++#include "media/base/audio_sample_types.h"
++#include "media/base/audio_timestamp_helper.h"
++#include "media/audio/sndio/sndio_output.h"
++
++namespace media {
++
++static const SampleFormat kSampleFormat = kSampleFormatS16;
++
++void SndioAudioOutputStream::OnMoveCallback(void *arg, int delta) {
++  SndioAudioOutputStream* self = static_cast<SndioAudioOutputStream*>(arg);
++
++  self->hw_delay -= delta;
++}
++
++void SndioAudioOutputStream::OnVolCallback(void *arg, unsigned int vol) {
++  SndioAudioOutputStream* self = static_cast<SndioAudioOutputStream*>(arg);
++
++  self->vol = vol;
++}
++
++void *SndioAudioOutputStream::ThreadEntry(void *arg) {
++  SndioAudioOutputStream* self = static_cast<SndioAudioOutputStream*>(arg);
++
++  self->ThreadLoop();
++  return NULL;
++}
++
++SndioAudioOutputStream::SndioAudioOutputStream(const AudioParameters& params,
++                                               AudioManagerBase* manager)
++    : manager(manager),
++      params(params),
++      audio_bus(AudioBus::Create(params)),
++      state(kClosed),
++      mutex(PTHREAD_MUTEX_INITIALIZER) {
++}
++
++SndioAudioOutputStream::~SndioAudioOutputStream() {
++  if (state != kClosed)
++    Close();
++}
++
++bool SndioAudioOutputStream::Open() {
++  if (params.format() != AudioParameters::AUDIO_PCM_LINEAR &&
++      params.format() != AudioParameters::AUDIO_PCM_LOW_LATENCY) {
++    LOG(WARNING) << "Unsupported audio format.";
++    return false;
++  }
++  state = kStopped;
++  volpending = 0;
++  vol = SIO_MAXVOL;
++  buffer = new char[audio_bus->frames() * params.GetBytesPerFrame(kSampleFormat)];
++  return true;
++}
++
++void SndioAudioOutputStream::Close() {
++  if (state == kClosed)
++    goto release;
++  if (state == kRunning)
++    Stop();
++  state = kClosed;
++  delete [] buffer;
++release:
++  manager->ReleaseOutputStream(this);  // Calls the destructor
++}
++
++void SndioAudioOutputStream::Start(AudioSourceCallback* callback) {
++  struct sio_par par;
++  int sig;
++
++  sio_initpar(&par);
++  par.rate = params.sample_rate();
++  par.pchan = params.channels();
++  par.bits = SampleFormatToBitsPerChannel(kSampleFormat);
++  par.bps = par.bits / 8;
++  par.sig = sig = par.bits != 8 ? 1 : 0;
++  par.le = SIO_LE_NATIVE;
++  par.appbufsz = params.frames_per_buffer();
++
++  hdl = sio_open(SIO_DEVANY, SIO_PLAY, 0);
++  if (hdl == NULL) {
++    LOG(ERROR) << "Couldn't open audio device.";
++    return;
++  }
++  if (!sio_setpar(hdl, &par) || !sio_getpar(hdl, &par)) {
++    LOG(ERROR) << "Couldn't set audio parameters.";
++    sio_close(hdl);
++    return;
++  }
++  if (par.rate  != (unsigned int)params.sample_rate() ||
++      par.pchan != (unsigned int)params.channels() ||
++      par.bits  != (unsigned int)SampleFormatToBitsPerChannel(kSampleFormat) ||
++      par.sig   != (unsigned int)sig ||
++      (par.bps > 1 && par.le != SIO_LE_NATIVE) ||
++      (par.bits != par.bps * 8)) {
++    LOG(ERROR) << "Unsupported audio parameters.";
++    sio_close(hdl);
++    return;
++  }
++
++  sio_onmove(hdl, &OnMoveCallback, this);
++  sio_onvol(hdl, &OnVolCallback, this);
++
++  state = kRunning;
++  hw_delay = 0;
++  source = callback;
++  sio_start(hdl);
++
++  if (pthread_create(&thread, NULL, &ThreadEntry, this) != 0) {
++    LOG(ERROR) << "Failed to create real-time thread.";
++    sio_stop(hdl);
++    sio_close(hdl);
++    state = kStopped;
++  }
++}
++
++void SndioAudioOutputStream::Stop() {
++  if (state == kStopped)
++    return;
++  state = kStopWait;
++  pthread_join(thread, NULL);
++  sio_stop(hdl);
++  sio_close(hdl);
++  state = kStopped;
++}
++
++void SndioAudioOutputStream::SetVolume(double v) {
++  pthread_mutex_lock(&mutex);
++  vol = v * SIO_MAXVOL;
++  volpending = 1;
++  pthread_mutex_unlock(&mutex);
++}
++
++void SndioAudioOutputStream::GetVolume(double* v) {
++  pthread_mutex_lock(&mutex);
++  *v = vol * (1. / SIO_MAXVOL);
++  pthread_mutex_unlock(&mutex);
++}
++
++// This stream is always used with sub second buffer sizes, where it's
++// sufficient to simply always flush upon Start().
++void SndioAudioOutputStream::Flush() {}
++
++void SndioAudioOutputStream::ThreadLoop(void) {
++  int avail, count, result;
++
++  while (state == kRunning) {
++    // Update volume if needed
++    pthread_mutex_lock(&mutex);
++    if (volpending) {
++      volpending = 0;
++      sio_setvol(hdl, vol);
++    }
++    pthread_mutex_unlock(&mutex);
++
++    // Get data to play
++    const base::TimeDelta delay = AudioTimestampHelper::FramesToTime(hw_delay,
++	params.sample_rate());
++    count = source->OnMoreData(delay, base::TimeTicks::Now(), {}, audio_bus.get());
++    audio_bus->ToInterleaved<SignedInt16SampleTypeTraits>(count, reinterpret_cast<int16_t*>(buffer));
++    if (count == 0) {
++      // We have to submit something to the device
++      count = audio_bus->frames();
++      memset(buffer, 0, count * params.GetBytesPerFrame(kSampleFormat));
++      LOG(WARNING) << "No data to play, running empty cycle.";
++    }
++
++    // Submit data to the device
++    avail = count * params.GetBytesPerFrame(kSampleFormat);
++    result = sio_write(hdl, buffer, avail);
++    if (result == 0) {
++      LOG(WARNING) << "Audio device disconnected.";
++      break;
++    }
++
++    // Update hardware pointer
++    hw_delay += count;
++  }
++}
++
++}  // namespace media
+diff --git a/audio/sndio/sndio_output.h b/audio/sndio/sndio_output.h
+new file mode 100644
+index 0000000000..06c2c6b9f9
+--- /dev/null
++++ b/audio/sndio/sndio_output.h
+@@ -0,0 +1,88 @@
++// Copyright (c) 2012 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef MEDIA_AUDIO_SNDIO_SNDIO_OUTPUT_H_
++#define MEDIA_AUDIO_SNDIO_SNDIO_OUTPUT_H_
++
++#include <pthread.h>
++#include <sndio.h>
++
++#include "base/time/tick_clock.h"
++#include "base/time/time.h"
++#include "media/audio/audio_io.h"
++
++namespace media {
++
++class AudioManagerBase;
++
++// Implementation of AudioOutputStream using sndio(7)
++class SndioAudioOutputStream : public AudioOutputStream {
++ public:
++  // The manager is creating this object
++  SndioAudioOutputStream(const AudioParameters& params,
++                         AudioManagerBase* manager);
++
++  SndioAudioOutputStream(const SndioAudioOutputStream&) = delete;
++  SndioAudioOutputStream& operator=(const SndioAudioOutputStream&) = delete;
++
++  virtual ~SndioAudioOutputStream();
++
++  // Implementation of AudioOutputStream.
++  bool Open() override;
++  void Close() override;
++  void Start(AudioSourceCallback* callback) override;
++  void Stop() override;
++  void SetVolume(double volume) override;
++  void GetVolume(double* volume) override;
++  void Flush() override;
++
++  friend void sndio_onmove(void *arg, int delta);
++  friend void sndio_onvol(void *arg, unsigned int vol);
++  friend void *sndio_threadstart(void *arg);
++
++ private:
++  enum StreamState {
++    kClosed,            // Not opened yet
++    kStopped,           // Device opened, but not started yet
++    kRunning,           // Started, device playing
++    kStopWait           // Stopping, waiting for the real-time thread to exit
++  };
++
++  // C-style call-backs
++  static void OnMoveCallback(void *arg, int delta);
++  static void OnVolCallback(void *arg, unsigned int vol);
++  static void* ThreadEntry(void *arg);
++
++  // Continuously moves data from the producer to the device
++  void ThreadLoop(void);
++
++  // Our creator, the audio manager needs to be notified when we close.
++  AudioManagerBase* manager;
++  // Parameters of the source
++  AudioParameters params;
++  // Source stores data here
++  std::unique_ptr<AudioBus> audio_bus;
++  // Call-back that produces data to play
++  AudioSourceCallback* source;
++  // Handle of the audio device
++  struct sio_hdl* hdl;
++  // Current state of the stream
++  enum StreamState state;
++  // High priority thread running ThreadLoop()
++  pthread_t thread;
++  // Protects vol, volpending and hw_delay
++  pthread_mutex_t mutex;
++  // Current volume in the 0..SIO_MAXVOL range
++  int vol;
++  // Set to 1 if volumes must be refreshed in the realtime thread
++  int volpending;
++  // Number of frames buffered in the hardware
++  int hw_delay;
++  // Temporary buffer where data is stored sndio-compatible format
++  char* buffer;
++};
++
++}  // namespace media
++
++#endif  // MEDIA_AUDIO_SNDIO_SNDIO_OUTPUT_H_
 diff --git a/base/BUILD.gn b/base/BUILD.gn
 index c835d9ea23..6a50a80dfe 100644
 --- a/base/BUILD.gn
@@ -4740,6 +5625,72 @@ index 1f54eef6f4..614b7684f7 100644
  #elif BUILDFLAG(IS_SOLARIS)
    return "Solaris";
  #elif BUILDFLAG(IS_FUCHSIA)
+diff --git a/browser/file_system_access/file_path_watcher/file_path_watcher_bsd.cc b/browser/file_system_access/file_path_watcher/file_path_watcher_bsd.cc
+new file mode 100644
+index 0000000000..6d1b2f48dd
+--- /dev/null
++++ b/browser/file_system_access/file_path_watcher/file_path_watcher_bsd.cc
+@@ -0,0 +1,60 @@
++// Copyright 2024 The Chromium Authors
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "content/browser/file_system_access/file_path_watcher/file_path_watcher.h"
++
++#include <memory>
++
++#include "base/memory/ptr_util.h"
++#include "build/build_config.h"
++#include "content/browser/file_system_access/file_path_watcher/file_path_watcher_kqueue.h"
++
++namespace content {
++
++namespace {
++
++class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate {
++ public:
++  FilePathWatcherImpl() = default;
++  FilePathWatcherImpl(const FilePathWatcherImpl&) = delete;
++  FilePathWatcherImpl& operator=(const FilePathWatcherImpl&) = delete;
++  ~FilePathWatcherImpl() override = default;
++
++  bool Watch(const base::FilePath& path,
++             Type type,
++             const FilePathWatcher::Callback& callback) override {
++    DCHECK(!impl_.get());
++    if (type == Type::kRecursive) {
++      if (!FilePathWatcher::RecursiveWatchAvailable()) {
++        return false;
++      }
++    } else {
++      impl_ = std::make_unique<FilePathWatcherKQueue>();
++    }
++    DCHECK(impl_.get());
++    return impl_->Watch(path, type, callback);
++  }
++
++  void Cancel() override {
++    if (impl_.get()) {
++      impl_->Cancel();
++    }
++    set_cancelled();
++  }
++
++ private:
++  std::unique_ptr<PlatformDelegate> impl_;
++};
++
++}  // namespace
++
++FilePathWatcher::FilePathWatcher()
++    : FilePathWatcher(std::make_unique<FilePathWatcherImpl>()) {}
++
++// static
++size_t FilePathWatcher::GetQuotaLimitImpl() {
++  return std::numeric_limits<size_t>::max();
++}
++
++}  // namespace content
 diff --git a/build/config/BUILD.gn b/build/config/BUILD.gn
 index 56ca3ca739..fddf0c18e7 100644
 --- a/build/config/BUILD.gn
@@ -10323,7 +11274,7 @@ index 30cd3a44b8..cf934e7d57 100644
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
  
 diff --git a/chrome/browser/prefs/browser_prefs.cc b/chrome/browser/prefs/browser_prefs.cc
-index 581384fccb..f7ef38c520 100644
+index 1bb09be779..b13fa432d8 100644
 --- a/chrome/browser/prefs/browser_prefs.cc
 +++ b/chrome/browser/prefs/browser_prefs.cc
 @@ -329,7 +329,7 @@
@@ -10358,7 +11309,7 @@ index 581384fccb..f7ef38c520 100644
  #include "ui/color/system_theme.h"
  #endif
  
-@@ -1785,7 +1785,7 @@ void RegisterLocalState(PrefRegistrySimple* registry) {
+@@ -1792,7 +1792,7 @@ void RegisterLocalState(PrefRegistrySimple* registry) {
    on_device_translation::RegisterLocalStatePrefs(registry);
  #endif  // BUILDFLAG(ENABLE_ON_DEVICE_TRANSLATION)
  
@@ -10367,7 +11318,7 @@ index 581384fccb..f7ef38c520 100644
    WhatsNewUI::RegisterLocalStatePrefs(registry);
  #endif
  
-@@ -1937,7 +1937,7 @@ void RegisterLocalState(PrefRegistrySimple* registry) {
+@@ -1944,7 +1944,7 @@ void RegisterLocalState(PrefRegistrySimple* registry) {
  #endif  // BUILDFLAG(ENABLE_PDF)
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN) || \
@@ -10376,7 +11327,7 @@ index 581384fccb..f7ef38c520 100644
    registry->RegisterBooleanPref(prefs::kChromeForTestingAllowed, true);
  #endif
  
-@@ -2310,13 +2310,13 @@ void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry,
+@@ -2317,13 +2317,13 @@ void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry,
  #endif
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -10472,10 +11423,10 @@ index e0cfeb40e8..db4f0f1176 100644
        l10n_util::GetStringUTF16(IDS_PROFILE_IN_USE_LINUX_RELAUNCH);
    return ShowProcessSingletonDialog(error, relaunch_button_text);
 diff --git a/chrome/browser/profiles/chrome_browser_main_extra_parts_profiles.cc b/chrome/browser/profiles/chrome_browser_main_extra_parts_profiles.cc
-index 0a62c42588..324eaaf603 100644
+index d854728b37..780c52f984 100644
 --- a/chrome/browser/profiles/chrome_browser_main_extra_parts_profiles.cc
 +++ b/chrome/browser/profiles/chrome_browser_main_extra_parts_profiles.cc
-@@ -378,7 +378,7 @@
+@@ -379,7 +379,7 @@
  #endif
  
  #if BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || \
@@ -10484,7 +11435,7 @@ index 0a62c42588..324eaaf603 100644
  #include "chrome/browser/enterprise/client_certificates/certificate_provisioning_service_factory.h"
  #include "chrome/browser/enterprise/client_certificates/certificate_store_factory.h"
  #include "chrome/browser/enterprise/idle/idle_service_factory.h"
-@@ -424,14 +424,14 @@
+@@ -425,14 +425,14 @@
  #endif
  
  #if BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || \
@@ -10501,7 +11452,7 @@ index 0a62c42588..324eaaf603 100644
  #include "chrome/browser/policy/messaging_layer/util/manual_test_heartbeat_event_factory.h"
  #endif
  
-@@ -439,7 +439,7 @@
+@@ -440,7 +440,7 @@
  #include "chrome/browser/history_embeddings/history_embeddings_service_factory.h"
  #endif
  
@@ -10510,7 +11461,7 @@ index 0a62c42588..324eaaf603 100644
  #include "chrome/browser/browser_switcher/browser_switcher_service_factory.h"
  #include "chrome/browser/enterprise/signin/enterprise_signin_service_factory.h"
  #include "chrome/browser/enterprise/signin/oidc_authentication_signin_interceptor_factory.h"
-@@ -664,7 +664,7 @@ void ChromeBrowserMainExtraPartsProfiles::
+@@ -665,7 +665,7 @@ void ChromeBrowserMainExtraPartsProfiles::
    AccountInvestigatorFactory::GetInstance();
    AccountPasswordStoreFactory::GetInstance();
    AccountReconcilorFactory::GetInstance();
@@ -10519,7 +11470,7 @@ index 0a62c42588..324eaaf603 100644
    AccountsPolicyManagerFactory::GetInstance();
  #endif
  #if !BUILDFLAG(IS_ANDROID)
-@@ -763,7 +763,7 @@ void ChromeBrowserMainExtraPartsProfiles::
+@@ -764,7 +764,7 @@ void ChromeBrowserMainExtraPartsProfiles::
    DiceBoundSessionCookieServiceFactory::GetInstance();
  #endif
  #endif
@@ -10528,7 +11479,7 @@ index 0a62c42588..324eaaf603 100644
    browser_switcher::BrowserSwitcherServiceFactory::GetInstance();
  #endif
    browser_sync::UserEventServiceFactory::GetInstance();
-@@ -826,13 +826,13 @@ void ChromeBrowserMainExtraPartsProfiles::
+@@ -827,13 +827,13 @@ void ChromeBrowserMainExtraPartsProfiles::
    collaboration::comments::CommentsServiceFactory::GetInstance();
    collaboration::messaging::MessagingBackendServiceFactory::GetInstance();
  #if BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || \
@@ -10544,7 +11495,7 @@ index 0a62c42588..324eaaf603 100644
    contextual_cueing::ContextualCueingServiceFactory::GetInstance();
  #endif
    CookieSettingsFactory::GetInstance();
-@@ -884,17 +884,17 @@ void ChromeBrowserMainExtraPartsProfiles::
+@@ -885,17 +885,17 @@ void ChromeBrowserMainExtraPartsProfiles::
    enterprise_connectors::ConnectorsServiceFactory::GetInstance();
    enterprise_connectors::ReportingEventRouterFactory::GetInstance();
  #if BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || \
@@ -10565,7 +11516,7 @@ index 0a62c42588..324eaaf603 100644
    enterprise_idle::IdleServiceFactory::GetInstance();
    enterprise_signals::SignalsAggregatorFactory::GetInstance();
  #endif
-@@ -903,10 +903,10 @@ void ChromeBrowserMainExtraPartsProfiles::
+@@ -904,10 +904,10 @@ void ChromeBrowserMainExtraPartsProfiles::
  #endif
    enterprise_reporting::LegacyTechServiceFactory::GetInstance();
  #if BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || \
@@ -10578,7 +11529,7 @@ index 0a62c42588..324eaaf603 100644
    enterprise_signin::EnterpriseSigninServiceFactory::GetInstance();
  #endif
  #if BUILDFLAG(ENABLE_SESSION_SERVICE)
-@@ -1043,7 +1043,7 @@ void ChromeBrowserMainExtraPartsProfiles::
+@@ -1047,7 +1047,7 @@ void ChromeBrowserMainExtraPartsProfiles::
  #if BUILDFLAG(IS_ANDROID)
    MerchantViewerDataManagerFactory::GetInstance();
  #endif
@@ -10587,7 +11538,7 @@ index 0a62c42588..324eaaf603 100644
    metrics::DesktopProfileSessionDurationsServiceFactory::GetInstance();
  #endif
  #if !BUILDFLAG(IS_ANDROID)
-@@ -1130,7 +1130,7 @@ void ChromeBrowserMainExtraPartsProfiles::
+@@ -1134,7 +1134,7 @@ void ChromeBrowserMainExtraPartsProfiles::
    PasswordCounterFactory::GetInstance();
  #endif  // !BUILDFLAG(IS_ANDROID)
  #if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX) || \
@@ -10596,7 +11547,7 @@ index 0a62c42588..324eaaf603 100644
    PasswordManagerBlocklistPolicyFactory::GetInstance();
  #endif
    PasswordManagerSettingsServiceFactory::GetInstance();
-@@ -1175,7 +1175,7 @@ void ChromeBrowserMainExtraPartsProfiles::
+@@ -1179,7 +1179,7 @@ void ChromeBrowserMainExtraPartsProfiles::
  #if BUILDFLAG(IS_CHROMEOS)
    policy::PolicyCertServiceFactory::GetInstance();
  #endif
@@ -10605,7 +11556,7 @@ index 0a62c42588..324eaaf603 100644
    policy::ProfileTokenPolicyWebSigninServiceFactory::GetInstance();
    policy::UserPolicyOidcSigninServiceFactory::GetInstance();
  #endif
-@@ -1218,7 +1218,7 @@ void ChromeBrowserMainExtraPartsProfiles::
+@@ -1222,7 +1222,7 @@ void ChromeBrowserMainExtraPartsProfiles::
  #if !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_CHROMEOS)
    ProfileStatisticsFactory::GetInstance();
  #endif
@@ -10614,7 +11565,7 @@ index 0a62c42588..324eaaf603 100644
    ProfileTokenWebSigninInterceptorFactory::GetInstance();
    OidcAuthenticationSigninInterceptorFactory::GetInstance();
  #endif
-@@ -1238,7 +1238,7 @@ void ChromeBrowserMainExtraPartsProfiles::
+@@ -1242,7 +1242,7 @@ void ChromeBrowserMainExtraPartsProfiles::
    ReduceAcceptLanguageFactory::GetInstance();
    RendererUpdaterFactory::GetInstance();
    regional_capabilities::RegionalCapabilitiesServiceFactory::GetInstance();
@@ -12182,7 +13133,7 @@ index f8f2acc003..6fc629ee84 100644
  #else
    return false;
 diff --git a/chrome/browser/ui/tabs/tab_dialog_manager.cc b/chrome/browser/ui/tabs/tab_dialog_manager.cc
-index 7159cb0e58..e55a45d63e 100644
+index ca089c61e3..f4e9dbbd50 100644
 --- a/chrome/browser/ui/tabs/tab_dialog_manager.cc
 +++ b/chrome/browser/ui/tabs/tab_dialog_manager.cc
 @@ -88,7 +88,7 @@ bool SupportsGlobalScreenCoordinates() {
@@ -14642,7 +15593,7 @@ index c1366e177f..39ef31d58e 100644
  #if BUILDFLAG(GOOGLE_CHROME_BRANDING)
    // Google Chrome packaged as a snap is a special case: the application name
 diff --git a/chrome/common/chrome_features.cc b/chrome/common/chrome_features.cc
-index f2871c712d..02283a8974 100644
+index 3324363afc..d693b2afd1 100644
 --- a/chrome/common/chrome_features.cc
 +++ b/chrome/common/chrome_features.cc
 @@ -64,7 +64,7 @@ BASE_FEATURE(UseAdHocSigningForWebAppShims, base::FEATURE_DISABLED_BY_DEFAULT);
@@ -14690,7 +15641,7 @@ index f2871c712d..02283a8974 100644
               base::FEATURE_ENABLED_BY_DEFAULT);
  #else
               base::FEATURE_DISABLED_BY_DEFAULT);
-@@ -997,7 +997,7 @@ BASE_FEATURE(KAnonymityServiceOHTTPRequests, base::FEATURE_ENABLED_BY_DEFAULT);
+@@ -1008,7 +1008,7 @@ BASE_FEATURE(KAnonymityServiceOHTTPRequests, base::FEATURE_ENABLED_BY_DEFAULT);
  // public keys.
  BASE_FEATURE(KAnonymityServiceStorage, base::FEATURE_ENABLED_BY_DEFAULT);
  
@@ -14699,7 +15650,7 @@ index f2871c712d..02283a8974 100644
  BASE_FEATURE(LinuxLowMemoryMonitor, base::FEATURE_DISABLED_BY_DEFAULT);
  // Values taken from the low-memory-monitor documentation and also apply to the
  // portal API:
-@@ -1008,7 +1008,7 @@ constexpr base::FeatureParam<int> kLinuxLowMemoryMonitorCriticalLevel{
+@@ -1019,7 +1019,7 @@ constexpr base::FeatureParam<int> kLinuxLowMemoryMonitorCriticalLevel{
      &kLinuxLowMemoryMonitor, "critical_level", 255};
  #endif  // BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CHROMEOS)
  
@@ -14709,7 +15660,7 @@ index f2871c712d..02283a8974 100644
  #endif
  
 diff --git a/chrome/common/chrome_features.h b/chrome/common/chrome_features.h
-index dd57df48cd..53bb3346db 100644
+index b580713386..e641d136d8 100644
 --- a/chrome/common/chrome_features.h
 +++ b/chrome/common/chrome_features.h
 @@ -49,13 +49,13 @@ BASE_DECLARE_FEATURE(kUseAdHocSigningForWebAppShims);
@@ -14737,7 +15688,7 @@ index dd57df48cd..53bb3346db 100644
  COMPONENT_EXPORT(CHROME_FEATURES) BASE_DECLARE_FEATURE(kChromeAppsDeprecation);
  COMPONENT_EXPORT(CHROME_FEATURES)
  BASE_DECLARE_FEATURE(kShortcutsNotApps);
-@@ -714,7 +714,7 @@ BASE_DECLARE_FEATURE(kKAnonymityServiceOHTTPRequests);
+@@ -730,7 +730,7 @@ BASE_DECLARE_FEATURE(kKAnonymityServiceOHTTPRequests);
  COMPONENT_EXPORT(CHROME_FEATURES)
  BASE_DECLARE_FEATURE(kKAnonymityServiceStorage);
  
@@ -14746,7 +15697,7 @@ index dd57df48cd..53bb3346db 100644
  COMPONENT_EXPORT(CHROME_FEATURES) BASE_DECLARE_FEATURE(kLinuxLowMemoryMonitor);
  COMPONENT_EXPORT(CHROME_FEATURES)
  extern const base::FeatureParam<int> kLinuxLowMemoryMonitorModerateLevel;
-@@ -722,7 +722,7 @@ COMPONENT_EXPORT(CHROME_FEATURES)
+@@ -738,7 +738,7 @@ COMPONENT_EXPORT(CHROME_FEATURES)
  extern const base::FeatureParam<int> kLinuxLowMemoryMonitorCriticalLevel;
  #endif  // BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CHROMEOS)
  
@@ -14884,7 +15835,7 @@ index d14bf158b1..e8d0d54d43 100644
  bool GetUserDownloadsDirectorySafe(base::FilePath* result);
  #endif
 diff --git a/chrome/common/chrome_switches.cc b/chrome/common/chrome_switches.cc
-index d698c2f50c..40c31761e5 100644
+index ad982f0a1a..64ada53234 100644
 --- a/chrome/common/chrome_switches.cc
 +++ b/chrome/common/chrome_switches.cc
 @@ -914,7 +914,7 @@ const char kDebugPrint[] = "debug-print";
@@ -14896,17 +15847,17 @@ index d698c2f50c..40c31761e5 100644
  const char kEnableNewAppMenuIcon[] = "enable-new-app-menu-icon";
  
  // Causes the browser to launch directly in guest mode.
-@@ -946,7 +946,7 @@ const char kGlicSkipReloadAfterNavigation[] =
- const char kGlicHostLogging[] = "glic-host-logging";
+@@ -950,7 +950,7 @@ const char kGlicHostLogging[] = "glic-host-logging";
+ const char kGlicAdminRedirectPatterns[] = "glic-admin-redirect-patterns";
  #endif
  
 -#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
 +#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN) || BUILDFLAG(IS_BSD)
  // Writes open and installed web apps for each profile to the specified file
- // without launching a new browser window or tab. Pass a absolute file path to
- // specify where to output the information. Can be used together with optional
+ // without launching a new browser window or tab. Pass a absolute file path
+ // to specify where to output the information. Can be used together with
 diff --git a/chrome/common/chrome_switches.h b/chrome/common/chrome_switches.h
-index c8de609ea3..b2741221ec 100644
+index a4ac956da5..af5ca6fc60 100644
 --- a/chrome/common/chrome_switches.h
 +++ b/chrome/common/chrome_switches.h
 @@ -278,7 +278,7 @@ extern const char kDebugPrint[];
@@ -14918,8 +15869,8 @@ index c8de609ea3..b2741221ec 100644
  extern const char kEnableNewAppMenuIcon[];
  extern const char kGuest[];
  extern const char kForceNtpMobilePromo[];
-@@ -297,7 +297,7 @@ extern const char kGlicSkipReloadAfterNavigation[];
- extern const char kGlicHostLogging[];
+@@ -298,7 +298,7 @@ extern const char kGlicHostLogging[];
+ extern const char kGlicAdminRedirectPatterns[];
  #endif
  
 -#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
@@ -15661,6 +16612,106 @@ index df98b60695..7f208b10f9 100644
  int64_t MonotonicClockNow() {
    timespec now = {0, 0};
  #if BUILDFLAG(MEDIA_CLOCK_MONOTONIC_RAW)
+diff --git a/common/gpu_pre_sandbox_hook_bsd.cc b/common/gpu_pre_sandbox_hook_bsd.cc
+new file mode 100644
+index 0000000000..9dcb33d099
+--- /dev/null
++++ b/common/gpu_pre_sandbox_hook_bsd.cc
+@@ -0,0 +1,68 @@
++// Copyright 2023 The Chromium Authors
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "content/common/gpu_pre_sandbox_hook_bsd.h"
++
++#include <dlfcn.h>
++#include <errno.h>
++#include <sys/stat.h>
++
++#include <memory>
++#include <sstream>
++#include <utility>
++#include <vector>
++
++#include "base/base_paths.h"
++#include "base/files/file_enumerator.h"
++#include "base/files/file_path.h"
++#include "base/files/scoped_file.h"
++#include "base/functional/bind.h"
++#include "base/logging.h"
++#include "base/path_service.h"
++#include "base/strings/stringprintf.h"
++#include "build/build_config.h"
++#include "build/buildflag.h"
++#include "build/chromeos_buildflags.h"
++#include "content/public/common/content_switches.h"
++#include "media/gpu/buildflags.h"
++
++namespace content {
++namespace {
++
++constexpr int dlopen_flag = RTLD_NOW | RTLD_GLOBAL | RTLD_NODELETE;
++
++void LoadVulkanLibraries() {
++  // Try to preload Vulkan libraries. Failure is not an error as not all may be
++  // present.
++  const char* kLibraries[] = {
++      "libvulkan.so",
++      "libvulkan_intel.so",
++      "libvulkan_intel_hasvk.so",
++      "libvulkan_radeon.so",
++  };
++  for (const auto* library : kLibraries) {
++    dlopen(library, dlopen_flag);
++  }
++}
++
++}  // namespace
++
++bool LoadLibrariesForGpu(
++    const sandbox::policy::SandboxSeccompBPF::Options& options) {
++  LoadVulkanLibraries();
++
++  return true;
++}
++
++bool GpuPreSandboxHook(sandbox::policy::SandboxLinux::Options options) {
++  if (!LoadLibrariesForGpu(options))
++    return false;
++
++  // TODO(tsepez): enable namspace sandbox here once crashes are understood.
++
++  errno = 0;
++  return true;
++}
++
++}  // namespace content
+diff --git a/common/gpu_pre_sandbox_hook_bsd.h b/common/gpu_pre_sandbox_hook_bsd.h
+new file mode 100644
+index 0000000000..1cb1d72b50
+--- /dev/null
++++ b/common/gpu_pre_sandbox_hook_bsd.h
+@@ -0,0 +1,20 @@
++// Copyright 2017 The Chromium Authors
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef CONTENT_COMMON_GPU_PRE_SANDBOX_HOOK_BSD_H_
++#define CONTENT_COMMON_GPU_PRE_SANDBOX_HOOK_BSD_H_
++
++#include "base/component_export.h"
++#include "sandbox/policy/sandbox.h"
++
++namespace content {
++
++// A pre-sandbox hook to use on Linux-based systems in sandboxed processes that
++// require general GPU usage.
++COMPONENT_EXPORT(GPU_PRE_SANDBOX_HOOK)
++bool GpuPreSandboxHook(sandbox::policy::SandboxLinux::Options options);
++
++}  // namespace content
++
++#endif  // CONTENT_COMMON_GPU_PRE_SANDBOX_HOOK_BSD_H_
 diff --git a/components/BUILD.gn b/components/BUILD.gn
 index 062225d7ca..5ba93f9150 100644
 --- a/components/BUILD.gn
@@ -19775,7 +20826,7 @@ index 0c9dabd7e8..33f0787bf5 100644
      compositor_->OnCompleteSwapWithNewSize(size);
    }
 diff --git a/content/browser/devtools/devtools_frontend_host_impl.cc b/content/browser/devtools/devtools_frontend_host_impl.cc
-index 43f8dbf09e..f13d523c57 100644
+index f5e1ba03eb..8462460bef 100644
 --- a/content/browser/devtools/devtools_frontend_host_impl.cc
 +++ b/content/browser/devtools/devtools_frontend_host_impl.cc
 @@ -25,7 +25,7 @@
@@ -19796,16 +20847,7 @@ index 43f8dbf09e..f13d523c57 100644
  // Remove the pieces of the URL we don't want to send back with the error
  // reports. In particular, do not send query or fragments as those can have
  // privacy-sensitive information in them.
-@@ -107,7 +107,7 @@ DevToolsFrontendHostImpl::DevToolsFrontendHostImpl(
-     const HandleMessageCallback& handle_message_callback)
-     : web_contents_(WebContents::FromRenderFrameHost(frame_host)),
-       handle_message_callback_(handle_message_callback) {
--#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
-   Observe(web_contents_);
- #endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-   mojo::AssociatedRemote<blink::mojom::DevToolsFrontend> frontend;
-@@ -132,7 +132,7 @@ void DevToolsFrontendHostImpl::DispatchEmbedderMessage(
+@@ -133,7 +133,7 @@ void DevToolsFrontendHostImpl::DispatchEmbedderMessage(
    handle_message_callback_.Run(std::move(message));
  }
  
@@ -19815,10 +20857,10 @@ index 43f8dbf09e..f13d523c57 100644
      RenderFrameHost* source_frame,
      blink::mojom::ConsoleMessageLevel log_level,
 diff --git a/content/browser/devtools/devtools_frontend_host_impl.h b/content/browser/devtools/devtools_frontend_host_impl.h
-index b4342cfd4a..bda0803140 100644
+index 8891f42bce..c9dea40093 100644
 --- a/content/browser/devtools/devtools_frontend_host_impl.h
 +++ b/content/browser/devtools/devtools_frontend_host_impl.h
-@@ -34,7 +34,7 @@ class DevToolsFrontendHostImpl : public DevToolsFrontendHost,
+@@ -33,7 +33,7 @@ class DevToolsFrontendHostImpl : public DevToolsFrontendHost,
  
    void BadMessageReceived() override;
  
@@ -20146,7 +21188,7 @@ index 41b815dcf4..b335ac965d 100644
            ->browser()
            ->ShouldRunOutOfProcessSystemDnsResolution() &&
 diff --git a/content/browser/renderer_host/delegated_frame_host.cc b/content/browser/renderer_host/delegated_frame_host.cc
-index 315dc4b132..6957e5fa67 100644
+index 6519cfc108..7d1b1b3af9 100644
 --- a/content/browser/renderer_host/delegated_frame_host.cc
 +++ b/content/browser/renderer_host/delegated_frame_host.cc
 @@ -334,7 +334,7 @@ void DelegatedFrameHost::EmbedSurface(
@@ -22170,6 +23212,52 @@ index c7ee91878e..bc52871d21 100644
  }
  
  }  // namespace content
+diff --git a/crashpad/crashpad/client/crashpad_client_posix.cc b/crashpad/crashpad/client/crashpad_client_posix.cc
+new file mode 100644
+index 0000000000..f0f485433e
+--- /dev/null
++++ b/crashpad/crashpad/client/crashpad_client_posix.cc
+@@ -0,0 +1,40 @@
++// Copyright 2017 The Crashpad Authors. All rights reserved.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++#include "client/crashpad_client.h"
++
++#include "base/logging.h"
++#include "base/notreached.h"
++
++namespace crashpad {
++
++CrashpadClient::CrashpadClient() {}
++
++CrashpadClient::~CrashpadClient() {}
++
++bool CrashpadClient::StartHandler(
++    const base::FilePath& handler,
++    const base::FilePath& database,
++    const base::FilePath& metrics_dir,
++    const std::string& url,
++    const std::map<std::string, std::string>& annotations,
++    const std::vector<std::string>& arguments,
++    bool restartable,
++    bool asynchronous_start,   
++    const std::vector<base::FilePath>& attachments) {
++  NOTREACHED();  // TODO(scottmg): https://crashpad.chromium.org/bug/196
++  return false;
++}
++
++}  // namespace crashpad
 diff --git a/device/bluetooth/bluetooth_adapter.cc b/device/bluetooth/bluetooth_adapter.cc
 index b167d89125..c76925d475 100644
 --- a/device/bluetooth/bluetooth_adapter.cc
@@ -22233,6 +23321,1652 @@ index 9042c2d5e9..471f865c71 100644
  #include "device/gamepad/hid_writer_linux.h"
  
  #include <unistd.h>
+diff --git a/device/hid/hid_connection_fido.cc b/device/hid/hid_connection_fido.cc
+new file mode 100644
+index 0000000000..621890f49a
+--- /dev/null
++++ b/device/hid/hid_connection_fido.cc
+@@ -0,0 +1,216 @@
++// Copyright 2014 The Chromium Authors
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "services/device/hid/hid_connection_fido.h"
++
++#include <errno.h>
++#include <sys/ioctl.h>
++
++#include <memory>
++#include <string>
++#include <utility>
++
++#include "base/files/file_descriptor_watcher_posix.h"
++#include "base/memory/ref_counted_memory.h"
++#include "base/posix/eintr_wrapper.h"
++#include "base/threading/scoped_blocking_call.h"
++#include "components/device_event_log/device_event_log.h"
++#include "services/device/hid/hid_service.h"
++
++namespace device {
++
++class HidConnectionFido::BlockingTaskRunnerHelper {
++ public:
++  BlockingTaskRunnerHelper(base::ScopedFD fd,
++                           scoped_refptr<HidDeviceInfo> device_info,
++                           base::WeakPtr<HidConnectionFido> connection)
++      : fd_(std::move(fd)),
++        connection_(connection),
++        origin_task_runner_(base::SequencedTaskRunner::GetCurrentDefault()) {
++    DETACH_FROM_SEQUENCE(sequence_checker_);
++    // Report buffers must always have room for the report ID.
++    report_buffer_size_ = device_info->max_input_report_size() + 1;
++    has_report_id_ = device_info->has_report_id();
++  }
++
++  BlockingTaskRunnerHelper(const BlockingTaskRunnerHelper&) = delete;
++  BlockingTaskRunnerHelper& operator=(const BlockingTaskRunnerHelper&) = delete;
++
++  ~BlockingTaskRunnerHelper() {
++    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++  }
++
++  // Starts the FileDescriptorWatcher that reads input events from the device.
++  // Must be called on a thread that has a base::MessageLoopForIO.
++  void Start() {
++    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++
++    file_watcher_ = base::FileDescriptorWatcher::WatchReadable(
++        fd_.get(), base::BindRepeating(
++                       &BlockingTaskRunnerHelper::OnFileCanReadWithoutBlocking,
++                       base::Unretained(this)));
++  }
++
++  void Write(scoped_refptr<base::RefCountedBytes> buffer,
++             WriteCallback callback) {
++    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++    base::ScopedBlockingCall scoped_blocking_call(
++        FROM_HERE, base::BlockingType::MAY_BLOCK);
++
++    auto data = buffer->data();
++    size_t size = buffer->size();
++    // if report id is 0, it shouldn't be included
++    if (data[0] == 0) {
++      data++;
++      size--;
++    }
++
++    ssize_t result =
++        HANDLE_EINTR(write(fd_.get(), data, size));
++    if (result < 0) {
++      HID_PLOG(EVENT) << "Write failed";
++      origin_task_runner_->PostTask(FROM_HERE,
++                                    base::BindOnce(std::move(callback), false));
++    } else {
++      if (static_cast<size_t>(result) != size) {
++        HID_LOG(EVENT) << "Incomplete HID write: " << result
++                       << " != " << buffer->size();
++      }
++      origin_task_runner_->PostTask(FROM_HERE,
++                                    base::BindOnce(std::move(callback), true));
++    }
++  }
++
++  void GetFeatureReport(uint8_t report_id,
++                        scoped_refptr<base::RefCountedBytes> buffer,
++                        ReadCallback callback) {
++    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++    base::ScopedBlockingCall scoped_blocking_call(
++        FROM_HERE, base::BlockingType::MAY_BLOCK);
++    HID_PLOG(EVENT) << "GendFeatureReport not implemented on OpenBSD";
++    origin_task_runner_->PostTask(
++        FROM_HERE, base::BindOnce(std::move(callback), false, nullptr, 0));
++  }
++
++  void SendFeatureReport(scoped_refptr<base::RefCountedBytes> buffer,
++                         WriteCallback callback) {
++    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++    base::ScopedBlockingCall scoped_blocking_call(
++        FROM_HERE, base::BlockingType::MAY_BLOCK);
++    HID_PLOG(EVENT) << "SendFeatureReport not implemented on OpenBSD";
++    origin_task_runner_->PostTask(FROM_HERE,
++                                    base::BindOnce(std::move(callback), false));
++  }
++
++ private:
++  void OnFileCanReadWithoutBlocking() {
++    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++
++    auto buffer =
++        base::MakeRefCounted<base::RefCountedBytes>(report_buffer_size_);
++    uint8_t* data = buffer->as_vector().data();
++    size_t length = report_buffer_size_;
++    if (!has_report_id_) {
++      // Fido will not prefix the buffer with a report ID if report IDs are not
++      // used by the device. Prefix the buffer with 0.
++      *data++ = 0;
++      length--;
++    }
++
++    ssize_t bytes_read = HANDLE_EINTR(read(fd_.get(), data, length));
++    if (bytes_read < 0) {
++      if (errno != EAGAIN) {
++        HID_PLOG(EVENT) << "Read failed";
++        // This assumes that the error is unrecoverable and disables reading
++        // from the device until it has been re-opened.
++        // TODO(reillyg): Investigate starting and stopping the file descriptor
++        // watcher in response to pending read requests so that per-request
++        // errors can be returned to the client.
++        file_watcher_.reset();
++      }
++      return;
++    }
++    if (!has_report_id_) {
++      // Behave as if the byte prefixed above as the the report ID was read.
++      bytes_read++;
++    }
++
++    origin_task_runner_->PostTask(
++        FROM_HERE, base::BindOnce(&HidConnectionFido::ProcessInputReport,
++                                  connection_, buffer, bytes_read));
++  }
++
++  SEQUENCE_CHECKER(sequence_checker_);
++  base::ScopedFD fd_;
++  size_t report_buffer_size_;
++  bool has_report_id_;
++  base::WeakPtr<HidConnectionFido> connection_;
++  const scoped_refptr<base::SequencedTaskRunner> origin_task_runner_;
++  std::unique_ptr<base::FileDescriptorWatcher::Controller> file_watcher_;
++};
++
++HidConnectionFido::HidConnectionFido(
++    scoped_refptr<HidDeviceInfo> device_info,
++    base::ScopedFD fd,
++    scoped_refptr<base::SequencedTaskRunner> blocking_task_runner,
++    bool allow_protected_reports,
++    bool allow_fido_reports)
++    : HidConnection(device_info, allow_protected_reports, allow_fido_reports),
++      helper_(nullptr, base::OnTaskRunnerDeleter(blocking_task_runner)),
++      blocking_task_runner_(std::move(blocking_task_runner)) {
++  helper_.reset(new BlockingTaskRunnerHelper(std::move(fd), device_info,
++                                             weak_factory_.GetWeakPtr()));
++  blocking_task_runner_->PostTask(
++      FROM_HERE, base::BindOnce(&BlockingTaskRunnerHelper::Start,
++                                base::Unretained(helper_.get())));
++}
++
++HidConnectionFido::~HidConnectionFido() {}
++
++void HidConnectionFido::PlatformClose() {
++  // By closing the device on the blocking task runner 1) the requirement that
++  // base::ScopedFD is destroyed on a thread where I/O is allowed is satisfied
++  // and 2) any tasks posted to this task runner that refer to this file will
++  // complete before it is closed.
++  helper_.reset();
++}
++
++void HidConnectionFido::PlatformWrite(
++    scoped_refptr<base::RefCountedBytes> buffer,
++    WriteCallback callback) {
++  // Fido expects the first byte of the buffer to always be a report ID so the
++  // buffer can be used directly.
++  blocking_task_runner_->PostTask(
++      FROM_HERE, base::BindOnce(&BlockingTaskRunnerHelper::Write,
++                                base::Unretained(helper_.get()), buffer,
++                                std::move(callback)));
++}
++
++void HidConnectionFido::PlatformGetFeatureReport(uint8_t report_id,
++                                                  ReadCallback callback) {
++  // The first byte of the destination buffer is the report ID being requested
++  // and is overwritten by the feature report.
++  DCHECK_GT(device_info()->max_feature_report_size(), 0u);
++  auto buffer = base::MakeRefCounted<base::RefCountedBytes>(
++      device_info()->max_feature_report_size() + 1);
++  buffer->as_vector().data()[0] = report_id;
++
++  blocking_task_runner_->PostTask(
++      FROM_HERE, base::BindOnce(&BlockingTaskRunnerHelper::GetFeatureReport,
++                                base::Unretained(helper_.get()), report_id,
++                                buffer, std::move(callback)));
++}
++
++void HidConnectionFido::PlatformSendFeatureReport(
++    scoped_refptr<base::RefCountedBytes> buffer,
++    WriteCallback callback) {
++  // Fido expects the first byte of the buffer to always be a report ID so the
++  // buffer can be used directly.
++  blocking_task_runner_->PostTask(
++      FROM_HERE, base::BindOnce(&BlockingTaskRunnerHelper::SendFeatureReport,
++                                base::Unretained(helper_.get()), buffer,
++                                std::move(callback)));
++}
++
++}  // namespace device
+diff --git a/device/hid/hid_connection_fido.h b/device/hid/hid_connection_fido.h
+new file mode 100644
+index 0000000000..e3557d225a
+--- /dev/null
++++ b/device/hid/hid_connection_fido.h
+@@ -0,0 +1,60 @@
++// Copyright 2014 The Chromium Authors
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef SERVICES_DEVICE_HID_HID_CONNECTION_LINUX_H_
++#define SERVICES_DEVICE_HID_HID_CONNECTION_LINUX_H_
++
++#include <stddef.h>
++#include <stdint.h>
++
++#include "base/files/scoped_file.h"
++#include "base/memory/weak_ptr.h"
++#include "base/task/sequenced_task_runner.h"
++#include "services/device/hid/hid_connection.h"
++
++namespace base {
++class SequencedTaskRunner;
++}
++
++namespace device {
++
++class HidConnectionFido : public HidConnection {
++ public:
++  HidConnectionFido(
++      scoped_refptr<HidDeviceInfo> device_info,
++      base::ScopedFD fd,
++      scoped_refptr<base::SequencedTaskRunner> blocking_task_runner,
++      bool allow_protected_reports,
++      bool allow_fido_reports);
++  HidConnectionFido(HidConnectionFido&) = delete;
++  HidConnectionFido& operator=(HidConnectionFido&) = delete;
++
++ private:
++  friend class base::RefCountedThreadSafe<HidConnectionFido>;
++  class BlockingTaskRunnerHelper;
++
++  ~HidConnectionFido() override;
++
++  // HidConnection implementation.
++  void PlatformClose() override;
++  void PlatformWrite(scoped_refptr<base::RefCountedBytes> buffer,
++                     WriteCallback callback) override;
++  void PlatformGetFeatureReport(uint8_t report_id,
++                                ReadCallback callback) override;
++  void PlatformSendFeatureReport(scoped_refptr<base::RefCountedBytes> buffer,
++                                 WriteCallback callback) override;
++
++  // |helper_| lives on the sequence to which |blocking_task_runner_| posts
++  // tasks so all calls must be posted there including this object's
++  // destruction.
++  std::unique_ptr<BlockingTaskRunnerHelper, base::OnTaskRunnerDeleter> helper_;
++
++  const scoped_refptr<base::SequencedTaskRunner> blocking_task_runner_;
++
++  base::WeakPtrFactory<HidConnectionFido> weak_factory_{this};
++};
++
++}  // namespace device
++
++#endif  // SERVICES_DEVICE_HID_HID_CONNECTION_LINUX_H_
+diff --git a/device/hid/hid_connection_freebsd.cc b/device/hid/hid_connection_freebsd.cc
+new file mode 100644
+index 0000000000..97d5932f81
+--- /dev/null
++++ b/device/hid/hid_connection_freebsd.cc
+@@ -0,0 +1,240 @@
++// Copyright (c) 2014 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "services/device/hid/hid_connection_freebsd.h"
++
++#include <dev/usb/usbhid.h>
++#include <dev/usb/usb_ioctl.h>
++
++#include "base/files/file_descriptor_watcher_posix.h"
++#include "base/location.h"
++#include "base/numerics/safe_math.h"
++#include "base/posix/eintr_wrapper.h"
++#include "base/strings/stringprintf.h"
++#include "base/task/single_thread_task_runner.h"
++#include "base/threading/scoped_blocking_call.h"
++#include "base/threading/thread_restrictions.h"
++#include "components/device_event_log/device_event_log.h"
++#include "services/device/hid/hid_service.h"
++
++namespace device {
++
++class HidConnectionFreeBSD::BlockingTaskRunnerHelper {
++ public:
++  BlockingTaskRunnerHelper(base::ScopedFD fd,
++                     scoped_refptr<HidDeviceInfo> device_info,
++                     base::WeakPtr<HidConnectionFreeBSD> connection)
++      : fd_(std::move(fd)),
++        connection_(connection),
++	origin_task_runner_(base::SequencedTaskRunner::GetCurrentDefault()) {
++    DETACH_FROM_SEQUENCE(sequence_checker_);
++    // Report buffers must always have room for the report ID.
++    report_buffer_size_ = device_info->max_input_report_size() + 1;
++    has_report_id_ = device_info->has_report_id();
++  }
++
++  BlockingTaskRunnerHelper(const BlockingTaskRunnerHelper&) = delete;
++  BlockingTaskRunnerHelper& operator=(const BlockingTaskRunnerHelper&) = delete;
++
++  ~BlockingTaskRunnerHelper() { DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_); }
++
++  // Starts the FileDescriptorWatcher that reads input events from the device.
++  // Must be called on a thread that has a base::MessageLoopForIO.
++  void Start() {
++    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++    base::AssertBlockingAllowed();
++
++    file_watcher_ = base::FileDescriptorWatcher::WatchReadable(
++        fd_.get(), base::BindRepeating(&BlockingTaskRunnerHelper::OnFileCanReadWithoutBlocking,
++                                       base::Unretained(this)));
++  }
++
++  void Write(scoped_refptr<base::RefCountedBytes> buffer,
++             WriteCallback callback) {
++    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++    base::ScopedBlockingCall scoped_blocking_call(
++        FROM_HERE, base::BlockingType::MAY_BLOCK);
++
++    auto data = buffer->as_vector().data();
++    size_t size = buffer->size();
++    // if report id is 0, it shouldn't be included
++    if (data[0] == 0) {
++      data++;
++      size--;
++    }
++
++    ssize_t result = HANDLE_EINTR(write(fd_.get(), data, size));
++    if (result < 0) {
++      HID_PLOG(EVENT) << "Write failed";
++      origin_task_runner_->PostTask(FROM_HERE, base::BindOnce(std::move(callback), false));
++    } else {
++      if (static_cast<size_t>(result) != size)
++        HID_LOG(EVENT) << "Incomplete HID write: " << result << " != " << size;
++      origin_task_runner_->PostTask(FROM_HERE, base::BindOnce(std::move(callback), true));
++    }
++  }
++
++  void GetFeatureReport(uint8_t report_id,
++                        scoped_refptr<base::RefCountedBytes> buffer,
++                        ReadCallback callback) {
++    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++    base::ScopedBlockingCall scoped_blocking_call(
++        FROM_HERE, base::BlockingType::MAY_BLOCK);
++    struct usb_gen_descriptor ugd;
++    ugd.ugd_report_type = UHID_FEATURE_REPORT;
++    ugd.ugd_data = buffer->as_vector().data();
++    ugd.ugd_maxlen = buffer->size();
++    int result = HANDLE_EINTR(
++        ioctl(fd_.get(), USB_GET_REPORT, &ugd));
++    if (result < 0) {
++      HID_PLOG(EVENT) << "Failed to get feature report";
++      origin_task_runner_->PostTask(FROM_HERE,
++                                    base::BindOnce(std::move(callback), false, nullptr, 0));
++    } else if (result == 0) {
++      HID_LOG(EVENT) << "Get feature result too short.";
++      origin_task_runner_->PostTask(FROM_HERE,
++                                    base::BindOnce(std::move(callback), false, nullptr, 0));
++    } else {
++      origin_task_runner_->PostTask(FROM_HERE,
++                                    base::BindOnce(std::move(callback), true, buffer, result));
++    }
++  }
++
++  void SendFeatureReport(scoped_refptr<base::RefCountedBytes> buffer,
++                         WriteCallback callback) {
++    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++    struct usb_gen_descriptor ugd;
++    ugd.ugd_report_type = UHID_FEATURE_REPORT;
++    ugd.ugd_data = buffer->as_vector().data();
++    ugd.ugd_maxlen = buffer->size();
++    // FreeBSD does not require report id if it's not used
++    if (buffer->data()[0] == 0) {
++      ugd.ugd_data = buffer->as_vector().data() + 1;
++      ugd.ugd_maxlen = buffer->size() - 1;
++    } else {
++      ugd.ugd_data = buffer->as_vector().data();
++      ugd.ugd_maxlen = buffer->size();
++    }
++    int result = HANDLE_EINTR(
++        ioctl(fd_.get(), USB_SET_REPORT, &ugd));
++    if (result < 0) {
++      HID_PLOG(EVENT) << "Failed to send feature report";
++      origin_task_runner_->PostTask(FROM_HERE,
++                                    base::BindOnce(std::move(callback), false));
++    } else {
++      origin_task_runner_->PostTask(FROM_HERE,
++                                    base::BindOnce(std::move(callback), true));
++    }
++  }
++
++ private:
++  void OnFileCanReadWithoutBlocking() {
++    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++
++    scoped_refptr<base::RefCountedBytes> buffer(new base::RefCountedBytes(report_buffer_size_));
++    unsigned char* data = buffer->as_vector().data();
++    size_t length = report_buffer_size_;
++    if (!has_report_id_) {
++      // FreeBSD will not prefix the buffer with a report ID if report IDs are not
++      // used by the device. Prefix the buffer with 0.
++      *data++ = 0;
++      length--;
++    }
++
++    ssize_t bytes_read = HANDLE_EINTR(read(fd_.get(), data, length));
++    if (bytes_read < 0) {
++      if (errno != EAGAIN) {
++        HID_PLOG(EVENT) << "Read failed";
++        // This assumes that the error is unrecoverable and disables reading
++        // from the device until it has been re-opened.
++        // TODO(reillyg): Investigate starting and stopping the file descriptor
++        // watcher in response to pending read requests so that per-request
++        // errors can be returned to the client.
++        file_watcher_.reset();
++      }
++      return;
++    }
++    if (!has_report_id_) {
++      // Behave as if the byte prefixed above as the the report ID was read.
++      bytes_read++;
++    }
++
++    origin_task_runner_->PostTask(
++        FROM_HERE, base::BindOnce(&HidConnectionFreeBSD::ProcessInputReport,
++                              connection_, buffer, bytes_read));
++  }
++
++  SEQUENCE_CHECKER(sequence_checker_);
++  base::ScopedFD fd_;
++  size_t report_buffer_size_;
++  bool has_report_id_;
++  base::WeakPtr<HidConnectionFreeBSD> connection_;
++  const scoped_refptr<base::SequencedTaskRunner> origin_task_runner_;
++  std::unique_ptr<base::FileDescriptorWatcher::Controller> file_watcher_;
++};
++
++HidConnectionFreeBSD::HidConnectionFreeBSD(
++    scoped_refptr<HidDeviceInfo> device_info,
++    base::ScopedFD fd,
++    scoped_refptr<base::SequencedTaskRunner> blocking_task_runner,
++    bool allow_protected_reports,
++    bool allow_fido_reports)
++    : HidConnection(device_info, allow_protected_reports, allow_fido_reports),
++      helper_(nullptr, base::OnTaskRunnerDeleter(blocking_task_runner)),
++      blocking_task_runner_(std::move(blocking_task_runner)) {
++  helper_.reset(new BlockingTaskRunnerHelper(std::move(fd), device_info,
++                                                 weak_factory_.GetWeakPtr()));
++  blocking_task_runner_->PostTask(
++      FROM_HERE, base::BindOnce(&BlockingTaskRunnerHelper::Start,
++                                base::Unretained(helper_.get())));
++}
++
++HidConnectionFreeBSD::~HidConnectionFreeBSD() {}
++
++void HidConnectionFreeBSD::PlatformClose() {
++  // By closing the device on the blocking task runner 1) the requirement that
++  // base::ScopedFD is destroyed on a thread where I/O is allowed is satisfied
++  // and 2) any tasks posted to this task runner that refer to this file will
++  // complete before it is closed.
++  blocking_task_runner_->DeleteSoon(FROM_HERE, helper_.release());
++}
++
++void HidConnectionFreeBSD::PlatformWrite(scoped_refptr<base::RefCountedBytes> buffer,
++                                     WriteCallback callback) {
++
++  blocking_task_runner_->PostTask(
++      FROM_HERE,
++      base::BindOnce(&BlockingTaskRunnerHelper::Write, base::Unretained(helper_.get()),
++                 buffer, std::move(callback)));
++}
++
++void HidConnectionFreeBSD::PlatformGetFeatureReport(uint8_t report_id,
++                                                ReadCallback callback) {
++  // The first byte of the destination buffer is the report ID being requested
++  // and is overwritten by the feature report.
++  DCHECK_GT(device_info()->max_feature_report_size(), 0u);
++  scoped_refptr<base::RefCountedBytes> buffer(
++      new base::RefCountedBytes(device_info()->max_feature_report_size() + 1));
++  if (report_id != 0)
++    buffer->as_vector().data()[0] = report_id;
++
++  blocking_task_runner_->PostTask(
++      FROM_HERE,
++      base::BindOnce(&BlockingTaskRunnerHelper::GetFeatureReport,
++                 base::Unretained(helper_.get()), report_id,
++                 buffer, std::move(callback)));
++}
++
++void HidConnectionFreeBSD::PlatformSendFeatureReport(
++    scoped_refptr<base::RefCountedBytes> buffer,
++    WriteCallback callback) {
++  base::ScopedBlockingCall scoped_blocking_call(
++      FROM_HERE, base::BlockingType::MAY_BLOCK);
++  blocking_task_runner_->PostTask(
++      FROM_HERE,
++      base::BindOnce(&BlockingTaskRunnerHelper::SendFeatureReport,
++                 base::Unretained(helper_.get()), buffer, std::move(callback)));
++}
++
++}  // namespace device
+diff --git a/device/hid/hid_connection_freebsd.h b/device/hid/hid_connection_freebsd.h
+new file mode 100644
+index 0000000000..3a4e3b8580
+--- /dev/null
++++ b/device/hid/hid_connection_freebsd.h
+@@ -0,0 +1,67 @@
++// Copyright (c) 2014 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef DEVICE_HID_HID_CONNECTION_FREEBSD_H_
++#define DEVICE_HID_HID_CONNECTION_FREEBSD_H_
++
++#include <stddef.h>
++#include <stdint.h>
++
++#include "base/files/scoped_file.h"
++#include "base/memory/weak_ptr.h"
++#include "base/memory/ref_counted_memory.h"
++#include "base/task/sequenced_task_runner.h"
++#include "services/device/hid/hid_connection.h"
++
++namespace base {
++class SequencedTaskRunner;
++}
++
++namespace net {
++class IOBuffer;
++}
++
++namespace device {
++
++class HidConnectionFreeBSD : public HidConnection {
++ public:
++  HidConnectionFreeBSD(
++      scoped_refptr<HidDeviceInfo> device_info,
++      base::ScopedFD fd,
++      scoped_refptr<base::SequencedTaskRunner> blocking_task_runner,
++      bool allow_protected_reports,
++      bool allow_fido_reports);
++
++ private:
++  friend class base::RefCountedThreadSafe<HidConnectionFreeBSD>;
++  class BlockingTaskRunnerHelper;
++
++  HidConnectionFreeBSD(const HidConnectionFreeBSD&) = delete;
++  HidConnectionFreeBSD& operator=(const HidConnectionFreeBSD&) = delete;
++
++  ~HidConnectionFreeBSD() override;
++
++  // HidConnection implementation.
++  void PlatformClose() override;
++  void PlatformWrite(scoped_refptr<base::RefCountedBytes> buffer,
++                     WriteCallback callback) override;
++  void PlatformGetFeatureReport(uint8_t report_id,
++                                ReadCallback callback) override;
++  void PlatformSendFeatureReport(scoped_refptr<base::RefCountedBytes> buffer,
++                                 WriteCallback callback) override;
++
++  // |helper_| lives on the sequence to which |blocking_task_runner_| posts
++  // tasks so all calls must be posted there including this object's
++  // destruction.
++  std::unique_ptr<BlockingTaskRunnerHelper, base::OnTaskRunnerDeleter> helper_;
++
++  const scoped_refptr<base::SequencedTaskRunner> blocking_task_runner_;
++  const scoped_refptr<base::SequencedTaskRunner> task_runner_;
++
++  base::WeakPtrFactory<HidConnectionFreeBSD> weak_factory_{this};
++};
++
++}  // namespace device
++
++#endif  // DEVICE_HID_HID_CONNECTION_FREEBSD_H_
+diff --git a/device/hid/hid_service_fido.cc b/device/hid/hid_service_fido.cc
+new file mode 100644
+index 0000000000..afa9c32486
+--- /dev/null
++++ b/device/hid/hid_service_fido.cc
+@@ -0,0 +1,396 @@
++// Copyright 2014 The Chromium Authors
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "services/device/hid/hid_service_fido.h"
++
++#include <fcntl.h>
++#include <poll.h>
++#include <stdint.h>
++
++#include <dlfcn.h>
++#include <fido.h>
++
++#include <limits>
++#include <memory>
++#include <string>
++#include <utility>
++
++#include "base/files/file.h"
++#include "base/files/file_path.h"
++#include "base/files/file_util.h"
++#include "base/files/scoped_file.h"
++#include "base/location.h"
++#include "base/sequence_checker.h"
++#include "base/strings/string_number_conversions.h"
++#include "base/strings/string_split.h"
++#include "base/strings/string_util.h"
++#include "base/task/sequenced_task_runner.h"
++#include "base/task/thread_pool.h"
++#include "base/threading/scoped_blocking_call.h"
++#include "build/build_config.h"
++#include "build/chromeos_buildflags.h"
++#include "components/device_event_log/device_event_log.h"
++#include "device/udev_linux/scoped_udev.h"
++#include "device/udev_linux/udev_watcher.h"
++#include "services/device/hid/hid_connection_fido.h"
++
++namespace device {
++
++namespace {
++
++bool terrible_ping_kludge(int fd, const std::string &path) {
++  u_char data[256];
++  int i, n;
++  struct pollfd pfd;
++
++  for (i = 0; i < 4; i++) {
++    memset(data, 0, sizeof(data));
++    /* broadcast channel ID */
++    data[1] = 0xff;
++    data[2] = 0xff;
++    data[3] = 0xff;
++    data[4] = 0xff;
++    /* Ping command */
++    data[5] = 0x81;
++    /* One byte ping only, Vasili */
++    data[6] = 0;   
++    data[7] = 1;   
++    HID_LOG(EVENT) << "send ping " << i << " " << path;
++    if (write(fd, data, 64) == -1) {
++      HID_PLOG(ERROR) << "write " << path;
++      return false;
++    }
++    HID_LOG(EVENT) << "wait reply " << path;
++    memset(&pfd, 0, sizeof(pfd));
++    pfd.fd = fd; 
++    pfd.events = POLLIN;
++    if ((n = poll(&pfd, 1, 100)) == -1) {
++      HID_PLOG(EVENT) << "poll " << path;
++      return false;
++    } else if (n == 0) {
++      HID_LOG(EVENT) << "timed out " << path;
++      continue;
++    }
++    if (read(fd, data, 64) == -1) {  
++      HID_PLOG(ERROR) << "read " << path;
++      return false;
++    }
++    /*
++     * Ping isn't always supported on the broadcast channel,
++     * so we might get an error, but we don't care - we're
++     * synched now.
++     */
++    HID_LOG(EVENT) << "got reply " << path;
++    return true;
++  }
++  HID_LOG(ERROR) << "no response " << path;
++  return false;
++}
++
++// HID report descriptor for U2F interface. Copied from:
++// https://chromium.googlesource.com/chromiumos/platform2/+/c6c7e4e54fce11932fedaa3ea10236bf75d85a2b%5E%21/u2fd/u2fhid.cc
++// Apparently Chromium wants to see these bytes, but OpenBSD fido(4)
++// devices prohibit USB_GET_REPORT_DESC ioctl that could be used to
++// get the bytes from the USB device.
++constexpr uint8_t kU2fReportDesc[] = {
++    0x06, 0xD0, 0xF1, /* Usage Page (FIDO Alliance), FIDO_USAGE_PAGE */
++    0x09, 0x01,       /* Usage (U2F HID Auth. Device) FIDO_USAGE_U2FHID */
++    0xA1, 0x01,       /* Collection (Application), HID_APPLICATION */
++    0x09, 0x20,       /*  Usage (Input Report Data), FIDO_USAGE_DATA_IN */
++    0x15, 0x00,       /*  Logical Minimum (0) */
++    0x26, 0xFF, 0x00, /*  Logical Maximum (255) */
++    0x75, 0x08,       /*  Report Size (8) */
++    0x95, 0x40,       /*  Report Count (64), HID_INPUT_REPORT_BYTES */
++    0x81, 0x02,       /*  Input (Data, Var, Abs), Usage */
++    0x09, 0x21,       /*  Usage (Output Report Data), FIDO_USAGE_DATA_OUT */
++    0x15, 0x00,       /*  Logical Minimum (0) */
++    0x26, 0xFF, 0x00, /*  Logical Maximum (255) */
++    0x75, 0x08,       /*  Report Size (8) */
++    0x95, 0x40,       /*  Report Count (64), HID_OUTPUT_REPORT_BYTES */
++    0x91, 0x02,       /*  Output (Data, Var, Abs), Usage */
++    0xC0              /* End Collection */
++};
++
++}  // namespace
++
++struct HidServiceFido::ConnectParams {
++  ConnectParams(scoped_refptr<HidDeviceInfo> device_info,
++                bool allow_protected_reports,
++                bool allow_fido_reports,
++                ConnectCallback callback)
++      : device_info(std::move(device_info)),
++        allow_protected_reports(allow_protected_reports),
++        allow_fido_reports(allow_fido_reports),
++        callback(std::move(callback)),
++	task_runner(base::SequencedTaskRunner::GetCurrentDefault()),
++        blocking_task_runner(
++            base::ThreadPool::CreateSequencedTaskRunner(kBlockingTaskTraits)) {}
++  ~ConnectParams() {}
++
++  scoped_refptr<HidDeviceInfo> device_info;
++  bool allow_protected_reports;
++  bool allow_fido_reports;
++  ConnectCallback callback;
++  scoped_refptr<base::SequencedTaskRunner> task_runner;
++  scoped_refptr<base::SequencedTaskRunner> blocking_task_runner;
++  base::ScopedFD fd;
++};
++
++class HidServiceFido::BlockingTaskRunnerHelper : public UdevWatcher::Observer {
++ public:
++  BlockingTaskRunnerHelper(base::WeakPtr<HidServiceFido> service)
++      : service_(std::move(service)),
++        task_runner_(base::SequencedTaskRunner::GetCurrentDefault()) {
++    DETACH_FROM_SEQUENCE(sequence_checker_);
++  }
++
++  BlockingTaskRunnerHelper(const BlockingTaskRunnerHelper&) = delete;
++  BlockingTaskRunnerHelper& operator=(const BlockingTaskRunnerHelper&) = delete;
++
++  ~BlockingTaskRunnerHelper() override {
++    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++  }
++
++  void Start() {
++    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++
++    void *library = dlopen("libudev.so", RTLD_NOW | RTLD_LOCAL);
++    if (library) {
++      dlclose(library);
++      watcher_ = UdevWatcher::StartWatching(this);
++      watcher_->EnumerateExistingDevices();
++    } else {
++      HID_LOG(ERROR) << "No udev available, failling back to single enumeration";
++      WalkFidoDevices(nullptr);
++    }
++
++    task_runner_->PostTask(
++        FROM_HERE,
++        base::BindOnce(&HidServiceFido::FirstEnumerationComplete, service_));
++  }
++
++ private:
++  void WalkFidoDevices(const char *name) {
++    fido_dev_info_t *devlist = NULL;
++    fido_dev_t *dev = NULL;
++    size_t devlist_len = 0, i;
++    const char *path;
++    int r;
++    const int MAX_FIDO_DEVICES = 256;
++
++    if ((devlist = fido_dev_info_new(MAX_FIDO_DEVICES)) == NULL) {
++      HID_LOG(ERROR) << "fido_dev_info_new failed";
++      goto out;
++    }
++    if ((r = fido_dev_info_manifest(devlist, MAX_FIDO_DEVICES, &devlist_len)) !=
++        FIDO_OK) {
++      HID_LOG(ERROR) << "fido_dev_info_manifest: " << fido_strerr(r);
++      goto out;
++    }
++
++    HID_LOG(EVENT) << "fido_dev_info_manifest found " << devlist_len
++                   << " device(s)";
++
++    for (i = 0; i < devlist_len; i++) {
++      const fido_dev_info_t *di = fido_dev_info_ptr(devlist, i);
++
++      if (di == NULL) {
++        HID_LOG(ERROR) << "fido_dev_info_ptr " << i << " failed";
++        continue;
++      }
++
++      if ((path = fido_dev_info_path(di)) == NULL) {
++        HID_LOG(ERROR) << "fido_dev_info_path " << i << " failed";
++        continue;
++      }
++
++      if (name != nullptr && !strcmp(path, name)) {
++        HID_LOG(EVENT) << "hotplug device " << i << ": " << path;
++        OnFidoDeviceAdded(di);
++        break;
++      }
++
++      HID_LOG(EVENT) << "trying device " << i << ": " << path;
++      if ((dev = fido_dev_new()) == NULL) {
++        HID_LOG(ERROR) << "fido_dev_new failed";
++        continue;
++      }
++
++      if ((r = fido_dev_open(dev, path)) != FIDO_OK) {
++        HID_LOG(ERROR) << "fido_dev_open failed " << path;
++        fido_dev_free(&dev);
++        continue;
++      }
++
++      fido_dev_close(dev);
++      fido_dev_free(&dev);
++
++      OnFidoDeviceAdded(di);
++    }
++  out:
++    if (devlist != NULL)
++      fido_dev_info_free(&devlist, MAX_FIDO_DEVICES);
++  }
++
++  void OnFidoDeviceAdded(const fido_dev_info_t *di) {
++    auto null_as_empty = [](const char *r) -> std::string {
++      return (r != nullptr) ? r : "";
++    };
++    std::string device_node(null_as_empty(fido_dev_info_path(di)));  
++    std::vector<uint8_t> report_descriptor(
++        kU2fReportDesc, kU2fReportDesc + sizeof(kU2fReportDesc));
++
++    auto device_info = base::MakeRefCounted<HidDeviceInfo>(
++        device_node, /*physical_device_id*/"", fido_dev_info_vendor(di),
++        fido_dev_info_product(di), null_as_empty(fido_dev_info_product_string(di)),
++        null_as_empty(fido_dev_info_manufacturer_string(di)),
++	device::mojom::HidBusType::kHIDBusTypeUSB, report_descriptor,
++        device_node);
++
++    task_runner_->PostTask(
++        FROM_HERE,
++        base::BindOnce(&HidServiceFido::AddDevice, service_, device_info));
++  }
++
++  // UdevWatcher::Observer
++  void OnDeviceAdded(ScopedUdevDevicePtr device) override {
++    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++    base::ScopedBlockingCall scoped_blocking_call(
++        FROM_HERE, base::BlockingType::MAY_BLOCK);
++
++    const char* subsystem = udev_device_get_subsystem(device.get());
++    if (!subsystem || strcmp(subsystem, "fido") != 0)
++      return;
++
++    const char* device_path = udev_device_get_syspath(device.get());
++    if (!device_path)
++      return;
++
++    WalkFidoDevices(device_path);
++  }
++
++  void OnDeviceRemoved(ScopedUdevDevicePtr device) override {
++    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++    base::ScopedBlockingCall scoped_blocking_call(
++        FROM_HERE, base::BlockingType::MAY_BLOCK);
++
++    const char* device_path = udev_device_get_syspath(device.get());
++    if (device_path) {
++      task_runner_->PostTask(
++          FROM_HERE, base::BindOnce(&HidServiceFido::RemoveDevice, service_,
++                                    std::string(device_path)));
++    }
++  }
++
++  void OnDeviceChanged(ScopedUdevDevicePtr) override {}
++
++  SEQUENCE_CHECKER(sequence_checker_);
++  std::unique_ptr<UdevWatcher> watcher_;
++
++  // This weak pointer is only valid when checked on this task runner.
++  base::WeakPtr<HidServiceFido> service_;
++  scoped_refptr<base::SequencedTaskRunner> task_runner_;
++};
++
++HidServiceFido::HidServiceFido()
++    : blocking_task_runner_(
++          base::ThreadPool::CreateSequencedTaskRunner(kBlockingTaskTraits)),
++      helper_(nullptr, base::OnTaskRunnerDeleter(blocking_task_runner_)) {
++  // We need to properly initialize |blocking_task_helper_| here because we need
++  // |weak_factory_| to be created first.
++  helper_.reset(new BlockingTaskRunnerHelper(weak_factory_.GetWeakPtr()));
++  blocking_task_runner_->PostTask(
++      FROM_HERE, base::BindOnce(&BlockingTaskRunnerHelper::Start,
++                                base::Unretained(helper_.get())));
++}
++
++HidServiceFido::~HidServiceFido() = default;
++
++base::WeakPtr<HidService> HidServiceFido::GetWeakPtr() {
++  return weak_factory_.GetWeakPtr();
++}
++
++void HidServiceFido::Connect(const std::string& device_guid,
++                              bool allow_protected_reports,
++                              bool allow_fido_reports,
++                              ConnectCallback callback) {
++  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++
++  const auto& map_entry = devices().find(device_guid);
++  if (map_entry == devices().end()) {
++    base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
++        FROM_HERE, base::BindOnce(std::move(callback), nullptr));
++    return;
++  }
++  scoped_refptr<HidDeviceInfo> device_info = map_entry->second;
++
++  auto params =
++      std::make_unique<ConnectParams>(device_info, allow_protected_reports,
++                                      allow_fido_reports, std::move(callback));
++  scoped_refptr<base::SequencedTaskRunner> blocking_task_runner =
++      params->blocking_task_runner;
++  blocking_task_runner->PostTask(
++      FROM_HERE, base::BindOnce(&HidServiceFido::OpenOnBlockingThread,
++                                std::move(params)));
++}
++
++// static
++void HidServiceFido::OpenOnBlockingThread(
++    std::unique_ptr<ConnectParams> params) {
++  base::ScopedBlockingCall scoped_blocking_call(FROM_HERE,
++                                                base::BlockingType::MAY_BLOCK);
++  scoped_refptr<base::SequencedTaskRunner> task_runner = params->task_runner;
++
++  base::FilePath device_path(params->device_info->device_node());
++  base::File device_file;
++  int flags =
++      base::File::FLAG_OPEN | base::File::FLAG_READ | base::File::FLAG_WRITE;
++  device_file.Initialize(device_path, flags);
++  if (!device_file.IsValid()) {
++    base::File::Error file_error = device_file.error_details();
++
++    if (file_error == base::File::FILE_ERROR_ACCESS_DENIED) {
++      HID_LOG(EVENT)
++          << "Access denied opening device read-write, trying read-only.";
++      flags = base::File::FLAG_OPEN | base::File::FLAG_READ;
++      device_file.Initialize(device_path, flags);
++    }
++  }
++  if (!device_file.IsValid()) {
++    HID_LOG(EVENT) << "Failed to open '" << params->device_info->device_node()
++                   << "': "
++                   << base::File::ErrorToString(device_file.error_details());
++    task_runner->PostTask(FROM_HERE,
++                          base::BindOnce(std::move(params->callback), nullptr));
++    return;
++  }
++  if (!terrible_ping_kludge(device_file.GetPlatformFile(), params->device_info->device_node())) {
++    HID_LOG(EVENT) << "Failed to ping " << params->device_info->device_node();
++    task_runner->PostTask(FROM_HERE, base::BindOnce(std::move(params->callback), nullptr));
++    return;
++  }
++  params->fd.reset(device_file.TakePlatformFile());
++
++  task_runner->PostTask(FROM_HERE, base::BindOnce(&HidServiceFido::FinishOpen,
++                                                  std::move(params)));
++}
++
++// static
++void HidServiceFido::FinishOpen(std::unique_ptr<ConnectParams> params) {
++  DCHECK(params->fd.is_valid());
++
++  if (!base::SetNonBlocking(params->fd.get())) {
++    HID_PLOG(DEBUG) << "Failed to set the non-blocking flag on the device fd";
++    std::move(params->callback).Run(nullptr);
++    return;
++  }
++
++  std::move(params->callback)
++      .Run(base::MakeRefCounted<HidConnectionFido>(
++          std::move(params->device_info), std::move(params->fd),
++          std::move(params->blocking_task_runner),
++          params->allow_protected_reports, params->allow_fido_reports));
++}
++
++}  // namespace device
+diff --git a/device/hid/hid_service_fido.h b/device/hid/hid_service_fido.h
+new file mode 100644
+index 0000000000..7d0dd44909
+--- /dev/null
++++ b/device/hid/hid_service_fido.h
+@@ -0,0 +1,65 @@
++// Copyright 2014 The Chromium Authors
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef SERVICES_DEVICE_HID_HID_SERVICE_LINUX_H_
++#define SERVICES_DEVICE_HID_HID_SERVICE_LINUX_H_
++
++#include <memory>
++
++#include "base/compiler_specific.h"
++#include "base/files/scoped_file.h"
++#include "base/memory/weak_ptr.h"
++#include "base/task/sequenced_task_runner.h"
++#include "build/build_config.h"
++#include "build/chromeos_buildflags.h"
++#include "services/device/hid/hid_device_info.h"
++#include "services/device/hid/hid_service.h"
++
++namespace device {
++
++class HidServiceFido : public HidService {
++ public:
++  HidServiceFido();
++  HidServiceFido(HidServiceFido&) = delete;
++  HidServiceFido& operator=(HidServiceFido&) = delete;
++  ~HidServiceFido() override;
++
++  // HidService:
++  void Connect(const std::string& device_id,
++               bool allow_protected_reports,
++               bool allow_fido_reports,
++               ConnectCallback callback) override;
++  base::WeakPtr<HidService> GetWeakPtr() override;
++
++ private:
++  struct ConnectParams;
++  class BlockingTaskRunnerHelper;
++
++// These functions implement the process of locating, requesting access to and
++// opening a device. Because this operation crosses multiple threads these
++// functions are static and the necessary parameters are passed as a single
++// struct.
++#if BUILDFLAG(IS_CHROMEOS_ASH)
++  static void OnPathOpenComplete(std::unique_ptr<ConnectParams> params,
++                                 base::ScopedFD fd);
++  static void OnPathOpenError(const std::string& device_path,
++                              ConnectCallback callback,
++                              const std::string& error_name,
++                              const std::string& error_message);
++#else
++  static void OpenOnBlockingThread(std::unique_ptr<ConnectParams> params);
++#endif
++  static void FinishOpen(std::unique_ptr<ConnectParams> params);
++
++  const scoped_refptr<base::SequencedTaskRunner> blocking_task_runner_;
++
++  // |helper_| lives on the sequence |blocking_task_runner_| posts to and holds
++  // a weak reference back to the service that owns it.
++  std::unique_ptr<BlockingTaskRunnerHelper, base::OnTaskRunnerDeleter> helper_;
++  base::WeakPtrFactory<HidServiceFido> weak_factory_{this};
++};
++
++}  // namespace device
++
++#endif  // SERVICES_DEVICE_HID_HID_SERVICE_LINUX_H_
+diff --git a/device/hid/hid_service_freebsd.cc b/device/hid/hid_service_freebsd.cc
+new file mode 100644
+index 0000000000..8ddb074bfc
+--- /dev/null
++++ b/device/hid/hid_service_freebsd.cc
+@@ -0,0 +1,395 @@
++// Copyright 2014 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "services/device/hid/hid_service_freebsd.h"
++
++#include <dev/usb/usb_ioctl.h>
++#include <stdint.h>
++#include <sys/socket.h>
++#include <sys/un.h>
++
++#include <set>
++#include <string>
++#include <vector>
++
++#include "base/files/file_descriptor_watcher_posix.h"
++#include "base/files/file_enumerator.h"
++#include "base/files/file_util.h"
++#include "base/files/file.h"
++#include "base/location.h"
++#include "base/logging.h"
++#include "base/posix/eintr_wrapper.h"
++#include "base/stl_util.h"
++#include "base/strings/pattern.h"
++#include "base/strings/stringprintf.h"
++#include "base/strings/sys_string_conversions.h"
++#include "base/strings/string_util.h"
++#include "base/strings/string_split.h"
++#include "base/task/single_thread_task_runner.h"
++#include "base/task/thread_pool.h"
++#include "base/threading/scoped_blocking_call.h"
++#include "base/threading/thread_restrictions.h"
++#include "components/device_event_log/device_event_log.h"
++#include "services/device/hid/hid_connection_freebsd.h"
++
++const int kMaxPermissionChecks = 5;
++
++namespace device {
++
++struct HidServiceFreeBSD::ConnectParams {
++  ConnectParams(scoped_refptr<HidDeviceInfo> device_info,
++                bool allow_protected_reports,
++		bool allow_fido_reports,
++                ConnectCallback callback)
++      : device_info(std::move(device_info)),
++	allow_protected_reports(allow_protected_reports),
++	allow_fido_reports(allow_fido_reports),
++        callback(std::move(callback)),
++	task_runner(base::SequencedTaskRunner::GetCurrentDefault()),
++        blocking_task_runner(
++            base::ThreadPool::CreateSequencedTaskRunner(kBlockingTaskTraits)) {}
++  ~ConnectParams() {}
++
++  scoped_refptr<HidDeviceInfo> device_info;
++  bool allow_protected_reports;
++  bool allow_fido_reports;
++  ConnectCallback callback;
++  scoped_refptr<base::SequencedTaskRunner> task_runner;
++  scoped_refptr<base::SequencedTaskRunner> blocking_task_runner;
++  base::ScopedFD fd;
++};
++
++class HidServiceFreeBSD::BlockingTaskRunnerHelper {
++ public:
++  BlockingTaskRunnerHelper(base::WeakPtr<HidServiceFreeBSD> service)
++      : service_(std::move(service)),
++	task_runner_(base::SequencedTaskRunner::GetCurrentDefault()) {
++    DETACH_FROM_SEQUENCE(sequence_checker_);
++
++    timer_.reset(new base::RepeatingTimer());
++    devd_buffer_ = new net::IOBufferWithSize(1024);
++  }
++
++  BlockingTaskRunnerHelper(const BlockingTaskRunnerHelper&) = delete;
++  BlockingTaskRunnerHelper& operator=(const BlockingTaskRunnerHelper&) = delete;
++
++  ~BlockingTaskRunnerHelper() {
++  }
++
++  void Start() {
++    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++
++    const base::FilePath kDevRoot("/dev");
++    const std::string kUHIDPattern("/dev/uhid*");
++
++    base::FileEnumerator enumerator(kDevRoot, false, base::FileEnumerator::FILES);
++    do {
++      const base::FilePath next_device_path(enumerator.Next());
++      const std::string next_device = next_device_path.value();
++      if (next_device.empty())
++        break;
++
++      if (base::MatchPattern(next_device, kUHIDPattern))
++        OnDeviceAdded(next_device.substr(5));
++    } while (true);
++
++    SetupDevdMonitor();
++
++    task_runner_->PostTask(
++        FROM_HERE,
++        base::BindOnce(&HidServiceFreeBSD::FirstEnumerationComplete, service_));
++  }
++
++  bool HaveReadWritePermissions(std::string device_id) {
++    std::string device_node = "/dev/" + device_id;
++    base::AssertBlockingAllowed();
++
++    base::FilePath device_path(device_node);
++    base::File device_file;
++    int flags =
++        base::File::FLAG_OPEN | base::File::FLAG_READ | base::File::FLAG_WRITE;
++    device_file.Initialize(device_path, flags);
++    if (!device_file.IsValid())
++      return false;
++
++    return true;
++  }
++
++  void OnDeviceAdded(std::string device_id) {
++    base::ScopedBlockingCall scoped_blocking_call(
++        FROM_HERE, base::BlockingType::MAY_BLOCK);
++    std::string device_node = "/dev/" + device_id;
++    uint16_t vendor_id = 0xffff;
++    uint16_t product_id = 0xffff;
++    std::string product_name = "";
++    std::string serial_number = "";
++
++    std::vector<uint8_t> report_descriptor;
++
++    base::AssertBlockingAllowed();
++
++    base::FilePath device_path(device_node);
++    base::File device_file;
++    int flags =
++        base::File::FLAG_OPEN | base::File::FLAG_READ | base::File::FLAG_WRITE;
++    device_file.Initialize(device_path, flags);
++    if (!device_file.IsValid()) {
++      HID_LOG(ERROR) << "Failed to open '" << device_node
++                     << "': "
++                     << base::File::ErrorToString(device_file.error_details());
++      return;
++    }
++
++    base::ScopedFD fd;
++    fd.reset(device_file.TakePlatformFile());
++
++    struct usb_gen_descriptor ugd;
++    ugd.ugd_data = NULL;
++    ugd.ugd_maxlen = 0xffff;
++    int result = HANDLE_EINTR(
++        ioctl(fd.get(), USB_GET_REPORT_DESC, &ugd));
++
++    if (result < 0) {
++      HID_LOG(ERROR) << "Failed to get report descriptor size";
++      return;
++    }
++
++    report_descriptor.resize(ugd.ugd_actlen);
++
++    ugd.ugd_data = report_descriptor.data();
++    ugd.ugd_maxlen = ugd.ugd_actlen;
++    result = HANDLE_EINTR(
++        ioctl(fd.get(), USB_GET_REPORT_DESC, &ugd));
++
++    if (result < 0) {
++      HID_LOG(ERROR) << "Failed to get report descriptor";
++      return;
++    }
++
++    scoped_refptr<HidDeviceInfo> device_info(new HidDeviceInfo(
++        device_id,
++        /*physical_device_id*/"",
++	vendor_id,
++	product_id,
++	product_name,
++	serial_number,
++        device::mojom::HidBusType::kHIDBusTypeUSB,
++        report_descriptor,
++	device_node));
++
++    task_runner_->PostTask(FROM_HERE, base::BindOnce(&HidServiceFreeBSD::AddDevice,
++                                                 service_, device_info));
++  }
++
++  void OnDeviceRemoved(std::string device_id) {
++    base::ScopedBlockingCall scoped_blocking_call(
++        FROM_HERE, base::BlockingType::MAY_BLOCK);
++    task_runner_->PostTask(
++        FROM_HERE, base::BindOnce(&HidServiceFreeBSD::RemoveDevice, service_,
++                                  device_id));
++  }
++
++ private:
++
++  void CheckPendingPermissionChange() {
++    base::AssertBlockingAllowed();
++    std::map<std::string, int>::iterator it;
++    for (it = permissions_checks_attempts_.begin(); it != permissions_checks_attempts_.end();) {
++      std::string device_name = it->first;
++      bool keep = true;
++      if (HaveReadWritePermissions(device_name)) {
++        OnDeviceAdded(device_name);
++        keep = false;
++      }
++      else if (it->second-- <= 0) {
++        HID_LOG(ERROR) << "Still don't have write permissions to '" << device_name
++                       << "' after " << kMaxPermissionChecks << " attempts";
++        keep = false;
++      }
++
++      if (keep)
++        ++it;
++      else
++        permissions_checks_attempts_.erase(it++);
++    }
++
++    if (permissions_checks_attempts_.empty())
++      timer_->Stop();
++  }
++
++  void SetupDevdMonitor() {
++    base::AssertBlockingAllowed();
++
++    int devd_fd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
++    if (devd_fd < 0)
++      return;
++
++    struct sockaddr_un sa;
++
++    sa.sun_family = AF_UNIX;
++    strlcpy(sa.sun_path, "/var/run/devd.seqpacket.pipe", sizeof(sa.sun_path));
++    if (connect(devd_fd, (struct sockaddr *) &sa, sizeof(sa)) < 0) {
++      close(devd_fd);
++      return;
++    } 
++
++    devd_fd_.reset(devd_fd);
++    file_watcher_ = base::FileDescriptorWatcher::WatchReadable(
++        devd_fd_.get(), base::BindRepeating(&BlockingTaskRunnerHelper::OnDevdMessageCanBeRead,
++                                            base::Unretained(this)));
++  }
++
++  void OnDevdMessageCanBeRead() {
++    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++    ssize_t bytes_read = HANDLE_EINTR(recv(devd_fd_.get(), devd_buffer_->data(),
++                                      devd_buffer_->size() - 1, MSG_WAITALL));
++    if (bytes_read < 0) {
++      if (errno != EAGAIN) {
++        HID_LOG(ERROR) << "Read failed";
++        file_watcher_.reset();
++      }
++      return;
++    }
++
++    devd_buffer_->data()[bytes_read] = 0;
++    char *data = devd_buffer_->data();
++    // It may take some time for devd to change permissions
++    // on /dev/uhidX node. So do not fail immediately if
++    // open fail. Retry each second for kMaxPermissionChecks
++    // times before giving up entirely
++    if (base::StartsWith(data, "+uhid", base::CompareCase::SENSITIVE)) {
++      std::vector<std::string> parts = base::SplitString(
++        data, " ", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
++      if (!parts.empty()) {
++        std::string device_name = parts[0].substr(1); // skip '+'
++        if (HaveReadWritePermissions(device_name))
++          OnDeviceAdded(parts[0].substr(1));
++        else {
++          // Do not re-add to checks
++          if (permissions_checks_attempts_.find(device_name) == permissions_checks_attempts_.end()) {
++            permissions_checks_attempts_.insert(std::pair<std::string, int>(device_name, kMaxPermissionChecks));
++            timer_->Start(FROM_HERE, base::Seconds(1),
++                          this, &BlockingTaskRunnerHelper::CheckPendingPermissionChange);
++          }
++        }
++      }
++    }
++
++    if (base::StartsWith(data, "-uhid", base::CompareCase::SENSITIVE)) {
++      std::vector<std::string> parts = base::SplitString(
++        data, " ", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
++      if (!parts.empty()) {
++        std::string device_name = parts[0].substr(1); // skip '-'
++        auto it = permissions_checks_attempts_.find(device_name);
++        if (it != permissions_checks_attempts_.end()) {
++          permissions_checks_attempts_.erase(it);
++          if (permissions_checks_attempts_.empty())
++            timer_->Stop();
++        }
++        OnDeviceRemoved(parts[0].substr(1));
++      }
++    }
++  }
++
++  SEQUENCE_CHECKER(sequence_checker_);
++
++  // This weak pointer is only valid when checked on this task runner.
++  base::WeakPtr<HidServiceFreeBSD> service_;
++  scoped_refptr<base::SequencedTaskRunner> task_runner_;
++  std::unique_ptr<base::FileDescriptorWatcher::Controller> file_watcher_;
++  std::unique_ptr<base::RepeatingTimer> timer_;
++  base::ScopedFD devd_fd_;
++  scoped_refptr<net::IOBufferWithSize> devd_buffer_;
++  std::map<std::string, int> permissions_checks_attempts_;
++};
++
++HidServiceFreeBSD::HidServiceFreeBSD()
++    : blocking_task_runner_(
++          base::ThreadPool::CreateSequencedTaskRunner(kBlockingTaskTraits)),
++      helper_(nullptr, base::OnTaskRunnerDeleter(blocking_task_runner_)) {
++  helper_.reset(new BlockingTaskRunnerHelper(weak_factory_.GetWeakPtr()));
++  blocking_task_runner_->PostTask(
++      FROM_HERE,
++      base::BindOnce(&BlockingTaskRunnerHelper::Start, base::Unretained(helper_.get())));
++}
++
++HidServiceFreeBSD::~HidServiceFreeBSD() {
++  blocking_task_runner_->DeleteSoon(FROM_HERE, helper_.release());
++}
++
++base::WeakPtr<HidService> HidServiceFreeBSD::GetWeakPtr() {
++  return weak_factory_.GetWeakPtr();
++}
++
++// static
++void HidServiceFreeBSD::OpenOnBlockingThread(
++    std::unique_ptr<ConnectParams> params) {
++  base::ScopedBlockingCall scoped_blocking_call(
++      FROM_HERE, base::BlockingType::MAY_BLOCK);
++  scoped_refptr<base::SequencedTaskRunner> task_runner = params->task_runner;
++
++  base::FilePath device_path(params->device_info->device_node());
++  base::File device_file;
++  int flags =
++      base::File::FLAG_OPEN | base::File::FLAG_READ | base::File::FLAG_WRITE;
++  device_file.Initialize(device_path, flags);
++  if (!device_file.IsValid()) {
++    HID_LOG(EVENT) << "Failed to open '" << params->device_info->device_node()
++                   << "': "
++                   << base::File::ErrorToString(device_file.error_details());
++    task_runner->PostTask(FROM_HERE,
++		          base::BindOnce(std::move(params->callback), nullptr));
++    return;
++  }
++  params->fd.reset(device_file.TakePlatformFile());
++  task_runner->PostTask(FROM_HERE, base::BindOnce(&HidServiceFreeBSD::FinishOpen,
++			                          std::move(params)));
++}
++
++void HidServiceFreeBSD::Connect(const std::string& device_guid,
++                                bool allow_protected_reports,
++				bool allow_fido_reports,
++                                ConnectCallback callback) {
++  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++
++  const auto& map_entry = devices().find(device_guid);
++  if (map_entry == devices().end()) {
++    base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
++        FROM_HERE, base::BindOnce(std::move(callback), nullptr));
++    return;
++  }
++
++  scoped_refptr<HidDeviceInfo> device_info = map_entry->second;
++
++  auto params = std::make_unique<ConnectParams>(device_info,
++                                                allow_protected_reports,
++						allow_fido_reports,
++						std::move(callback));
++  scoped_refptr<base::SequencedTaskRunner> blocking_task_runner =
++      params->blocking_task_runner;
++
++  blocking_task_runner->PostTask(
++      FROM_HERE, base::BindOnce(&HidServiceFreeBSD::OpenOnBlockingThread,
++                                std::move(params)));
++}
++
++// static
++void HidServiceFreeBSD::FinishOpen(std::unique_ptr<ConnectParams> params) {
++  DCHECK(params->fd.is_valid());
++
++  if (!base::SetNonBlocking(params->fd.get())) {
++    HID_PLOG(ERROR) << "Failed to set the non-blocking flag on the device fd";
++    std::move(params->callback).Run(nullptr);
++  }
++
++  std::move(params->callback).Run(base::MakeRefCounted<HidConnectionFreeBSD>(
++    std::move(params->device_info),
++    std::move(params->fd),
++    std::move(params->blocking_task_runner),
++    params->allow_protected_reports,
++    params->allow_fido_reports
++  ));
++}
++
++}  // namespace device
+diff --git a/device/hid/hid_service_freebsd.h b/device/hid/hid_service_freebsd.h
+new file mode 100644
+index 0000000000..9f5d405a84
+--- /dev/null
++++ b/device/hid/hid_service_freebsd.h
+@@ -0,0 +1,49 @@
++// Copyright 2014 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef DEVICE_HID_HID_SERVICE_FREEBSD_H_
++#define DEVICE_HID_HID_SERVICE_FREEBSD_H_
++
++#include <string>
++
++#include "base/memory/ref_counted.h"
++#include "base/memory/weak_ptr.h"
++#include "base/timer/timer.h"
++#include "services/device/hid/hid_service.h"
++#include "net/base/io_buffer.h"
++
++namespace device {
++
++class HidServiceFreeBSD : public HidService {
++ public:
++  HidServiceFreeBSD();
++
++  HidServiceFreeBSD(const HidServiceFreeBSD&) = delete;
++  HidServiceFreeBSD& operator=(const HidServiceFreeBSD&) = delete;
++
++  ~HidServiceFreeBSD() override;
++
++  void Connect(const std::string& device_guid,
++               bool allow_protected_reports,
++	       bool allow_fido_reports,
++               ConnectCallback connect) override;
++  base::WeakPtr<HidService> GetWeakPtr() override;
++
++ private:
++  struct ConnectParams;
++  class BlockingTaskRunnerHelper;
++
++  static void OpenOnBlockingThread(std::unique_ptr<ConnectParams> params);
++  static void FinishOpen(std::unique_ptr<ConnectParams> params);
++
++  const scoped_refptr<base::SequencedTaskRunner> blocking_task_runner_;
++  // |helper_| lives on the sequence |blocking_task_runner_| posts to and holds
++  // a weak reference back to the service that owns it.
++  std::unique_ptr<BlockingTaskRunnerHelper, base::OnTaskRunnerDeleter> helper_;
++  base::WeakPtrFactory<HidServiceFreeBSD> weak_factory_{this};
++};
++
++}  // namespace device
++
++#endif  // DEVICE_HID_HID_SERVICE_FREEBSD_H_
+diff --git a/device/usb/usb_service_fake.cc b/device/usb/usb_service_fake.cc
+new file mode 100644
+index 0000000000..19134a2a7c
+--- /dev/null
++++ b/device/usb/usb_service_fake.cc
+@@ -0,0 +1,50 @@
++// Copyright 2014 The Chromium Authors
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "services/device/usb/usb_service_fake.h"
++
++#include <stdint.h>
++
++#include <list>
++#include <memory>
++#include <set>
++#include <utility>
++
++#include "base/barrier_closure.h"
++#include "base/containers/contains.h"
++#include "base/location.h"
++#include "base/notimplemented.h"
++#include "base/memory/ref_counted_memory.h"
++#include "base/memory/weak_ptr.h"
++#include "base/strings/string_number_conversions.h"
++#include "base/strings/utf_string_conversions.h"
++#include "base/task/sequenced_task_runner.h"
++#include "base/task/single_thread_task_runner.h"
++#include "base/task/thread_pool.h"
++#include "base/threading/scoped_blocking_call.h"
++#include "build/build_config.h"
++#include "components/device_event_log/device_event_log.h"
++#include "services/device/usb/usb_device_handle.h"
++#include "services/device/usb/usb_error.h"
++#include "services/device/usb/webusb_descriptors.h"
++
++namespace device {
++
++UsbServiceImpl::UsbServiceImpl()
++    : task_runner_(base::SequencedTaskRunner::GetCurrentDefault()) {
++  NOTIMPLEMENTED();
++}
++
++UsbServiceImpl::~UsbServiceImpl() {
++  NOTIMPLEMENTED();
++  NotifyWillDestroyUsbService();
++}
++
++void UsbServiceImpl::GetDevices(GetDevicesCallback callback) {
++  NOTIMPLEMENTED();
++  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++  UsbService::GetDevices(std::move(callback));
++}
++
++}  // namespace device
+diff --git a/device/usb/usb_service_fake.h b/device/usb/usb_service_fake.h
+new file mode 100644
+index 0000000000..1bd057986a
+--- /dev/null
++++ b/device/usb/usb_service_fake.h
+@@ -0,0 +1,48 @@
++// Copyright 2015 The Chromium Authors
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef SERVICES_DEVICE_USB_USB_SERVICE_IMPL_H_
++#define SERVICES_DEVICE_USB_USB_SERVICE_IMPL_H_
++
++#include "services/device/usb/usb_service.h"
++
++#include <stddef.h>
++
++#include <map>
++#include <set>
++#include <string>
++#include <vector>
++
++#include "base/containers/queue.h"
++#include "base/memory/weak_ptr.h"
++#include "build/build_config.h"
++#include "services/device/usb/usb_context.h"
++#include "services/device/usb/usb_device_impl.h"
++#include "third_party/abseil-cpp/absl/types/optional.h"
++
++namespace device {
++
++class UsbDeviceImpl;
++
++class UsbServiceImpl final : public UsbService {
++ public:
++  UsbServiceImpl();
++
++  UsbServiceImpl(const UsbServiceImpl&) = delete;
++  UsbServiceImpl& operator=(const UsbServiceImpl&) = delete;
++
++  ~UsbServiceImpl() override;
++
++ private:
++  // device::UsbService implementation
++  void GetDevices(GetDevicesCallback callback) override;
++
++  void OnUsbContext(scoped_refptr<UsbContext> context);
++
++  scoped_refptr<base::SequencedTaskRunner> task_runner_;
++};
++
++}  // namespace device
++
++#endif  // SERVICES_DEVICE_USB_USB_SERVICE_IMPL_H_
 diff --git a/extensions/browser/api/api_browser_context_keyed_service_factories.cc b/extensions/browser/api/api_browser_context_keyed_service_factories.cc
 index d623431ab7..d8c8b4ca4d 100644
 --- a/extensions/browser/api/api_browser_context_keyed_service_factories.cc
@@ -22260,7 +24994,7 @@ index 5bf518d209..940e8da41c 100644
  #else
    return false;
 diff --git a/extensions/browser/api/messaging/message_service.cc b/extensions/browser/api/messaging/message_service.cc
-index 7a407d489e..c2884d6540 100644
+index 7d4a2472cc..955cd44777 100644
 --- a/extensions/browser/api/messaging/message_service.cc
 +++ b/extensions/browser/api/messaging/message_service.cc
 @@ -83,7 +83,7 @@ namespace {
@@ -22659,6 +25393,66 @@ index 7a0ffd5321..8c4b6969a9 100644
    std::unique_ptr<FileSystemDelegate> file_system_delegate_;
  #endif
    std::unique_ptr<MessagingDelegate> messaging_delegate_;
+diff --git a/files/file_path_watcher_bsd.cc b/files/file_path_watcher_bsd.cc
+new file mode 100644
+index 0000000000..7b89027ea5
+--- /dev/null
++++ b/files/file_path_watcher_bsd.cc
+@@ -0,0 +1,54 @@
++// Copyright 2021 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include <memory>
++
++#include "base/files/file_path_watcher.h"
++#include "base/files/file_path_watcher_kqueue.h"
++#include "base/memory/ptr_util.h"
++#include "build/build_config.h"
++
++namespace base {
++
++namespace {
++
++class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate {
++ public:
++  FilePathWatcherImpl() = default;
++  FilePathWatcherImpl(const FilePathWatcherImpl&) = delete;
++  FilePathWatcherImpl& operator=(const FilePathWatcherImpl&) = delete;
++  ~FilePathWatcherImpl() override = default;
++
++  bool Watch(const FilePath& path,
++             Type type,
++             const FilePathWatcher::Callback& callback) override {
++    DCHECK(!impl_.get());
++    if (type == Type::kRecursive) {
++      if (!FilePathWatcher::RecursiveWatchAvailable())
++        return false;
++    } else {
++      impl_ = std::make_unique<FilePathWatcherKQueue>();
++    }
++    DCHECK(impl_.get());
++    return impl_->Watch(path, type, callback);
++  }
++
++  void Cancel() override {
++    if (impl_.get())
++      impl_->Cancel();
++    set_cancelled();
++  }
++
++ private:
++  std::unique_ptr<PlatformDelegate> impl_;
++};
++
++}  // namespace
++
++FilePathWatcher::FilePathWatcher() {
++  DETACH_FROM_SEQUENCE(sequence_checker_);
++  impl_ = std::make_unique<FilePathWatcherImpl>();
++}
++
++}  // namespace base
 diff --git a/google_apis/gcm/engine/heartbeat_manager.cc b/google_apis/gcm/engine/heartbeat_manager.cc
 index d73a4a6cd0..1cd982544d 100644
 --- a/google_apis/gcm/engine/heartbeat_manager.cc
@@ -27395,6 +30189,1192 @@ index a04a920b96..04f0dd17cc 100644
    g_font_mapping_mode = font_mapping_mode;
    InitializeLinuxFontMapper();
  #endif
+diff --git a/policy/freebsd/sandbox_freebsd.cc b/policy/freebsd/sandbox_freebsd.cc
+new file mode 100644
+index 0000000000..eb94f21861
+--- /dev/null
++++ b/policy/freebsd/sandbox_freebsd.cc
+@@ -0,0 +1,210 @@
++// Copyright (c) 2012 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "sandbox/policy/freebsd/sandbox_freebsd.h"
++
++#include <dirent.h>
++#include <fcntl.h>
++#include <stdint.h>
++#include <sys/resource.h>
++#include <sys/stat.h>
++#include <sys/time.h>
++#include <sys/types.h>
++#include <unistd.h>
++
++#include <limits>
++#include <memory>
++#include <string>
++#include <vector>
++
++#include "base/command_line.h"
++#include "base/debug/stack_trace.h"
++#include "base/feature_list.h"
++#include "base/files/file_path.h"
++#include "base/files/file_util.h"
++#include "base/files/scoped_file.h"
++#include "base/logging.h"
++#include "base/memory/singleton.h"
++#include "base/path_service.h"
++#include "base/posix/eintr_wrapper.h"
++#include "base/strings/string_number_conversions.h"
++#include "base/system/sys_info.h"
++#include "base/threading/thread.h"
++#include "base/time/time.h"
++#include "build/build_config.h"
++#include "crypto/crypto_buildflags.h"
++#include "sandbox/constants.h"
++#include "sandbox/linux/services/credentials.h"
++#include "sandbox/linux/services/namespace_sandbox.h"
++#include "sandbox/linux/services/proc_util.h"
++#include "sandbox/linux/services/resource_limits.h"
++#include "sandbox/linux/services/thread_helpers.h"
++#include "sandbox/linux/syscall_broker/broker_command.h"
++#include "sandbox/linux/syscall_broker/broker_process.h"
++#include "sandbox/policy/sandbox.h"
++#include "sandbox/policy/sandbox_type.h"
++#include "sandbox/policy/mojom/sandbox.mojom.h"
++#include "sandbox/policy/switches.h"
++#include "sandbox/sandbox_buildflags.h" 
++
++#if BUILDFLAG(USING_SANITIZER)
++#include <sanitizer/common_interface_defs.h>
++#endif
++
++#if BUILDFLAG(USE_NSS_CERTS)
++#include "crypto/nss_util.h"
++#endif
++
++#include "third_party/boringssl/src/include/openssl/crypto.h"
++
++#include "ui/gfx/font_util.h"
++
++namespace sandbox {
++namespace policy {
++
++SandboxLinux::SandboxLinux()
++    : sandbox_status_flags_(kInvalid),
++      pre_initialized_(false),
++      initialize_sandbox_ran_(false),
++      broker_process_(nullptr) {
++}
++
++SandboxLinux::~SandboxLinux() {
++  if (pre_initialized_) {
++    CHECK(initialize_sandbox_ran_);
++  }
++}
++
++SandboxLinux* SandboxLinux::GetInstance() {
++  SandboxLinux* instance = base::Singleton<SandboxLinux>::get();
++  CHECK(instance);
++  return instance;
++}
++
++void SandboxLinux::StopThread(base::Thread* thread) {
++  DCHECK(thread);
++  thread->Stop();
++}
++
++void SandboxLinux::PreinitializeSandbox(sandbox::mojom::Sandbox sandbox_type) {
++  CHECK(!pre_initialized_);
++#if BUILDFLAG(USING_SANITIZER)
++  // Sanitizers need to open some resources before the sandbox is enabled.
++  // This should not fork, not launch threads, not open a directory.
++  __sanitizer_sandbox_on_notify(sanitizer_args());
++  sanitizer_args_.reset();
++#endif
++  base::CommandLine* command_line = base::CommandLine::ForCurrentProcess();
++  const std::string process_type =
++      command_line->GetSwitchValueASCII(switches::kProcessType);
++
++  base::SysInfo::AmountOfPhysicalMemory();
++  base::SysInfo::NumberOfProcessors();
++  base::SysInfo::CPUModelName();
++
++  switch (sandbox_type) {
++    case sandbox::mojom::Sandbox::kNoSandbox:
++    {
++#if BUILDFLAG(USE_NSS_CERTS)
++      // The main process has to initialize the ~/.pki dir which won't work
++      // after unveil(2).
++      crypto::EnsureNSSInit();
++#endif
++      CRYPTO_pre_sandbox_init();
++
++      base::FilePath cache_directory, local_directory;
++
++      base::PathService::Get(base::DIR_CACHE, &cache_directory);
++      base::PathService::Get(base::DIR_HOME, &local_directory);   
++
++      cache_directory = cache_directory.AppendASCII("chromium");
++      local_directory = local_directory.AppendASCII(".local").AppendASCII("share").AppendASCII("applications");
++
++      if (!base::CreateDirectory(cache_directory)) {
++        LOG(ERROR) << "Failed to create " << cache_directory.value() << " directory.";
++      }
++
++      if (!base::CreateDirectory(local_directory)) {
++        LOG(ERROR) << "Failed to create " << local_directory.value() << " directory.";
++      }
++
++      break;
++    }
++    case sandbox::mojom::Sandbox::kRenderer:
++      gfx::InitializeFonts();
++      break;
++    default:
++      break;
++  }
++
++  pre_initialized_ = true;
++}
++
++bool SandboxLinux::InitializeSandbox(sandbox::mojom::Sandbox sandbox_type,
++                                     SandboxLinux::PreSandboxHook hook,
++                                     const Options& options) {
++  DCHECK(!initialize_sandbox_ran_);
++  initialize_sandbox_ran_ = true;
++
++  base::CommandLine* command_line = base::CommandLine::ForCurrentProcess();
++  const std::string process_type =
++      command_line->GetSwitchValueASCII(switches::kProcessType);
++
++  if (command_line->HasSwitch(switches::kNoSandbox))
++    return true;
++
++  VLOG(1) << "SandboxLinux::InitializeSandbox: process_type="
++      << process_type << " sandbox_type=" << sandbox_type;
++
++  // Only one thread is running, pre-initialize if not already done.
++  if (!pre_initialized_)
++    PreinitializeSandbox(sandbox_type);
++
++  // Attempt to limit the future size of the address space of the process.
++  int error = 0;
++  const bool limited_as = LimitAddressSpace(&error);
++  if (error) {
++    // Restore errno. Internally to |LimitAddressSpace|, the errno due to
++    // setrlimit may be lost.
++    errno = error;
++    PCHECK(limited_as);
++  }
++
++  if (hook)
++    CHECK(std::move(hook).Run(options));
++
++  return true;
++}
++
++bool SandboxLinux::LimitAddressSpace(int* error) {
++#if !defined(ADDRESS_SANITIZER) && !defined(MEMORY_SANITIZER) && \
++    !defined(THREAD_SANITIZER) && !defined(LEAK_SANITIZER)
++  base::CommandLine* command_line = base::CommandLine::ForCurrentProcess();
++  if (SandboxTypeFromCommandLine(*command_line) == sandbox::mojom::Sandbox::kNoSandbox) {
++    return false;
++  }
++
++  // Unfortunately, it does not appear possible to set RLIMIT_AS such that it
++  // will both (a) be high enough to support V8's and WebAssembly's address
++  // space requirements while also (b) being low enough to mitigate exploits
++  // using integer overflows that require large allocations, heap spray, or
++  // other memory-hungry attack modes.
++
++  *error = sandbox::ResourceLimits::Lower(
++      RLIMIT_DATA, static_cast<rlim_t>(sandbox::kDataSizeLimit));
++
++  // Cache the resource limit before turning on the sandbox.
++  base::SysInfo::AmountOfVirtualMemory();
++  base::SysInfo::MaxSharedMemorySize();
++
++  return *error == 0;
++#else
++  base::SysInfo::AmountOfVirtualMemory();
++  return false;
++#endif  // !defined(ADDRESS_SANITIZER) && !defined(MEMORY_SANITIZER) &&
++        // !defined(THREAD_SANITIZER) && !defined(LEAK_SANITIZER)
++}
++
++}  // namespace policy
++}  // namespace sandbox
+diff --git a/policy/freebsd/sandbox_freebsd.h b/policy/freebsd/sandbox_freebsd.h
+new file mode 100644
+index 0000000000..d61153c7e5
+--- /dev/null
++++ b/policy/freebsd/sandbox_freebsd.h
+@@ -0,0 +1,276 @@
++// Copyright (c) 2012 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++#ifndef SANDBOX_POLICY_LINUX_SANDBOX_OPENBSD_H_
++#define SANDBOX_POLICY_LINUX_SANDBOX_OPENBSD_H_
++
++#include <memory>
++#include <string>
++#include <vector>
++
++#include "base/logging.h"
++#include "base/posix/global_descriptors.h"
++#include "sandbox/policy/export.h"
++#include "sandbox/policy/linux/sandbox_seccomp_bpf_linux.h"
++#include "sandbox/policy/mojom/sandbox.mojom.h"
++#include "base/sanitizer_buildflags.h"
++
++#if BUILDFLAG(USING_SANITIZER)
++#include <sanitizer/common_interface_defs.h>
++#endif
++
++namespace base {
++template <typename T>
++struct DefaultSingletonTraits;
++class Thread;
++}  // namespace base
++
++namespace sandbox {
++namespace syscall_broker {
++class BrokerProcess;
++}  // namespace syscall_broker
++}  // namespace sandbox
++
++namespace sandbox {
++namespace policy {
++
++// A singleton class to represent and change our sandboxing state for the
++// three main Linux sandboxes.
++// The sandboxing model allows using two layers of sandboxing. The first layer
++// can be implemented either with unprivileged namespaces or with the setuid
++// sandbox. This class provides a way to engage the namespace sandbox, but does
++// not deal with the legacy setuid sandbox directly.
++// The second layer is mainly based on seccomp-bpf and is engaged with
++// InitializeSandbox(). InitializeSandbox() is also responsible for "sealing"
++// the first layer of sandboxing. That is, InitializeSandbox must always be
++// called to have any meaningful sandboxing at all.
++class SANDBOX_POLICY_EXPORT SandboxLinux {
++ public:
++  // This is a list of sandbox IPC methods which the renderer may send to the
++  // sandbox host. See
++  // https://chromium.googlesource.com/chromium/src/+/master/docs/linux_sandbox_ipc.md
++  // This isn't the full list, values < 32 are reserved for methods called from
++  // Skia, and values < 64 are reserved for libc_interceptor.cc.
++  enum LinuxSandboxIPCMethods {
++    DEPRECATED_METHOD_GET_FALLBACK_FONT_FOR_CHAR = 64,
++    DEPRECATED_METHOD_GET_CHILD_WITH_INODE,
++    DEPRECATED_METHOD_GET_STYLE_FOR_STRIKE,
++    METHOD_MAKE_SHARED_MEMORY_SEGMENT,
++    DEPRECATED_METHOD_MATCH_WITH_FALLBACK,
++  };
++
++  // These form a bitmask which describes the conditions of the Linux sandbox.
++  // Note: this doesn't strictly give you the current status, it states
++  // what will be enabled when the relevant processes are initialized.
++  enum Status {
++    // SUID sandbox active.
++    kSUID = 1 << 0,
++
++    // Sandbox is using a new PID namespace.
++    kPIDNS = 1 << 1,
++
++    // Sandbox is using a new network namespace.
++    kNetNS = 1 << 2,
++
++    // seccomp-bpf sandbox active.
++    kSeccompBPF = 1 << 3,
++
++    // The Yama LSM module is present and enforcing.
++    kYama = 1 << 4,
++
++    // seccomp-bpf sandbox is active and the kernel supports TSYNC.
++    kSeccompTSYNC = 1 << 5,
++
++    // User namespace sandbox active.
++    kUserNS = 1 << 6,
++
++    // A flag that denotes an invalid sandbox status.
++    kInvalid = 1 << 31,
++  };
++
++  // SandboxLinux Options are a superset of SandboxSecompBPF Options.
++  struct Options : public SandboxSeccompBPF::Options {
++    // When running with a zygote, the namespace sandbox will have already
++    // been engaged prior to initializing SandboxLinux itself, and need not
++    // be done so again. Set to true to indicate that there isn't a zygote
++    // for this process and the step is to be performed here explicitly.
++    bool engage_namespace_sandbox = false;
++
++    // Allow starting the sandbox with multiple threads already running. This
++    // will enable TSYNC for seccomp-BPF, which syncs the seccomp-BPF policy
++    // across all running threads.
++    bool allow_threads_during_sandbox_init = false;
++
++    // Enables the CHECK for open directories. The open directory check is only
++    // useful for the chroot jail (from the semantic layer of the sandbox), and
++    // can safely be disabled if we are only enabling the seccomp-BPF layer.
++    bool check_for_open_directories = true;
++  };
++
++  // Callers can provide this hook to run code right before the policy
++  // is passed to the BPF compiler and the sandbox is engaged. If
++  // pre_sandbox_hook() returns true, the sandbox will be engaged
++  // afterwards, otherwise the process is terminated.
++  using PreSandboxHook = base::OnceCallback<bool(Options)>;
++
++  // Get our singleton instance.
++  static SandboxLinux* GetInstance();
++
++  SandboxLinux(const SandboxLinux&) = delete;
++  SandboxLinux& operator=(const SandboxLinux&) = delete;
++
++  bool SetPledge(const char *pstring, const char *ppath);
++  bool SetUnveil(const std::string process_type, sandbox::mojom::Sandbox sandbox_type);
++
++  // Do some initialization that can only be done before any of the sandboxes
++  // are enabled. If using the setuid sandbox, this should be called manually
++  // before the setuid sandbox is engaged.
++  // Security: When this runs, it is imperative that either InitializeSandbox()
++  // runs as well or that all file descriptors returned in
++  // GetFileDescriptorsToClose() get closed.
++  // Otherwise file descriptors that bypass the security of the setuid sandbox
++  // would be kept open. One must be particularly careful if a process performs
++  // a fork().
++  void PreinitializeSandbox(sandbox::mojom::Sandbox sandbox_type);
++
++  // Check that the current process is the init process of a new PID
++  // namespace and then proceed to drop access to the file system by using
++  // a new unprivileged namespace. This is a layer-1 sandbox.
++  // In order for this sandbox to be effective, it must be "sealed" by calling
++  // InitializeSandbox().
++  void EngageNamespaceSandbox(bool from_zygote);
++
++  // Return a list of file descriptors to close if PreinitializeSandbox() ran
++  // but InitializeSandbox() won't. Avoid using.
++  // TODO(jln): get rid of this hack.
++  std::vector<int> GetFileDescriptorsToClose();
++
++  // Seal an eventual layer-1 sandbox and initialize the layer-2 sandbox with
++  // an adequate policy depending on the process type and command line
++  // arguments.
++  // Currently the layer-2 sandbox is composed of seccomp-bpf and address space
++  // limitations.
++  // This function should only be called without any thread running.
++  bool InitializeSandbox(sandbox::mojom::Sandbox sandbox_type,
++                         PreSandboxHook hook,
++                         const Options& options);
++
++  // Stop |thread| in a way that can be trusted by the sandbox.
++  void StopThread(base::Thread* thread);
++
++  // Returns the status of the renderer, worker and ppapi sandbox. Can only
++  // be queried after going through PreinitializeSandbox(). This is a bitmask
++  // and uses the constants defined in "enum Status" above. Since the
++  // status needs to be provided before the sandboxes are actually started,
++  // this returns what will actually happen once InitializeSandbox()
++  // is called from inside these processes.
++  int GetStatus();
++
++  // Returns true if the current process is single-threaded or if the number
++  // of threads cannot be determined.
++  bool IsSingleThreaded() const;
++
++  // Returns true if we started Seccomp BPF.
++  bool seccomp_bpf_started() const;
++
++  // Check the policy and eventually start the seccomp-bpf sandbox. This should
++  // never be called with threads started. If we detect that threads have
++  // started we will crash.
++  bool StartSeccompBPF(sandbox::mojom::Sandbox sandbox_type,
++                       PreSandboxHook hook,
++                       const Options& options);
++
++  // Limit the address space of the current process (and its children) to make
++  // some vulnerabilities harder to exploit. Writes the errno due to setrlimit
++  // (including 0 if no error) into |error|.
++  bool LimitAddressSpace(int* error);
++
++  // Returns a file descriptor to proc. The file descriptor is no longer valid
++  // after the sandbox has been sealed.
++  int proc_fd() const {
++    DCHECK_NE(-1, proc_fd_);
++    return proc_fd_;
++  }
++
++#if BUILDFLAG(USING_SANITIZER)
++  __sanitizer_sandbox_arguments* sanitizer_args() const {
++    return sanitizer_args_.get();
++  };
++#endif
++
++  // A BrokerProcess is a helper that is started before the sandbox is engaged,
++  // typically from a pre-sandbox hook, that will serve requests to access
++  // files over an IPC channel. The client  of this runs from a SIGSYS handler
++  // triggered by the seccomp-bpf sandbox.
++  // |client_sandbox_policy| is the policy being run by the client, and is
++  // used to derive the equivalent broker-side policy.
++  // |broker_side_hook| is an alternate pre-sandbox hook to be run before the
++  // broker itself gets sandboxed, to which the broker side policy and
++  // |options| are passed.
++  // Crashes the process if the broker can not be started since continuation
++  // is impossible (and presumably unsafe).
++  // This should never be destroyed, as after the sandbox is started it is
++  // vital to the process.
++#if 0
++  void StartBrokerProcess(
++      const sandbox::syscall_broker::BrokerCommandSet& allowed_command_set,
++      std::vector<sandbox::syscall_broker::BrokerFilePermission> permissions,
++      PreSandboxHook broker_side_hook,
++      const Options& options);
++
++  sandbox::syscall_broker::BrokerProcess* broker_process() const {
++    return broker_process_;
++  }
++#endif
++
++ private:
++  friend struct base::DefaultSingletonTraits<SandboxLinux>;
++
++  SandboxLinux();
++  ~SandboxLinux();
++
++  // We must have been pre_initialized_ before using these.
++  bool seccomp_bpf_supported() const;
++  bool seccomp_bpf_with_tsync_supported() const;
++
++  // Returns true if it can be determined that the current process has open
++  // directories that are not managed by the SandboxLinux class. This would
++  // be a vulnerability as it would allow to bypass the setuid sandbox.
++  bool HasOpenDirectories() const;
++
++  // The last part of the initialization is to make sure any temporary "hole"
++  // in the sandbox is closed. For now, this consists of closing proc_fd_.
++  void SealSandbox();
++
++  // GetStatus() makes promises as to how the sandbox will behave. This
++  // checks that no promises have been broken.
++  void CheckForBrokenPromises(sandbox::mojom::Sandbox sandbox_type);
++
++  // Stop |thread| and make sure it does not appear in /proc/self/tasks/
++  // anymore.
++  void StopThreadAndEnsureNotCounted(base::Thread* thread) const;
++
++  // A file descriptor to /proc. It's dangerous to have it around as it could
++  // allow for sandbox bypasses. It needs to be closed before we consider
++  // ourselves sandboxed.
++  int proc_fd_;
++
++  bool seccomp_bpf_started_;
++  // The value returned by GetStatus(). Gets computed once and then cached.
++  int sandbox_status_flags_;
++  // Did PreinitializeSandbox() run?
++  bool pre_initialized_;
++  bool seccomp_bpf_supported_;             // Accurate if pre_initialized_.
++  bool seccomp_bpf_with_tsync_supported_;  // Accurate if pre_initialized_.
++  bool yama_is_enforcing_;                 // Accurate if pre_initialized_.
++  bool initialize_sandbox_ran_;            // InitializeSandbox() was called.
++#if BUILDFLAG(USING_SANITIZER)
++  std::unique_ptr<__sanitizer_sandbox_arguments> sanitizer_args_;
++#endif
++  sandbox::syscall_broker::BrokerProcess* broker_process_;  // Leaked as global.
++};
++
++}  // namespace policy
++}  // namespace sandbox
++
++#endif  // SANDBOX_POLICY_LINUX_SANDBOX_OPENBSD_H_
+diff --git a/policy/openbsd/sandbox_openbsd.cc b/policy/openbsd/sandbox_openbsd.cc
+new file mode 100644
+index 0000000000..a4b025e5d5
+--- /dev/null
++++ b/policy/openbsd/sandbox_openbsd.cc
+@@ -0,0 +1,396 @@
++// Copyright (c) 2012 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "sandbox/policy/openbsd/sandbox_openbsd.h"
++
++#include <dirent.h>
++#include <fcntl.h>
++#include <stdint.h>
++#include <sys/resource.h>
++#include <sys/stat.h>
++#include <sys/time.h>
++#include <sys/types.h>
++#include <unistd.h>
++#include <util.h>
++
++#include <limits>
++#include <memory>
++#include <string>
++#include <vector>
++
++#include "base/command_line.h"
++#include "base/debug/stack_trace.h"
++#include "base/feature_list.h"
++#include "base/files/file_path.h"
++#include "base/files/file_util.h"
++#include "base/files/scoped_file.h"
++#include "base/logging.h"
++#include "base/memory/singleton.h"
++#include "base/path_service.h"
++#include "base/posix/eintr_wrapper.h"
++#include "base/strings/string_number_conversions.h"
++#include "base/system/sys_info.h"
++#include "base/threading/thread.h"
++#include "base/time/time.h"
++#include "build/build_config.h"
++#include "crypto/crypto_buildflags.h"
++#include "sandbox/constants.h"
++#include "sandbox/linux/services/credentials.h"
++#include "sandbox/linux/services/namespace_sandbox.h"
++#include "sandbox/linux/services/proc_util.h"
++#include "sandbox/linux/services/resource_limits.h"
++#include "sandbox/linux/services/thread_helpers.h"
++#include "sandbox/linux/syscall_broker/broker_command.h"
++#include "sandbox/linux/syscall_broker/broker_process.h"
++#include "sandbox/policy/sandbox.h"
++#include "sandbox/policy/sandbox_type.h"
++#include "sandbox/policy/mojom/sandbox.mojom.h"
++#include "sandbox/policy/switches.h"
++#include "sandbox/sandbox_buildflags.h" 
++
++#if BUILDFLAG(USING_SANITIZER)
++#include <sanitizer/common_interface_defs.h>
++#endif
++
++#if BUILDFLAG(USE_NSS_CERTS)
++#include "crypto/nss_util.h"
++#endif
++
++#include "third_party/boringssl/src/include/openssl/crypto.h"
++#include "third_party/skia/experimental/rust_png/ffi/FFI.rs.h"
++
++#include <fontconfig/fontconfig.h>
++#include "ui/gfx/linux/fontconfig_util.h"
++
++#define MAXTOKENS	3
++
++#define _UNVEIL_MAIN		"/etc/chromium/unveil.main";
++#define _UNVEIL_GPU		"/etc/chromium/unveil.gpu";
++#define _UNVEIL_UTILITY_NETWORK	"/etc/chromium/unveil.utility_network";
++#define _UNVEIL_UTILITY_AUDIO	"/etc/chromium/unveil.utility_audio";
++#define _UNVEIL_UTILITY_VIDEO	"/etc/chromium/unveil.utility_video";
++
++namespace sandbox {
++namespace policy {
++
++SandboxLinux::SandboxLinux()
++    : unveil_initialized_(false),
++      sandbox_status_flags_(kInvalid),
++      pre_initialized_(false),
++      initialize_sandbox_ran_(false),
++      broker_process_(nullptr) {
++}
++
++SandboxLinux::~SandboxLinux() {
++  if (pre_initialized_) {
++    CHECK(initialize_sandbox_ran_);
++  }
++}
++
++SandboxLinux* SandboxLinux::GetInstance() {
++  SandboxLinux* instance = base::Singleton<SandboxLinux>::get();
++  CHECK(instance);
++  return instance;
++}
++
++void SandboxLinux::StopThread(base::Thread* thread) {
++  DCHECK(thread);
++  thread->Stop();
++}
++
++void SandboxLinux::PreinitializeSandbox(sandbox::mojom::Sandbox sandbox_type) {
++  CHECK(!pre_initialized_);
++#if BUILDFLAG(USING_SANITIZER)
++  // Sanitizers need to open some resources before the sandbox is enabled.
++  // This should not fork, not launch threads, not open a directory.
++  __sanitizer_sandbox_on_notify(sanitizer_args());
++  sanitizer_args_.reset();
++#endif
++  base::CommandLine* command_line = base::CommandLine::ForCurrentProcess();
++  const std::string process_type =
++      command_line->GetSwitchValueASCII(switches::kProcessType);
++
++  base::SysInfo::AmountOfPhysicalMemory();
++  base::SysInfo::NumberOfProcessors();
++  base::SysInfo::CPUModelName();
++
++  switch (sandbox_type) {
++    case sandbox::mojom::Sandbox::kNoSandbox:
++    {
++#if BUILDFLAG(USE_NSS_CERTS)
++      // The main process has to initialize the ~/.pki dir which won't work
++      // after unveil(2).
++      crypto::EnsureNSSInit();
++#endif
++      CRYPTO_pre_sandbox_init();
++
++      rust_png::initialize_cpudetect();
++
++      base::FilePath cache_directory, local_directory;
++
++      base::PathService::Get(base::DIR_CACHE, &cache_directory);
++      base::PathService::Get(base::DIR_HOME, &local_directory);   
++
++      cache_directory = cache_directory.AppendASCII("chromium");
++      local_directory = local_directory.AppendASCII(".local").AppendASCII("share").AppendASCII("applications");
++
++      if (!base::CreateDirectory(cache_directory)) {
++        LOG(ERROR) << "Failed to create " << cache_directory.value() << " directory.";
++      }
++
++      if (!base::CreateDirectory(local_directory)) {
++        LOG(ERROR) << "Failed to create " << local_directory.value() << " directory.";
++      }
++
++      break;
++    }
++    case sandbox::mojom::Sandbox::kRenderer:
++    {
++      FcConfig* config = gfx::GetGlobalFontConfig();
++      DCHECK(config);
++      break;
++    }
++    default:
++      break;
++  }
++
++  pre_initialized_ = true;
++}
++
++bool SandboxLinux::SetPledge(const char *pstring, const char *ppath) {
++  FILE *fp;
++  char *s = NULL;
++  size_t len = 0;
++  ssize_t read;
++
++  if (pstring != NULL) {
++    if (pledge(pstring, NULL) == -1)
++      goto err;
++    VLOG(5) << "pledge " << pstring;
++  } else if (ppath != NULL) {
++    fp = fopen(ppath, "r");
++    if (fp != NULL) {
++      while ((read = getline(&s, &len, fp)) != -1 ) {
++        if (s[strlen(s)-1] == '\n')
++          s[strlen(s)-1] = '\0';
++        if (pledge(s, NULL) == -1)
++  	  goto err;
++        VLOG(5) << "pledge " << s;
++      }
++      fclose(fp);
++    } else {
++      LOG(ERROR) << "fopen(" << ppath << ") failed, errno: " << errno;
++      return false;
++    }
++  }
++  return true;
++err:
++  LOG(ERROR) << "pledge() failed, errno: " << errno;
++  return false;
++}
++
++bool SandboxLinux::SetUnveil(const std::string process_type, sandbox::mojom::Sandbox sandbox_type) {
++  FILE *fp;
++  char *s = NULL, *cp = NULL, *home = NULL, **ap, *tokens[MAXTOKENS];
++  char *xdg_var = NULL;
++  char path[PATH_MAX];
++  const char *ufile;
++  size_t len = 0, lineno = 0;
++
++  switch (sandbox_type) {
++    case sandbox::mojom::Sandbox::kNoSandbox:
++      ufile = _UNVEIL_MAIN;
++      break;
++    case sandbox::mojom::Sandbox::kGpu:
++    case sandbox::mojom::Sandbox::kOnDeviceModelExecution:
++      ufile = _UNVEIL_GPU;
++      break;
++    case sandbox::mojom::Sandbox::kNetwork:
++      ufile = _UNVEIL_UTILITY_NETWORK;
++      break;
++    case sandbox::mojom::Sandbox::kAudio:
++      ufile = _UNVEIL_UTILITY_AUDIO;
++      break;
++    case sandbox::mojom::Sandbox::kVideoCapture:
++      ufile = _UNVEIL_UTILITY_VIDEO;
++      break;
++    default:
++      unveil("/dev/null", "r");
++      goto done;
++  }
++
++  fp = fopen(ufile, "r");
++  if (fp != NULL) {
++    while (!feof(fp)) {
++      if ((s = fparseln(fp, &len, &lineno, NULL,
++          FPARSELN_UNESCCOMM | FPARSELN_UNESCCONT)) == NULL) {
++        if (ferror(fp)) {
++          LOG(ERROR) << "ferror(), errno: " << errno;
++	  _exit(1);
++	} else {
++          continue;
++	}
++      }
++      cp = s;
++      cp += strspn(cp, " \t\n"); /* eat whitespace */
++      if (cp[0] == '\0')
++        continue;
++
++      for (ap = tokens; ap < &tokens[MAXTOKENS - 1] &&
++          (*ap = strsep(&cp, " \t")) != NULL;) {
++        if (**ap != '\0')
++          ap++;
++      }
++      *ap = NULL;
++
++      if (tokens[1] == NULL) {
++        LOG(ERROR) << ufile << ": line " << lineno << ": must supply value to " << s;
++        _exit(1);
++      }
++
++      if (tokens[0][0] == '~') {
++        if ((home = getenv("HOME")) == NULL || *home == '\0') {
++          LOG(ERROR) << "failed to get home";
++	  _exit(1);
++	}
++        memmove(tokens[0], tokens[0] + 1, strlen(tokens[0]));
++        strncpy(path, home, sizeof(path) - 1);
++        path[sizeof(path) - 1] = '\0';
++        strncat(path, tokens[0], sizeof(path) - 1 - strlen(path));
++      } else if (strncmp(tokens[0], "XDG_", 4) == 0) {
++        if ((xdg_var = getenv(tokens[0])) == NULL || *xdg_var == '\0') {
++          LOG(ERROR) << "failed to get " << tokens[0];
++          continue;
++	}
++        strncpy(path, xdg_var, sizeof(path) - 1);
++        path[sizeof(path) - 1] = '\0';
++      } else {
++        strncpy(path, tokens[0], sizeof(path) - 1);
++        path[sizeof(path) - 1] = '\0';
++      }
++
++      if (unveil(path, tokens[1]) == -1) {
++        LOG(ERROR) << "failed unveiling " << path << " with permissions " << tokens[1];
++        _exit(1);
++      } else {
++        VLOG(5) << "unveiling " << path << " with permissions " << tokens[1];
++      }
++    }
++    fclose(fp);
++  } else {
++        LOG(ERROR) << "failed to open " << ufile << " errno: " << errno;
++        _exit(1);
++  }
++
++done:
++  unveil_initialized_ = true;
++
++  return true;
++}
++
++bool SandboxLinux::unveil_initialized() const {
++  return unveil_initialized_;
++}
++
++bool SandboxLinux::InitializeSandbox(sandbox::mojom::Sandbox sandbox_type,
++                                     SandboxLinux::PreSandboxHook hook,
++                                     const Options& options) {
++  DCHECK(!initialize_sandbox_ran_);
++  initialize_sandbox_ran_ = true;
++
++  base::CommandLine* command_line = base::CommandLine::ForCurrentProcess();
++  const std::string process_type =
++      command_line->GetSwitchValueASCII(switches::kProcessType);
++
++  if (command_line->HasSwitch(switches::kNoSandbox))
++    return true;
++
++  VLOG(1) << "SandboxLinux::InitializeSandbox: process_type="
++      << process_type << " sandbox_type=" << sandbox_type;
++
++  // Only one thread is running, pre-initialize if not already done.
++  if (!pre_initialized_)
++    PreinitializeSandbox(sandbox_type);
++
++  // Attempt to limit the future size of the address space of the process.
++  int error = 0;
++  const bool limited_as = LimitAddressSpace(&error);
++  if (error) {
++    // Restore errno. Internally to |LimitAddressSpace|, the errno due to
++    // setrlimit may be lost.
++    errno = error;
++    PCHECK(limited_as);
++  }
++
++  if (hook)
++    CHECK(std::move(hook).Run(options));
++
++  if (!command_line->HasSwitch(switches::kDisableUnveil))
++    SetUnveil(process_type, sandbox_type);
++
++  switch(sandbox_type) {
++    case sandbox::mojom::Sandbox::kNoSandbox:
++      SetPledge(NULL, "/etc/chromium/pledge.main");
++      break;
++    case sandbox::mojom::Sandbox::kRenderer:
++      // prot_exec needed by v8
++      // flock needed by sqlite3 locking
++      SetPledge("stdio rpath flock prot_exec recvfd sendfd ps", NULL);
++      break;
++    case sandbox::mojom::Sandbox::kGpu:
++    case sandbox::mojom::Sandbox::kOnDeviceModelExecution:
++      SetPledge("stdio drm inet rpath flock cpath wpath prot_exec recvfd sendfd tmppath unix", NULL);
++      break;
++    case sandbox::mojom::Sandbox::kAudio:
++      SetPledge(NULL, "/etc/chromium/pledge.utility_audio");
++      break;
++    case sandbox::mojom::Sandbox::kNetwork:
++      SetPledge(NULL, "/etc/chromium/pledge.utility_network");
++      break;
++    case sandbox::mojom::Sandbox::kVideoCapture:
++      SetPledge(NULL, "/etc/chromium/pledge.utility_video");
++      break;
++    case sandbox::mojom::Sandbox::kUtility:
++    case sandbox::mojom::Sandbox::kService:
++      SetPledge("stdio rpath cpath wpath fattr flock sendfd recvfd prot_exec", NULL);
++      break;
++    default:
++      LOG(ERROR) << "non-pledge()'d process: " << sandbox_type;
++      break;
++  }
++
++  return true;
++}
++
++bool SandboxLinux::LimitAddressSpace(int* error) {
++#if !defined(ADDRESS_SANITIZER) && !defined(MEMORY_SANITIZER) && \
++    !defined(THREAD_SANITIZER) && !defined(LEAK_SANITIZER)
++  base::CommandLine* command_line = base::CommandLine::ForCurrentProcess();
++  if (SandboxTypeFromCommandLine(*command_line) == sandbox::mojom::Sandbox::kNoSandbox) {
++    return false;
++  }
++
++  // Unfortunately, it does not appear possible to set RLIMIT_AS such that it
++  // will both (a) be high enough to support V8's and WebAssembly's address
++  // space requirements while also (b) being low enough to mitigate exploits
++  // using integer overflows that require large allocations, heap spray, or
++  // other memory-hungry attack modes.
++
++  *error = sandbox::ResourceLimits::Lower(
++      RLIMIT_DATA, static_cast<rlim_t>(sandbox::kDataSizeLimit));
++
++  // Cache the resource limit before turning on the sandbox.
++  base::SysInfo::AmountOfVirtualMemory();
++  base::SysInfo::MaxSharedMemorySize();
++
++  return *error == 0;
++#else
++  base::SysInfo::AmountOfVirtualMemory();
++  return false;
++#endif  // !defined(ADDRESS_SANITIZER) && !defined(MEMORY_SANITIZER) &&
++        // !defined(THREAD_SANITIZER) && !defined(LEAK_SANITIZER)
++}
++
++}  // namespace policy
++}  // namespace sandbox
+diff --git a/policy/openbsd/sandbox_openbsd.h b/policy/openbsd/sandbox_openbsd.h
+new file mode 100644
+index 0000000000..7be8c18b30
+--- /dev/null
++++ b/policy/openbsd/sandbox_openbsd.h
+@@ -0,0 +1,280 @@
++// Copyright (c) 2012 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++#ifndef SANDBOX_POLICY_LINUX_SANDBOX_OPENBSD_H_
++#define SANDBOX_POLICY_LINUX_SANDBOX_OPENBSD_H_
++
++#include <memory>
++#include <string>
++#include <vector>
++
++#include "base/logging.h"
++#include "base/posix/global_descriptors.h"
++#include "sandbox/policy/export.h"
++#include "sandbox/policy/linux/sandbox_seccomp_bpf_linux.h"
++#include "sandbox/policy/mojom/sandbox.mojom.h"
++#include "base/sanitizer_buildflags.h"
++
++#if BUILDFLAG(USING_SANITIZER)
++#include <sanitizer/common_interface_defs.h>
++#endif
++
++namespace base {
++template <typename T>
++struct DefaultSingletonTraits;
++class Thread;
++}  // namespace base
++
++namespace sandbox {
++namespace syscall_broker {
++class BrokerProcess;
++}  // namespace syscall_broker
++}  // namespace sandbox
++
++namespace sandbox {
++namespace policy {
++
++// A singleton class to represent and change our sandboxing state for the
++// three main Linux sandboxes.
++// The sandboxing model allows using two layers of sandboxing. The first layer
++// can be implemented either with unprivileged namespaces or with the setuid
++// sandbox. This class provides a way to engage the namespace sandbox, but does
++// not deal with the legacy setuid sandbox directly.
++// The second layer is mainly based on seccomp-bpf and is engaged with
++// InitializeSandbox(). InitializeSandbox() is also responsible for "sealing"
++// the first layer of sandboxing. That is, InitializeSandbox must always be
++// called to have any meaningful sandboxing at all.
++class SANDBOX_POLICY_EXPORT SandboxLinux {
++ public:
++  // This is a list of sandbox IPC methods which the renderer may send to the
++  // sandbox host. See
++  // https://chromium.googlesource.com/chromium/src/+/master/docs/linux_sandbox_ipc.md
++  // This isn't the full list, values < 32 are reserved for methods called from
++  // Skia, and values < 64 are reserved for libc_interceptor.cc.
++  enum LinuxSandboxIPCMethods {
++    DEPRECATED_METHOD_GET_FALLBACK_FONT_FOR_CHAR = 64,
++    DEPRECATED_METHOD_GET_CHILD_WITH_INODE,
++    DEPRECATED_METHOD_GET_STYLE_FOR_STRIKE,
++    METHOD_MAKE_SHARED_MEMORY_SEGMENT,
++    DEPRECATED_METHOD_MATCH_WITH_FALLBACK,
++  };
++
++  // These form a bitmask which describes the conditions of the Linux sandbox.
++  // Note: this doesn't strictly give you the current status, it states
++  // what will be enabled when the relevant processes are initialized.
++  enum Status {
++    // SUID sandbox active.
++    kSUID = 1 << 0,
++
++    // Sandbox is using a new PID namespace.
++    kPIDNS = 1 << 1,
++
++    // Sandbox is using a new network namespace.
++    kNetNS = 1 << 2,
++
++    // seccomp-bpf sandbox active.
++    kSeccompBPF = 1 << 3,
++
++    // The Yama LSM module is present and enforcing.
++    kYama = 1 << 4,
++
++    // seccomp-bpf sandbox is active and the kernel supports TSYNC.
++    kSeccompTSYNC = 1 << 5,
++
++    // User namespace sandbox active.
++    kUserNS = 1 << 6,
++
++    // A flag that denotes an invalid sandbox status.
++    kInvalid = 1 << 31,
++  };
++
++  // SandboxLinux Options are a superset of SandboxSecompBPF Options.
++  struct Options : public SandboxSeccompBPF::Options {
++    // When running with a zygote, the namespace sandbox will have already
++    // been engaged prior to initializing SandboxLinux itself, and need not
++    // be done so again. Set to true to indicate that there isn't a zygote
++    // for this process and the step is to be performed here explicitly.
++    bool engage_namespace_sandbox = false;
++
++    // Allow starting the sandbox with multiple threads already running. This
++    // will enable TSYNC for seccomp-BPF, which syncs the seccomp-BPF policy
++    // across all running threads.
++    bool allow_threads_during_sandbox_init = false;
++
++    // Enables the CHECK for open directories. The open directory check is only
++    // useful for the chroot jail (from the semantic layer of the sandbox), and
++    // can safely be disabled if we are only enabling the seccomp-BPF layer.
++    bool check_for_open_directories = true;
++  };
++
++  // Callers can provide this hook to run code right before the policy
++  // is passed to the BPF compiler and the sandbox is engaged. If
++  // pre_sandbox_hook() returns true, the sandbox will be engaged
++  // afterwards, otherwise the process is terminated.
++  using PreSandboxHook = base::OnceCallback<bool(Options)>;
++
++  // Get our singleton instance.
++  static SandboxLinux* GetInstance();
++
++  SandboxLinux(const SandboxLinux&) = delete;
++  SandboxLinux& operator=(const SandboxLinux&) = delete;
++
++  bool SetPledge(const char *pstring, const char *ppath);
++  bool SetUnveil(const std::string process_type, sandbox::mojom::Sandbox sandbox_type);
++
++  // Do some initialization that can only be done before any of the sandboxes
++  // are enabled. If using the setuid sandbox, this should be called manually
++  // before the setuid sandbox is engaged.
++  // Security: When this runs, it is imperative that either InitializeSandbox()
++  // runs as well or that all file descriptors returned in
++  // GetFileDescriptorsToClose() get closed.
++  // Otherwise file descriptors that bypass the security of the setuid sandbox
++  // would be kept open. One must be particularly careful if a process performs
++  // a fork().
++  void PreinitializeSandbox(sandbox::mojom::Sandbox sandbox_type);
++
++  // Check that the current process is the init process of a new PID
++  // namespace and then proceed to drop access to the file system by using
++  // a new unprivileged namespace. This is a layer-1 sandbox.
++  // In order for this sandbox to be effective, it must be "sealed" by calling
++  // InitializeSandbox().
++  void EngageNamespaceSandbox(bool from_zygote);
++
++  // Return a list of file descriptors to close if PreinitializeSandbox() ran
++  // but InitializeSandbox() won't. Avoid using.
++  // TODO(jln): get rid of this hack.
++  std::vector<int> GetFileDescriptorsToClose();
++
++  // Seal an eventual layer-1 sandbox and initialize the layer-2 sandbox with
++  // an adequate policy depending on the process type and command line
++  // arguments.
++  // Currently the layer-2 sandbox is composed of seccomp-bpf and address space
++  // limitations.
++  // This function should only be called without any thread running.
++  bool InitializeSandbox(sandbox::mojom::Sandbox sandbox_type,
++                         PreSandboxHook hook,
++                         const Options& options);
++
++  // Stop |thread| in a way that can be trusted by the sandbox.
++  void StopThread(base::Thread* thread);
++
++  // Returns the status of the renderer, worker and ppapi sandbox. Can only
++  // be queried after going through PreinitializeSandbox(). This is a bitmask
++  // and uses the constants defined in "enum Status" above. Since the
++  // status needs to be provided before the sandboxes are actually started,
++  // this returns what will actually happen once InitializeSandbox()
++  // is called from inside these processes.
++  int GetStatus();
++
++  // Returns true if the current process is single-threaded or if the number
++  // of threads cannot be determined.
++  bool IsSingleThreaded() const;
++
++  // Returns true if we started Seccomp BPF.
++  bool seccomp_bpf_started() const;
++
++  // Returns true if unveil(2) is used.
++  bool unveil_initialized() const;
++
++  // Check the policy and eventually start the seccomp-bpf sandbox. This should
++  // never be called with threads started. If we detect that threads have
++  // started we will crash.
++  bool StartSeccompBPF(sandbox::mojom::Sandbox sandbox_type,
++                       PreSandboxHook hook,
++                       const Options& options);
++
++  // Limit the address space of the current process (and its children) to make
++  // some vulnerabilities harder to exploit. Writes the errno due to setrlimit
++  // (including 0 if no error) into |error|.
++  bool LimitAddressSpace(int* error);
++
++  // Returns a file descriptor to proc. The file descriptor is no longer valid
++  // after the sandbox has been sealed.
++  int proc_fd() const {
++    DCHECK_NE(-1, proc_fd_);
++    return proc_fd_;
++  }
++
++#if BUILDFLAG(USING_SANITIZER)
++  __sanitizer_sandbox_arguments* sanitizer_args() const {
++    return sanitizer_args_.get();
++  };
++#endif
++
++  // A BrokerProcess is a helper that is started before the sandbox is engaged,
++  // typically from a pre-sandbox hook, that will serve requests to access
++  // files over an IPC channel. The client  of this runs from a SIGSYS handler
++  // triggered by the seccomp-bpf sandbox.
++  // |client_sandbox_policy| is the policy being run by the client, and is
++  // used to derive the equivalent broker-side policy.
++  // |broker_side_hook| is an alternate pre-sandbox hook to be run before the
++  // broker itself gets sandboxed, to which the broker side policy and
++  // |options| are passed.
++  // Crashes the process if the broker can not be started since continuation
++  // is impossible (and presumably unsafe).
++  // This should never be destroyed, as after the sandbox is started it is
++  // vital to the process.
++#if 0
++  void StartBrokerProcess(
++      const sandbox::syscall_broker::BrokerCommandSet& allowed_command_set,
++      std::vector<sandbox::syscall_broker::BrokerFilePermission> permissions,
++      PreSandboxHook broker_side_hook,
++      const Options& options);
++
++  sandbox::syscall_broker::BrokerProcess* broker_process() const {
++    return broker_process_;
++  }
++#endif
++
++ private:
++  friend struct base::DefaultSingletonTraits<SandboxLinux>;
++
++  SandboxLinux();
++  ~SandboxLinux();
++
++  // We must have been pre_initialized_ before using these.
++  bool seccomp_bpf_supported() const;
++  bool seccomp_bpf_with_tsync_supported() const;
++
++  // Returns true if it can be determined that the current process has open
++  // directories that are not managed by the SandboxLinux class. This would
++  // be a vulnerability as it would allow to bypass the setuid sandbox.
++  bool HasOpenDirectories() const;
++
++  // The last part of the initialization is to make sure any temporary "hole"
++  // in the sandbox is closed. For now, this consists of closing proc_fd_.
++  void SealSandbox();
++
++  // GetStatus() makes promises as to how the sandbox will behave. This
++  // checks that no promises have been broken.
++  void CheckForBrokenPromises(sandbox::mojom::Sandbox sandbox_type);
++
++  // Stop |thread| and make sure it does not appear in /proc/self/tasks/
++  // anymore.
++  void StopThreadAndEnsureNotCounted(base::Thread* thread) const;
++
++  // A file descriptor to /proc. It's dangerous to have it around as it could
++  // allow for sandbox bypasses. It needs to be closed before we consider
++  // ourselves sandboxed.
++  int proc_fd_;
++
++  bool seccomp_bpf_started_;
++  bool unveil_initialized_;
++  // The value returned by GetStatus(). Gets computed once and then cached.
++  int sandbox_status_flags_;
++  // Did PreinitializeSandbox() run?
++  bool pre_initialized_;
++  bool seccomp_bpf_supported_;             // Accurate if pre_initialized_.
++  bool seccomp_bpf_with_tsync_supported_;  // Accurate if pre_initialized_.
++  bool yama_is_enforcing_;                 // Accurate if pre_initialized_.
++  bool initialize_sandbox_ran_;            // InitializeSandbox() was called.
++#if BUILDFLAG(USING_SANITIZER)
++  std::unique_ptr<__sanitizer_sandbox_arguments> sanitizer_args_;
++#endif
++  sandbox::syscall_broker::BrokerProcess* broker_process_;  // Leaked as global.
++};
++
++}  // namespace policy
++}  // namespace sandbox
++
++#endif  // SANDBOX_POLICY_LINUX_SANDBOX_OPENBSD_H_
 diff --git a/printing/backend/cups_helper.cc b/printing/backend/cups_helper.cc
 index f255a09958..63341b058d 100644
 --- a/printing/backend/cups_helper.cc
@@ -28833,6 +32813,73 @@ index 39a320c356..a4bb733b02 100644
  constexpr char kDeviceIdPrefix[] = "crd-linux-host-";
  #else
  constexpr char kDeviceIdPrefix[] = "crd-unknown-host-";
+diff --git a/resource_coordinator/public/cpp/memory_instrumentation/os_metrics_bsd.cc b/resource_coordinator/public/cpp/memory_instrumentation/os_metrics_bsd.cc
+new file mode 100644
+index 0000000000..85dcc45c8e
+--- /dev/null
++++ b/resource_coordinator/public/cpp/memory_instrumentation/os_metrics_bsd.cc
+@@ -0,0 +1,61 @@
++// Copyright 2022 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "services/resource_coordinator/public/cpp/memory_instrumentation/os_metrics.h"
++
++#include "base/notimplemented.h"
++
++#include "base/memory/page_size.h"
++#include "base/process/process.h"
++#include "base/process/process_handle.h"
++
++#include <sys/sysctl.h>
++
++#include <vector>
++
++#if BUILDFLAG(IS_OPENBSD)
++#define vm_rssize info.p_vm_rssize
++#elif BUILDFLAG(IS_FREEBSD)
++#include <sys/user.h>
++#define vm_rssize info.ki_rssize
++#endif
++
++namespace memory_instrumentation {
++
++// static
++bool OSMetrics::FillOSMemoryDump(base::ProcessId pid,
++                                 const MemDumpFlagSet& flags,
++                                 mojom::RawOSMemDump* dump) {
++  base::Process process = pid == base::kNullProcessId
++                              ? base::Process::Current()
++                              : base::Process::Open(pid);
++  const size_t kPageSize = base::GetPageSize();
++  struct kinfo_proc info;
++  size_t length = sizeof(struct kinfo_proc);
++#if BUILDFLAG(IS_OPENBSD)
++  int mib[] = { CTL_KERN, KERN_PROC, KERN_PROC_PID, process.Handle(),
++                static_cast<int>(length), 1 };
++#elif BUILDFLAG(IS_FREEBSD)
++  int mib[] = { CTL_KERN, KERN_PROC, KERN_PROC_PID, process.Handle() };
++#endif
++
++  if (sysctl(mib, std::size(mib), &info, &length, NULL, 0) < 0)
++    return false;
++
++  dump->resident_set_kb = (vm_rssize * kPageSize) / 1024;
++  dump->platform_private_footprint->rss_anon_bytes =
++      vm_rssize * kPageSize;
++  dump->platform_private_footprint->vm_swap_bytes = 0;
++
++  return true;
++}
++
++// static
++std::vector<mojom::VmRegionPtr> OSMetrics::GetProcessMemoryMaps(
++    base::ProcessId) {
++  NOTIMPLEMENTED();
++  return std::vector<mojom::VmRegionPtr>();
++}
++
++}  // namespace memory_instrumentation
 diff --git a/sandbox/BUILD.gn b/sandbox/BUILD.gn
 index 0820bc89c5..e75ac3dbb2 100644
 --- a/sandbox/BUILD.gn
@@ -33317,7 +37364,7 @@ index a7ba27f22d..ef4a07bda5 100644
    }
  
 diff --git a/services/network/public/cpp/features.cc b/services/network/public/cpp/features.cc
-index 7dd8e53b54..8b51630dd0 100644
+index 2201a6a523..e98d0d2fc1 100644
 --- a/services/network/public/cpp/features.cc
 +++ b/services/network/public/cpp/features.cc
 @@ -109,7 +109,7 @@ BASE_FEATURE(kSplitAuthCacheByNetworkIsolationKey,
@@ -33958,6 +38005,41 @@ index 095fa9825a..cfcce2b26e 100644
  #include "skia/ext/skcolorspace_trfn.h"
  
  #include <array>
+diff --git a/speech-dispatcher/libspeechd_version.h b/speech-dispatcher/libspeechd_version.h
+new file mode 100644
+index 0000000000..c455a1ffa5
+--- /dev/null
++++ b/speech-dispatcher/libspeechd_version.h
+@@ -0,0 +1,29 @@
++/*
++ * libspeechd_version.h - Shared library for easy access to Speech Dispatcher functions (header)
++ *
++ * Copyright (C) 2001, 2002, 2003, 2004 Brailcom, o.p.s.
++ *
++ * This is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU Lesser General Public License as published by
++ * the Free Software Foundation; either version 2.1, or (at your option)
++ * any later version.
++ *
++ * This software is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
++ *
++ * $Id: patch-third_party_speech-dispatcher_libspeechd_version_h,v 1.4 2024/03/22 13:10:56 robert Exp $
++ */
++
++#ifndef _LIBSPEECHD_VERSION_H
++#define _LIBSPEECHD_VERSION_H
++
++#define LIBSPEECHD_MAJOR_VERSION 0
++#define LIBSPEECHD_MINOR_VERSION 11
++#define LIBSPEECHD_MICRO_VERSION 5
++
++#endif /* ifndef _LIBSPEECHD_VERSION_H */
 diff --git a/third_party/abseil-cpp/absl/base/config.h b/third_party/abseil-cpp/absl/base/config.h
 index b247d0847f..e3d91937d3 100644
 --- a/third_party/abseil-cpp/absl/base/config.h
@@ -34572,7 +38654,7 @@ index 6e2473c4dd..30da1c120f 100644
          "rt",
          "dl",
 diff --git a/third_party/blink/common/features.cc b/third_party/blink/common/features.cc
-index 080c003ec1..480049a60d 100644
+index 77da303e11..a967ff01b7 100644
 --- a/third_party/blink/common/features.cc
 +++ b/third_party/blink/common/features.cc
 @@ -572,7 +572,7 @@ BASE_FEATURE_PARAM(base::TimeDelta,
@@ -35151,10 +39233,10 @@ index b7e5074cd5..34723a6d10 100644
  #elif BUILDFLAG(IS_ANDROID)
    // TODO(crbug.com/dawn/1969): Some Android devices don't fail to copy from
 diff --git a/third_party/blink/renderer/platform/BUILD.gn b/third_party/blink/renderer/platform/BUILD.gn
-index ad5d60eae0..4da7a6045e 100644
+index f854f8a38c..991581d9bf 100644
 --- a/third_party/blink/renderer/platform/BUILD.gn
 +++ b/third_party/blink/renderer/platform/BUILD.gn
-@@ -2077,7 +2077,7 @@ static_library("test_support") {
+@@ -2078,7 +2078,7 @@ static_library("test_support") {
    ]
  
    # fuzzed_data_provider may not work with a custom toolchain.
@@ -35310,10 +39392,10 @@ index c6cef6d269..156da6959d 100644
  #elif BUILDFLAG(IS_WIN)
    return std::make_unique<FontUniqueNameLookupWin>();
 diff --git a/third_party/blink/renderer/platform/fonts/skia/font_cache_skia.cc b/third_party/blink/renderer/platform/fonts/skia/font_cache_skia.cc
-index 5f34fe4dd3..e70a69ecd3 100644
+index 239bbc98ff..0d48d69a76 100644
 --- a/third_party/blink/renderer/platform/fonts/skia/font_cache_skia.cc
 +++ b/third_party/blink/renderer/platform/fonts/skia/font_cache_skia.cc
-@@ -65,7 +65,7 @@ AtomicString ToAtomicString(const SkString& str) {
+@@ -66,7 +66,7 @@ AtomicString ToAtomicString(const SkString& str) {
    return AtomicString::FromUTF8(std::string_view(str.begin(), str.end()));
  }
  
@@ -35322,7 +39404,7 @@ index 5f34fe4dd3..e70a69ecd3 100644
  // This function is called on android or when we are emulating android fonts on
  // linux and the embedder has overriden the default fontManager with
  // WebFontRendering::setSkiaFontMgr.
-@@ -256,7 +256,7 @@ const FontPlatformData* FontCache::CreateFontPlatformData(
+@@ -259,7 +259,7 @@ const FontPlatformData* FontCache::CreateFontPlatformData(
    std::string name;
  
    sk_sp<SkTypeface> typeface;
@@ -35427,7 +39509,7 @@ index a72614ba3e..9478ee036f 100644
            base::FeatureList::IsEnabled(kPlatformH264CbpEncoding) &&
            profile.profile == media::VideoCodecProfile::H264PROFILE_BASELINE;
 diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
-index 25e2cf6b2c..30e05d8ed4 100644
+index 0091f253ab..a2dc3b5007 100644
 --- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
 +++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
 @@ -324,7 +324,7 @@
@@ -35475,7 +39557,7 @@ index 25e2cf6b2c..30e05d8ed4 100644
        base_feature: "WebAppEnableAppTitle",
      },
      {
-@@ -1748,7 +1748,7 @@
+@@ -1738,7 +1738,7 @@
      {
        name: "DeviceBoundSessionCredentials",
        origin_trial_feature_name: "DeviceBoundSessionCredentials",
@@ -35484,7 +39566,7 @@ index 25e2cf6b2c..30e05d8ed4 100644
        status: "experimental",
        // Killswitch is net::features::kDeviceBoundSessions
        base_feature: "none",
-@@ -1756,7 +1756,7 @@
+@@ -1746,7 +1746,7 @@
      {
        name: "DeviceBoundSessionCredentials2",
        origin_trial_feature_name: "DeviceBoundSessionCredentials2",
@@ -35493,7 +39575,7 @@ index 25e2cf6b2c..30e05d8ed4 100644
        status: "experimental",
        // Killswitch is net::features::kDeviceBoundSessions
        base_feature: "none",
-@@ -1899,7 +1899,7 @@
+@@ -1889,7 +1889,7 @@
        name: "DocumentIsolationPolicy",
        status: "experimental",
        origin_trial_feature_name: "DocumentIsolationPolicy",
@@ -35502,7 +39584,7 @@ index 25e2cf6b2c..30e05d8ed4 100644
        base_feature: "none",
      },
      {
-@@ -2144,7 +2144,7 @@
+@@ -2134,7 +2134,7 @@
        base_feature: "none",
        public: true,
        origin_trial_feature_name: "FedCmMultipleIdentityProviders",
@@ -35511,7 +39593,7 @@ index 25e2cf6b2c..30e05d8ed4 100644
        origin_trial_allows_third_party: true,
      },
      {
-@@ -3643,7 +3643,7 @@
+@@ -3633,7 +3633,7 @@
        // Tracking bug for the implementation: https://crbug.com/1462930
        name: "PermissionElement",
        origin_trial_feature_name: "PermissionElement",
@@ -35520,7 +39602,7 @@ index 25e2cf6b2c..30e05d8ed4 100644
        status: "experimental",
        public: true,
        base_feature_status: "enabled",
-@@ -5179,7 +5179,7 @@
+@@ -5169,7 +5169,7 @@
        name: "UnrestrictedSharedArrayBuffer",
        base_feature: "none",
        origin_trial_feature_name: "UnrestrictedSharedArrayBuffer",
@@ -35529,7 +39611,7 @@ index 25e2cf6b2c..30e05d8ed4 100644
      },
      // Enables using policy-controlled feature "usb-unrestricted" to allow
      // isolated context to access protected USB interface classes and to
-@@ -5364,7 +5364,7 @@
+@@ -5354,7 +5354,7 @@
      {
        name: "WebAppScopeExtensions",
        origin_trial_feature_name: "WebAppScopeExtensions",
@@ -35538,7 +39620,7 @@ index 25e2cf6b2c..30e05d8ed4 100644
        status: "experimental",
        base_feature: "none",
      },
-@@ -5472,7 +5472,7 @@
+@@ -5462,7 +5462,7 @@
      {
        name: "WebAuthenticationImmediateGet",
        origin_trial_feature_name: "WebAuthenticationImmediateGet",
@@ -38908,6 +42990,187 @@ index 34ae7b913a..f1fc2314f7 100644
  #elif defined(ARMV8_OS_FUCHSIA)
      uint32_t features;
      zx_status_t rc = zx_system_get_features(ZX_FEATURE_KIND_CPU, &features);
+diff --git a/threading/platform_thread_bsd.cc b/threading/platform_thread_bsd.cc
+new file mode 100644
+index 0000000000..b0222328bf
+--- /dev/null
++++ b/threading/platform_thread_bsd.cc
+@@ -0,0 +1,31 @@
++// Copyright 2023 The Chromium Authors
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++// Description: These are stubs for *BSD.
++
++#include "base/threading/platform_thread.h"
++
++namespace base {
++namespace internal {
++
++bool CanSetThreadTypeToRealtimeAudio() {
++  return false;
++}
++
++bool SetCurrentThreadTypeForPlatform(ThreadType thread_type,
++                                MessagePumpType pump_type_hint) {
++  return false;
++}
++
++std::optional<ThreadPriorityForTest>
++GetCurrentThreadPriorityForPlatformForTest() {
++  return std::nullopt;
++}
++}  // namespace internal
++
++// static
++void PlatformThreadBase::SetName(const std::string& name) {
++  SetNameCommon(name);
++}
++
++}  // namespace base
+diff --git a/toolchain/freebsd/BUILD.gn b/toolchain/freebsd/BUILD.gn
+new file mode 100644
+index 0000000000..be54cf41e0
+--- /dev/null
++++ b/toolchain/freebsd/BUILD.gn
+@@ -0,0 +1,66 @@
++# Copyright 2013 The Chromium Authors. All rights reserved.
++# Use of this source code is governed by a BSD-style license that can be
++# found in the LICENSE file.
++
++import("//build/config/sysroot.gni")
++import("//build/toolchain/gcc_toolchain.gni")
++
++clang_toolchain("clang_x86") {
++  toolchain_args = {
++    current_cpu = "x86"
++    current_os = "freebsd"
++  }
++}
++
++gcc_toolchain("x86") {
++  cc = "gcc"
++  cxx = "g++"
++
++  readelf = "readelf"
++  nm = "nm"
++  ar = "ar"
++  ld = cxx
++
++  toolchain_args = {
++    current_cpu = "x86"
++    current_os = "freebsd"
++    is_clang = false
++  }
++}
++
++clang_toolchain("clang_x64") {
++  toolchain_args = {
++    current_cpu = "x64"
++    current_os = "freebsd"
++  }
++}
++
++gcc_toolchain("x64") {
++  cc = "gcc"
++  cxx = "g++"
++
++  readelf = "readelf"
++  nm = "nm"
++  ar = "ar"
++  ld = cxx
++
++  toolchain_args = {
++    current_cpu = "x64"
++    current_os = "freebsd"
++    is_clang = false
++  }
++}
++
++clang_toolchain("clang_arm") {
++  toolchain_args = {
++    current_cpu = "arm64"
++    current_os = "freebsd"
++  }
++}
++
++clang_toolchain("clang_arm64") {
++  toolchain_args = {
++    current_cpu = "arm64"
++    current_os = "freebsd"
++  }
++}
+diff --git a/toolchain/openbsd/BUILD.gn b/toolchain/openbsd/BUILD.gn
+new file mode 100644
+index 0000000000..75cbfa8be7
+--- /dev/null
++++ b/toolchain/openbsd/BUILD.gn
+@@ -0,0 +1,66 @@
++# Copyright 2013 The Chromium Authors. All rights reserved.
++# Use of this source code is governed by a BSD-style license that can be
++# found in the LICENSE file.
++
++import("//build/config/sysroot.gni")
++import("//build/toolchain/gcc_toolchain.gni")
++
++clang_toolchain("clang_x86") {
++  toolchain_args = {
++    current_cpu = "x86"
++    current_os = "openbsd"
++  }
++}
++
++gcc_toolchain("x86") {
++  cc = "gcc"
++  cxx = "g++"
++
++  readelf = "readelf"
++  nm = "nm"
++  ar = "ar"
++  ld = cxx
++
++  toolchain_args = {
++    current_cpu = "x86"
++    current_os = "openbsd"
++    is_clang = false
++  }
++}
++
++clang_toolchain("clang_x64") {
++  toolchain_args = {
++    current_cpu = "x64"
++    current_os = "openbsd"
++  }
++}
++
++gcc_toolchain("x64") {
++  cc = "gcc"
++  cxx = "g++"
++
++  readelf = "readelf"
++  nm = "nm"
++  ar = "ar"
++  ld = cxx
++
++  toolchain_args = {
++    current_cpu = "x64"
++    current_os = "openbsd"
++    is_clang = false
++  }
++}
++
++clang_toolchain("clang_arm") {
++  toolchain_args = {
++    current_cpu = "arm64"
++    current_os = "openbsd"
++  }
++}
++
++clang_toolchain("clang_arm64") {
++  toolchain_args = {
++    current_cpu = "arm64"
++    current_os = "openbsd"
++  }
++}
 diff --git a/tools/code_cache_generator/BUILD.gn b/tools/code_cache_generator/BUILD.gn
 index 88eef351c9..efda6834fa 100644
 --- a/tools/code_cache_generator/BUILD.gn
@@ -40130,10 +44393,10 @@ index dc8009ddcd..cf108f1d0a 100644
    kQt = 2,
    kMaxValue = kQt,
 diff --git a/ui/compositor/compositor.cc b/ui/compositor/compositor.cc
-index 57cac208e9..53163dac98 100644
+index 9d77fd4175..701ab09d0e 100644
 --- a/ui/compositor/compositor.cc
 +++ b/ui/compositor/compositor.cc
-@@ -985,7 +985,7 @@ void Compositor::OnResume() {
+@@ -979,7 +979,7 @@ void Compositor::OnResume() {
      obs.ResetIfActive();
  }
  
@@ -40143,10 +44406,10 @@ index 57cac208e9..53163dac98 100644
    observer_list_.Notify(
        &CompositorObserver::OnCompositingCompleteSwapWithNewSize, this, size);
 diff --git a/ui/compositor/compositor.h b/ui/compositor/compositor.h
-index 0d1fd44c61..1a7d92d037 100644
+index f1a4674323..6c5d519813 100644
 --- a/ui/compositor/compositor.h
 +++ b/ui/compositor/compositor.h
-@@ -468,7 +468,7 @@ class COMPOSITOR_EXPORT Compositor : public base::PowerSuspendObserver,
+@@ -462,7 +462,7 @@ class COMPOSITOR_EXPORT Compositor : public base::PowerSuspendObserver,
    // base::PowerSuspendObserver:
    void OnResume() override;
  
@@ -40156,12 +44419,12 @@ index 0d1fd44c61..1a7d92d037 100644
  #endif  // BUILDFLAG(IS_LINUX) && BUILDFLAG(IS_OZONE_X11)
  
 diff --git a/ui/compositor/compositor_observer.h b/ui/compositor/compositor_observer.h
-index a2f67f9d58..d7d9dce223 100644
+index fdb41d6183..b29361575f 100644
 --- a/ui/compositor/compositor_observer.h
 +++ b/ui/compositor/compositor_observer.h
-@@ -59,7 +59,7 @@ class COMPOSITOR_EXPORT CompositorObserver {
-   virtual void OnChildResizeActivated() {}
- #endif  // BUILDFLAG(IS_CHROMEOS)
+@@ -56,7 +56,7 @@ class COMPOSITOR_EXPORT CompositorObserver {
+   // Called when a child of the compositor is resizing.
+   virtual void OnCompositingChildResizing(Compositor* compositor) {}
  
 -#if BUILDFLAG(IS_LINUX) && BUILDFLAG(IS_OZONE_X11)
 +#if (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)) && BUILDFLAG(IS_OZONE_X11)
