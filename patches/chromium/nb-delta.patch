@@ -1,8 +1,8 @@
 diff --git a/base/BUILD.gn b/base/BUILD.gn
-index bc2e0a8759..6a50a80dfe 100644
+index a293bee936..ac02e76c56 100644
 --- a/base/BUILD.gn
 +++ b/base/BUILD.gn
-@@ -960,7 +960,7 @@ component("base") {
+@@ -962,7 +962,7 @@ component("base") {
      #"system/sys_info_openbsd.cc",
    ]
  
@@ -26,7 +26,7 @@ index bc2e0a8759..6a50a80dfe 100644
  
    # iOS
 diff --git a/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_config.h b/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_config.h
-index d06206b991..87cc4f8d0e 100644
+index 03769fe759..798f2c5f24 100644
 --- a/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_config.h
 +++ b/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_config.h
 @@ -56,8 +56,8 @@ static_assert(sizeof(void*) != 8, "");
@@ -41,10 +41,10 @@ index d06206b991..87cc4f8d0e 100644
  // Need TLS support.
  #define PA_CONFIG_THREAD_CACHE_SUPPORTED() \
 diff --git a/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc b/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc
-index f0ad55928a..1b0656dc31 100644
+index 535bf0b548..d75ce5042c 100644
 --- a/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc
 +++ b/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc
-@@ -24,7 +24,7 @@
+@@ -25,7 +25,7 @@
  #endif
  
  #if PA_CONFIG(HAS_LINUX_KERNEL)
@@ -53,7 +53,7 @@ index f0ad55928a..1b0656dc31 100644
  #include <sys/time.h>
  #include <sys/futex.h>
  #elif defined(OS_FREEBSD)
-@@ -112,6 +112,9 @@ PA_ALWAYS_INLINE long FutexSyscall(volatile void* ftx, int op, int value) {
+@@ -170,6 +170,9 @@ PA_ALWAYS_INLINE long FutexSyscall(volatile void* ftx, int op, int value) {
  #elif defined(OS_OPENBSD)
    long retval = futex(reinterpret_cast<volatile unsigned int *>(&state_), FUTEX_WAIT | FUTEX_PRIVATE_FLAG,
                      kLockedContended, nullptr, nullptr);
@@ -211,7 +211,7 @@ index 1fdd4bd9ac..b5ad52b85b 100644
  #else  // OS_*
    ucontext_t* context = reinterpret_cast<ucontext_t*>(context_ptr);
 diff --git a/base/message_loop/message_pump_glib.cc b/base/message_loop/message_pump_glib.cc
-index 494c156f00..8f3709d2f6 100644
+index a88163bcb0..45bcef1ac1 100644
 --- a/base/message_loop/message_pump_glib.cc
 +++ b/base/message_loop/message_pump_glib.cc
 @@ -9,9 +9,13 @@
@@ -228,7 +228,7 @@ index 494c156f00..8f3709d2f6 100644
  
  #include "base/logging.h"
  #include "base/memory/raw_ptr.h"
-@@ -58,7 +62,13 @@ int GetTimeIntervalMilliseconds(TimeTicks next_task_time) {
+@@ -64,7 +68,13 @@ int GetTimeIntervalMilliseconds(TimeTicks next_task_time) {
  
  bool RunningOnMainThread() {
  #if BUILDFLAG(IS_BSD)
@@ -940,10 +940,10 @@ index 977a598526..5e51e02096 100644
  is_wasm = current_os == "emscripten"
  is_watchos = current_os == "watchos"
 diff --git a/build/config/compiler/BUILD.gn b/build/config/compiler/BUILD.gn
-index 00da513903..a9739843a6 100644
+index 008a3feb1f..d36d544373 100644
 --- a/build/config/compiler/BUILD.gn
 +++ b/build/config/compiler/BUILD.gn
-@@ -1290,7 +1290,7 @@ config("compiler_cpu_abi") {
+@@ -1331,7 +1331,7 @@ config("compiler_cpu_abi") {
        }
        cflags += [ "-msse3" ]
      } else if (current_cpu == "x86") {
@@ -952,7 +952,7 @@ index 00da513903..a9739843a6 100644
          cflags += [ "--target=i386-unknown-linux-gnu" ]
          ldflags += [ "--target=i386-unknown-linux-gnu" ]
        } else {
-@@ -2491,7 +2491,7 @@ config("export_dynamic") {
+@@ -2526,7 +2526,7 @@ config("export_dynamic") {
  # 2. Remove the thin_archive config, so that the .a file actually contains all
  #    .o files, instead of just references to .o files in the build directoy
  config("thin_archive") {
@@ -1058,10 +1058,10 @@ index 5ed9253d08..8a4ee7d638 100644
    _libclang_path += "/bin"
  } else {
 diff --git a/build/toolchain/gcc_toolchain.gni b/build/toolchain/gcc_toolchain.gni
-index d1bfedbeb2..27018a59a1 100644
+index e00d01545b..d95ae89870 100644
 --- a/build/toolchain/gcc_toolchain.gni
 +++ b/build/toolchain/gcc_toolchain.gni
-@@ -601,7 +601,7 @@ template("single_gcc_toolchain") {
+@@ -605,7 +605,7 @@ template("single_gcc_toolchain") {
        # We need to specify link groups, at least, for single pass linkers. I.e.
        # Rust libraries are alpha-sorted instead of by dependencies so they fail
        # to link if not properly ordered or grouped.
@@ -1143,10 +1143,10 @@ index 0000000000..27240dd95a
 +  }
 +}
 diff --git a/chrome/browser/about_flags.cc b/chrome/browser/about_flags.cc
-index 3007a13b3d..c6995aabf5 100644
+index 1e6b78bb19..fbd284e26b 100644
 --- a/chrome/browser/about_flags.cc
 +++ b/chrome/browser/about_flags.cc
-@@ -900,6 +900,8 @@ const FeatureEntry::FeatureParam kAudioBackendPulseAudio[] = {
+@@ -901,6 +901,8 @@ const FeatureEntry::FeatureParam kAudioBackendPulseAudio[] = {
          { "audio-backend", "pulseaudio" }};
  const FeatureEntry::FeatureParam kAudioBackendSndio[] = {
          { "audio-backend", "sndio" }};
@@ -1155,7 +1155,7 @@ index 3007a13b3d..c6995aabf5 100644
  const FeatureEntry::FeatureParam kAudioBackendAlsa[] = {
          { "audio-backend", "alsa" }};
  const FeatureEntry::FeatureVariation
-@@ -910,6 +912,9 @@ const FeatureEntry::FeatureVariation
+@@ -911,6 +913,9 @@ const FeatureEntry::FeatureVariation
          {"using sndio by default if available", kAudioBackendSndio,
           std::size(kAudioBackendSndio),
           nullptr},
@@ -1166,23 +1166,23 @@ index 3007a13b3d..c6995aabf5 100644
           std::size(kAudioBackendAlsa),
           nullptr}};
 diff --git a/chrome/browser/extensions/api/runtime/chrome_runtime_api_delegate.cc b/chrome/browser/extensions/api/runtime/chrome_runtime_api_delegate.cc
-index 90c62d8396..92f50927cb 100644
+index b00c84f431..3aa41498cb 100644
 --- a/chrome/browser/extensions/api/runtime/chrome_runtime_api_delegate.cc
 +++ b/chrome/browser/extensions/api/runtime/chrome_runtime_api_delegate.cc
-@@ -356,6 +356,8 @@ bool ChromeRuntimeAPIDelegate::GetPlatformInfo(PlatformInfo* info) {
+@@ -364,6 +364,8 @@ bool ChromeRuntimeAPIDelegate::GetPlatformInfo(PlatformInfo* info) {
      info->os = extensions::api::runtime::PlatformOs::kLinux;
-   } else if (UNSAFE_TODO(strcmp(os, "freebsd")) == 0) {
+   } else if (os == "freebsd") {
      info->os = extensions::api::runtime::PlatformOs::kLinux;
-+  } else if (UNSAFE_TODO(strcmp(os, "netbsd")) == 0) {
++  } else if (os == "netbsd") {
 +    info->os = extensions::api::runtime::PlatformOs::kLinux;
-   } else if (UNSAFE_TODO(strcmp(os, "android")) == 0) {
+   } else if (os == "android") {
      info->os = extensions::api::runtime::PlatformOs::kAndroid;
    } else {
 diff --git a/chrome/browser/flag_descriptions.cc b/chrome/browser/flag_descriptions.cc
-index 32827b185a..68a3b4526c 100644
+index 4c657ab541..af8aed47e4 100644
 --- a/chrome/browser/flag_descriptions.cc
 +++ b/chrome/browser/flag_descriptions.cc
-@@ -8128,6 +8128,8 @@ const char kAudioBackendName[] =
+@@ -8137,6 +8137,8 @@ const char kAudioBackendName[] =
  const char kAudioBackendDescription[] =
  #if BUILDFLAG(IS_OPENBSD)
      "Select the desired audio backend to use. The default is sndio.";
@@ -1192,7 +1192,7 @@ index 32827b185a..68a3b4526c 100644
      "Select the desired audio backend to use. The default will automatically "
      "enumerate through the supported backends.";
 diff --git a/chrome/common/chrome_paths.cc b/chrome/common/chrome_paths.cc
-index b62a335ced..8c772b4482 100644
+index 06ef89a82a..5fb6bb9341 100644
 --- a/chrome/common/chrome_paths.cc
 +++ b/chrome/common/chrome_paths.cc
 @@ -52,9 +52,9 @@ std::optional<bool> g_override_using_default_data_directory_for_testing;
@@ -1207,7 +1207,7 @@ index b62a335ced..8c772b4482 100644
  #endif  // BUILDFLAG(GOOGLE_CHROME_BRANDING)
  
  #endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-@@ -476,9 +476,9 @@ bool PathProvider(int key, base::FilePath* result) {
+@@ -474,9 +474,9 @@ bool PathProvider(int key, base::FilePath* result) {
  #if BUILDFLAG(GOOGLE_CHROME_BRANDING)
        cur = base::FilePath(
            FILE_PATH_LITERAL("/etc/opt/chrome/native-messaging-hosts"));
@@ -1276,7 +1276,7 @@ index 2afbdd5d3f..f849c13dfd 100644
  const char kPolicyPath[] = "/etc/chromium/policies";
  #endif  // BUILDFLAG(GOOGLE_CHROME_BRANDING)
 diff --git a/components/policy/tools/generate_policy_source.py b/components/policy/tools/generate_policy_source.py
-index 6c99e71333..0ba805e319 100755
+index ee0c3b30ea..386c091b4c 100755
 --- a/components/policy/tools/generate_policy_source.py
 +++ b/components/policy/tools/generate_policy_source.py
 @@ -38,9 +38,9 @@ PLATFORM_STRINGS = {
@@ -1318,10 +1318,10 @@ index 0be5361ac9..7be86fc918 100644
  #define HOST_NAME_MAX MAXHOSTNAMELEN
  #endif
 diff --git a/components/update_client/update_query_params.cc b/components/update_client/update_query_params.cc
-index f1f72ede2a..a3c688be35 100644
+index 9e015028f9..986c03f30b 100644
 --- a/components/update_client/update_query_params.cc
 +++ b/components/update_client/update_query_params.cc
-@@ -41,6 +41,8 @@ const char kOs[] =
+@@ -41,6 +41,8 @@ constexpr std::string_view kOs =
      "openbsd";
  #elif defined(OS_FREEBSD)
      "freebsd";
@@ -1331,10 +1331,10 @@ index f1f72ede2a..a3c688be35 100644
  #error "unknown os"
  #endif
 diff --git a/content/test/BUILD.gn b/content/test/BUILD.gn
-index 8e939c6c74..7194802c44 100644
+index 0cb62bf470..a12215a47c 100644
 --- a/content/test/BUILD.gn
 +++ b/content/test/BUILD.gn
-@@ -1836,7 +1836,7 @@ test("content_browsertests") {
+@@ -1870,7 +1870,7 @@ test("content_browsertests") {
      "--disable-crashpad-for-testing",
    ]
  
@@ -1344,7 +1344,7 @@ index 8e939c6c74..7194802c44 100644
    }
  
 diff --git a/extensions/common/api/_permission_features.json b/extensions/common/api/_permission_features.json
-index 84846365aa..46a0ab0b3f 100644
+index 68bffaa70b..1ea88e1dc6 100644
 --- a/extensions/common/api/_permission_features.json
 +++ b/extensions/common/api/_permission_features.json
 @@ -61,7 +61,7 @@
@@ -1482,7 +1482,7 @@ index 84846365aa..46a0ab0b3f 100644
    },
    "storage": [
      {
-@@ -676,13 +676,13 @@
+@@ -678,13 +678,13 @@
        "channel": "stable",
        "extension_types": ["extension", "legacy_packaged_app", "platform_app"],
        // "desktop_android" is not supported.
@@ -1498,7 +1498,7 @@ index 84846365aa..46a0ab0b3f 100644
        "allowlist": ["B44D08FD98F1523ED5837D78D0A606EA9D6206E5"]  // Web Store
      }
    ],
-@@ -691,13 +691,13 @@
+@@ -693,13 +693,13 @@
        "channel": "stable",
        "extension_types": ["extension", "legacy_packaged_app", "platform_app"],
        // "desktop_android" is not supported.
@@ -1514,7 +1514,7 @@ index 84846365aa..46a0ab0b3f 100644
        "allowlist": ["B44D08FD98F1523ED5837D78D0A606EA9D6206E5"]  // Web Store
      }
    ],
-@@ -725,7 +725,7 @@
+@@ -727,7 +727,7 @@
        "channel": "stable",
        "extension_types": ["platform_app"],
        // "desktop_android" is not supported.
@@ -1523,7 +1523,7 @@ index 84846365aa..46a0ab0b3f 100644
      },
      {
        "channel": "dev",
-@@ -811,7 +811,7 @@
+@@ -813,7 +813,7 @@
      "channel": "stable",
      "extension_types": ["platform_app"],
      // "desktop_android" is not supported.
@@ -1547,7 +1547,7 @@ index f0960a1d5b..c65a2f85c6 100644
        },
        {
 diff --git a/media/BUILD.gn b/media/BUILD.gn
-index 9bf7da07d0..1cc23c6a58 100644
+index a53a359619..fd2a4fc5c8 100644
 --- a/media/BUILD.gn
 +++ b/media/BUILD.gn
 @@ -110,6 +110,9 @@ config("media_config") {
@@ -1613,7 +1613,7 @@ index ad545ee2ae..d43ed6bb60 100644
        CodecWorkerImpl<VPxWorkerInterface, VPxWorkerImpl, VPxWorker,
                        VPxWorkerStatus, VPX_WORKER_STATUS_NOT_OK,
 diff --git a/media/base/media_switches.cc b/media/base/media_switches.cc
-index 0949bbddd2..b64d5f3cb8 100644
+index 926355de37..d66eb61a8c 100644
 --- a/media/base/media_switches.cc
 +++ b/media/base/media_switches.cc
 @@ -67,7 +67,7 @@ const char kReportVp9AsAnUnsupportedMimeType[] =
@@ -1625,7 +1625,7 @@ index 0949bbddd2..b64d5f3cb8 100644
  // The Alsa device to use when opening an audio input stream.
  const char kAlsaInputDevice[] = "alsa-input-device";
  // The Alsa device to use when opening an audio stream.
-@@ -375,6 +375,7 @@ constexpr base::FeatureParam<AudioBackend>::Option
+@@ -384,6 +384,7 @@ constexpr base::FeatureParam<AudioBackend>::Option
      kAudioBackendOptions[] = {
          {AudioBackend::kAuto,
           "auto"},
@@ -1633,7 +1633,7 @@ index 0949bbddd2..b64d5f3cb8 100644
          {AudioBackend::kPulseAudio, "pulseaudio"},
          {AudioBackend::kSndio, "sndio"},
          {AudioBackend::kAlsa, "alsa"}};
-@@ -384,6 +385,8 @@ const base::FeatureParam<AudioBackend>
+@@ -393,6 +394,8 @@ const base::FeatureParam<AudioBackend>
          &kAudioBackend, "audio-backend",
  #if BUILDFLAG(IS_OPENBSD)
          AudioBackend::kSndio,
@@ -1643,7 +1643,7 @@ index 0949bbddd2..b64d5f3cb8 100644
          AudioBackend::kAuto,
  #endif
 diff --git a/media/base/media_switches.h b/media/base/media_switches.h
-index cecc317555..99e8147539 100644
+index cc34530ba4..1c11be04a9 100644
 --- a/media/base/media_switches.h
 +++ b/media/base/media_switches.h
 @@ -43,7 +43,7 @@ MEDIA_EXPORT extern const char kDisableBackgroundMediaSuspend[];
@@ -1655,7 +1655,7 @@ index cecc317555..99e8147539 100644
  MEDIA_EXPORT extern const char kAlsaInputDevice[];
  MEDIA_EXPORT extern const char kAlsaOutputDevice[];
  #endif
-@@ -345,6 +345,7 @@ enum class AudioBackend {
+@@ -350,6 +350,7 @@ enum class AudioBackend {
    kAuto,
    kPulseAudio,
    kSndio,
@@ -1886,10 +1886,10 @@ index 2a87752d01..f451f6343a 100644
    gid_t socket_gid;
    if (getpeereid(fd, &socket_euid, &socket_gid) < 0) {
 diff --git a/mojo/public/tools/bindings/mojom.gni b/mojo/public/tools/bindings/mojom.gni
-index 1d99ccedb8..780825cb41 100644
+index 9e981e1e49..3097396779 100644
 --- a/mojo/public/tools/bindings/mojom.gni
 +++ b/mojo/public/tools/bindings/mojom.gni
-@@ -767,6 +767,11 @@ template("mojom") {
+@@ -768,6 +768,11 @@ template("mojom") {
        enabled_features += [ "is_bsd" ]
      }
  
@@ -2046,10 +2046,10 @@ index 263a8260f9..5cacc04ce7 100644
    if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &delay, sizeof(delay))) {
      PLOG(ERROR) << "Failed to set TCP_KEEPIDLE on fd: " << fd;
 diff --git a/net/socket/udp_socket_posix.cc b/net/socket/udp_socket_posix.cc
-index 1b9bb7ba1c..558bdb0fdc 100644
+index 2188644135..48f4e2dc2d 100644
 --- a/net/socket/udp_socket_posix.cc
 +++ b/net/socket/udp_socket_posix.cc
-@@ -77,6 +77,32 @@ constexpr int kBindRetries = 10;
+@@ -78,6 +78,32 @@ constexpr int kBindRetries = 10;
  constexpr int kPortStart = 1024;
  constexpr int kPortEnd = 65535;
  
@@ -2082,7 +2082,7 @@ index 1b9bb7ba1c..558bdb0fdc 100644
  int GetSocketFDHash(int fd) {
    return fd ^ 1595649551;
  }
-@@ -884,9 +910,17 @@ int UDPSocketPosix::SetMulticastOptions() {
+@@ -902,9 +928,17 @@ int UDPSocketPosix::SetMulticastOptions() {
    if (multicast_interface_ != 0) {
      switch (addr_family_) {
        case AF_INET: {
@@ -2100,7 +2100,7 @@ index 1b9bb7ba1c..558bdb0fdc 100644
          int rv = setsockopt(socket_, IPPROTO_IP, IP_MULTICAST_IF,
                              reinterpret_cast<const char*>(&mreq), sizeof(mreq));
          if (rv)
-@@ -949,9 +983,17 @@ int UDPSocketPosix::JoinGroup(const IPAddress& group_address) const {
+@@ -967,9 +1001,17 @@ int UDPSocketPosix::JoinGroup(const IPAddress& group_address) const {
      case IPAddress::kIPv4AddressSize: {
        if (addr_family_ != AF_INET)
          return ERR_ADDRESS_INVALID;
@@ -2118,7 +2118,7 @@ index 1b9bb7ba1c..558bdb0fdc 100644
        mreq.imr_multiaddr = ToInAddr(group_address);
        int rv = setsockopt(socket_, IPPROTO_IP, IP_ADD_MEMBERSHIP,
                            &mreq, sizeof(mreq));
-@@ -986,9 +1028,17 @@ int UDPSocketPosix::LeaveGroup(const IPAddress& group_address) const {
+@@ -1004,9 +1046,17 @@ int UDPSocketPosix::LeaveGroup(const IPAddress& group_address) const {
      case IPAddress::kIPv4AddressSize: {
        if (addr_family_ != AF_INET)
          return ERR_ADDRESS_INVALID;
@@ -2137,10 +2137,10 @@ index 1b9bb7ba1c..558bdb0fdc 100644
        int rv = setsockopt(socket_, IPPROTO_IP, IP_DROP_MEMBERSHIP,
                            &mreq, sizeof(mreq));
 diff --git a/net/tools/net_watcher/net_watcher.cc b/net/tools/net_watcher/net_watcher.cc
-index 0b7658393a..4733898ac8 100644
+index e5710df2fd..deb369e786 100644
 --- a/net/tools/net_watcher/net_watcher.cc
 +++ b/net/tools/net_watcher/net_watcher.cc
-@@ -162,7 +162,7 @@ class NetWatcher :
+@@ -159,7 +159,7 @@ class NetWatcher :
  }  // namespace
  
  int main(int argc, char* argv[]) {
@@ -2150,10 +2150,10 @@ index 0b7658393a..4733898ac8 100644
  #endif
    base::AtExitManager exit_manager;
 diff --git a/sandbox/policy/BUILD.gn b/sandbox/policy/BUILD.gn
-index b9637da84f..373d5f1b6e 100644
+index 9ff8c75c83..fb7a3be790 100644
 --- a/sandbox/policy/BUILD.gn
 +++ b/sandbox/policy/BUILD.gn
-@@ -122,6 +122,17 @@ component("policy") {
+@@ -126,6 +126,17 @@ component("policy") {
      ]
      libs = [ "util" ]
    }
@@ -2684,7 +2684,7 @@ index 0000000000..d61153c7e5
 +
 +#endif  // SANDBOX_POLICY_LINUX_SANDBOX_OPENBSD_H_
 diff --git a/sandbox/policy/openbsd/sandbox_openbsd.cc b/sandbox/policy/openbsd/sandbox_openbsd.cc
-index a4b025e5d5..be9750d147 100644
+index a499665f50..a40a980418 100644
 --- a/sandbox/policy/openbsd/sandbox_openbsd.cc
 +++ b/sandbox/policy/openbsd/sandbox_openbsd.cc
 @@ -65,11 +65,11 @@
@@ -2969,10 +2969,10 @@ index 85dcc45c8e..4534b7343b 100644
  
    if (sysctl(mib, std::size(mib), &info, &length, NULL, 0) < 0)
 diff --git a/third_party/abseil-cpp/absl/base/config.h b/third_party/abseil-cpp/absl/base/config.h
-index 4bc43fd62a..e3d91937d3 100644
+index 1f415501c6..f94d7da503 100644
 --- a/third_party/abseil-cpp/absl/base/config.h
 +++ b/third_party/abseil-cpp/absl/base/config.h
-@@ -413,7 +413,8 @@ static_assert(ABSL_INTERNAL_INLINE_NAMESPACE_STR[0] != 'h' ||
+@@ -412,7 +412,8 @@ static_assert(ABSL_INTERNAL_INLINE_NAMESPACE_STR[0] != 'h' ||
  #ifdef ABSL_HAVE_SCHED_YIELD
  #error ABSL_HAVE_SCHED_YIELD cannot be directly set
  #elif defined(__linux__) || defined(__ros__) || defined(__native_client__) || \
@@ -2982,7 +2982,7 @@ index 4bc43fd62a..e3d91937d3 100644
  #define ABSL_HAVE_SCHED_YIELD 1
  #endif
  
-@@ -429,7 +430,7 @@ static_assert(ABSL_INTERNAL_INLINE_NAMESPACE_STR[0] != 'h' ||
+@@ -428,7 +429,7 @@ static_assert(ABSL_INTERNAL_INLINE_NAMESPACE_STR[0] != 'h' ||
  #ifdef ABSL_HAVE_SEMAPHORE_H
  #error ABSL_HAVE_SEMAPHORE_H cannot be directly set
  #elif defined(__linux__) || defined(__ros__) || defined(__VXWORKS__) || \
@@ -2992,28 +2992,59 @@ index 4bc43fd62a..e3d91937d3 100644
  #endif
  
 diff --git a/third_party/abseil-cpp/absl/base/internal/raw_logging.cc b/third_party/abseil-cpp/absl/base/internal/raw_logging.cc
-index 35a08f0ac0..f000ed587d 100644
+index 8537f3ec52..c47fdb4545 100644
 --- a/third_party/abseil-cpp/absl/base/internal/raw_logging.cc
 +++ b/third_party/abseil-cpp/absl/base/internal/raw_logging.cc
-@@ -44,7 +44,7 @@
- #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || \
-     defined(__hexagon__) || defined(__Fuchsia__) ||                     \
-     defined(__native_client__) || defined(__OpenBSD__) ||               \
+@@ -43,7 +43,7 @@
+ // this, consider moving both to config.h instead.
+ #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) ||     \
+     defined(__hexagon__) || defined(__Fuchsia__) || defined(__OpenBSD__) || \
 -    defined(__EMSCRIPTEN__) || defined(__ASYLO__)
 +    defined(__EMSCRIPTEN__) || defined(__ASYLO__) || defined(__NetBSD__)
  
  #include <unistd.h>
  
+diff --git a/third_party/abseil-cpp/absl/base/internal/sysinfo.cc b/third_party/abseil-cpp/absl/base/internal/sysinfo.cc
+index f5379da834..35ed8c1807 100644
+--- a/third_party/abseil-cpp/absl/base/internal/sysinfo.cc
++++ b/third_party/abseil-cpp/absl/base/internal/sysinfo.cc
+@@ -198,7 +198,7 @@ static double GetNominalCPUFrequency() {
+ 
+ #else
+ 
+-#if !defined(__OpenBSD__) && !defined(__FreeBSD__)
++#if !defined(__OpenBSD__) && !defined(__FreeBSD__) && !defined(__NetBSD__)
+ // Helper function for reading a long from a file. Returns true if successful
+ // and the memory location pointed to by value is set to the value read.
+ static bool ReadLongFromFile(const char *file, long *value) {
+@@ -331,7 +331,7 @@ static double GetNominalCPUFrequency() {
+   // a new mode (turbo mode). Essentially, those frequencies cannot
+   // always be relied upon. The same reasons apply to /proc/cpuinfo as
+   // well.
+-#if !defined(__OpenBSD__) && !defined(__FreeBSD__) // pledge violation
++#if !defined(__OpenBSD__) && !defined(__FreeBSD__) && !defined(__NetBSD__) // pledge violation
+   if (ReadLongFromFile("/sys/devices/system/cpu/cpu0/tsc_freq_khz", &freq)) {
+     return freq * 1e3;  // Value is kHz.
+   }
+@@ -354,7 +354,7 @@ static double GetNominalCPUFrequency() {
+   // If CPU scaling is in effect, we want to use the *maximum*
+   // frequency, not whatever CPU speed some random processor happens
+   // to be using now.
+-#if !defined(__OpenBSD__) && !defined(__FreeBSD__) // pledge violation
++#if !defined(__OpenBSD__) && !defined(__FreeBSD__) && !defined(__NetBSD__) // pledge violation
+   if (ReadLongFromFile("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq",
+                        &freq)) {
+     return freq * 1e3;  // Value is kHz.
 diff --git a/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.h b/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.h
-index da491eb4b3..ce01a4d551 100644
+index becef794d2..e0c7784491 100644
 --- a/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.h
 +++ b/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.h
-@@ -36,7 +36,7 @@
-     !defined(__native_client__) && !defined(__asmjs__) &&             \
-     !defined(__wasm__) && !defined(__HAIKU__) && !defined(__sun) &&   \
-     !defined(__VXWORKS__) && !defined(__hexagon__) && !defined(__XTENSA__) && \
--    !defined(__FreeBSD__)
-+    !defined(__FreeBSD__) && !defined(__NetBSD__)
+@@ -35,7 +35,7 @@
+ #if defined(__ELF__) && !defined(__OpenBSD__) && !defined(__QNX__) &&    \
+     !defined(__asmjs__) && !defined(__wasm__) && !defined(__HAIKU__) &&  \
+     !defined(__sun) && !defined(__VXWORKS__) && !defined(__hexagon__) && \
+-    !defined(__XTENSA__) && !defined(__FreeBSD__)
++    !defined(__XTENSA__) && !defined(__FreeBSD__) && !defined(__NetBSD__)
  #define ABSL_HAVE_ELF_MEM_IMAGE 1
  #endif
  
@@ -3235,10 +3266,10 @@ index 703e54a7b8..b24d91923d 100755
  
  
 diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
-index f28f632941..a2dc3b5007 100644
+index 0b8f08c955..d6d0db23d9 100644
 --- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
 +++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
-@@ -324,7 +324,7 @@
+@@ -340,7 +340,7 @@
          "default": "",
        },
        origin_trial_feature_name: "AIPromptAPIMultimodalInput",
@@ -3247,7 +3278,7 @@ index f28f632941..a2dc3b5007 100644
        origin_trial_allows_third_party: true,
        implied_by: ["AIPromptAPIMultimodalInput"],
      },
-@@ -354,7 +354,7 @@
+@@ -370,7 +370,7 @@
          "default": "",
        },
        origin_trial_feature_name: "AIPromptAPIMultimodalInput",
@@ -3256,7 +3287,7 @@ index f28f632941..a2dc3b5007 100644
        origin_trial_allows_third_party: true,
        base_feature_status: "enabled",
        copied_from_base_feature_if: "overridden",
-@@ -390,7 +390,7 @@
+@@ -406,7 +406,7 @@
          "default": "",
        },
        origin_trial_feature_name: "AIRewriterAPI",
@@ -3265,7 +3296,7 @@ index f28f632941..a2dc3b5007 100644
        origin_trial_allows_third_party: true,
        base_feature_status: "enabled",
        copied_from_base_feature_if: "overridden",
-@@ -423,7 +423,7 @@
+@@ -439,7 +439,7 @@
          "default": "",
        },
        origin_trial_feature_name: "AIWriterAPI",
@@ -3274,7 +3305,7 @@ index f28f632941..a2dc3b5007 100644
        origin_trial_allows_third_party: true,
        base_feature_status: "enabled",
        copied_from_base_feature_if: "overridden",
-@@ -535,7 +535,7 @@
+@@ -553,7 +553,7 @@
        name: "AppTitle",
        status: "experimental",
        origin_trial_feature_name: "AppTitle",
@@ -3283,7 +3314,7 @@ index f28f632941..a2dc3b5007 100644
        base_feature: "WebAppEnableAppTitle",
      },
      {
-@@ -1738,7 +1738,7 @@
+@@ -1775,7 +1775,7 @@
      {
        name: "DeviceBoundSessionCredentials",
        origin_trial_feature_name: "DeviceBoundSessionCredentials",
@@ -3292,7 +3323,7 @@ index f28f632941..a2dc3b5007 100644
        status: "experimental",
        // Killswitch is net::features::kDeviceBoundSessions
        base_feature: "none",
-@@ -1746,7 +1746,7 @@
+@@ -1783,7 +1783,7 @@
      {
        name: "DeviceBoundSessionCredentials2",
        origin_trial_feature_name: "DeviceBoundSessionCredentials2",
@@ -3301,7 +3332,7 @@ index f28f632941..a2dc3b5007 100644
        status: "experimental",
        // Killswitch is net::features::kDeviceBoundSessions
        base_feature: "none",
-@@ -1889,7 +1889,7 @@
+@@ -1926,7 +1926,7 @@
        name: "DocumentIsolationPolicy",
        status: "experimental",
        origin_trial_feature_name: "DocumentIsolationPolicy",
@@ -3310,7 +3341,7 @@ index f28f632941..a2dc3b5007 100644
        base_feature: "none",
      },
      {
-@@ -2134,7 +2134,7 @@
+@@ -2169,7 +2169,7 @@
        base_feature: "none",
        public: true,
        origin_trial_feature_name: "FedCmMultipleIdentityProviders",
@@ -3319,7 +3350,7 @@ index f28f632941..a2dc3b5007 100644
        origin_trial_allows_third_party: true,
      },
      {
-@@ -3633,7 +3633,7 @@
+@@ -3714,7 +3714,7 @@
        // Tracking bug for the implementation: https://crbug.com/1462930
        name: "PermissionElement",
        origin_trial_feature_name: "PermissionElement",
@@ -3328,7 +3359,7 @@ index f28f632941..a2dc3b5007 100644
        status: "experimental",
        public: true,
        base_feature_status: "enabled",
-@@ -5169,7 +5169,7 @@
+@@ -5306,7 +5306,7 @@
        name: "UnrestrictedSharedArrayBuffer",
        base_feature: "none",
        origin_trial_feature_name: "UnrestrictedSharedArrayBuffer",
@@ -3337,7 +3368,7 @@ index f28f632941..a2dc3b5007 100644
      },
      // Enables using policy-controlled feature "usb-unrestricted" to allow
      // isolated context to access protected USB interface classes and to
-@@ -5354,7 +5354,7 @@
+@@ -5500,7 +5500,7 @@
      {
        name: "WebAppScopeExtensions",
        origin_trial_feature_name: "WebAppScopeExtensions",
@@ -3346,7 +3377,7 @@ index f28f632941..a2dc3b5007 100644
        status: "experimental",
        base_feature: "none",
      },
-@@ -5462,7 +5462,7 @@
+@@ -5608,7 +5608,7 @@
      {
        name: "WebAuthenticationImmediateGet",
        origin_trial_feature_name: "WebAuthenticationImmediateGet",
@@ -3962,7 +3993,7 @@ index b87ab0b41b..9609843664 100644
    pthread_setname_np(pthread_self(), name);
  #endif
 diff --git a/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc b/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc
-index aa4b72acfa..68d65ed278 100644
+index 47b5b51412..68d65ed278 100644
 --- a/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc
 +++ b/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc
 @@ -28,7 +28,7 @@ int main() {
@@ -3978,7 +4009,7 @@ index aa4b72acfa..68d65ed278 100644
    FcFini();
  
    // Check existence of intended fontconfig cache file.
--  auto cache = fontconfig_caches + "/" + kCacheKey + "-le64.cache-reindex1-" + FC_CACHE_VERSION;
+-  auto cache = fontconfig_caches + "/" + kCacheKey + "-le64.cache-" + FC_CACHE_VERSION;
 +  auto cache = fontconfig_caches + "/" + kCacheKey + "-x86_64.cache-" + FC_CACHE_VERSION;
    bool cache_exists = access(cache.c_str(), F_OK) == 0;
    return !cache_exists;
@@ -3997,7 +4028,7 @@ index eb86c3c3ed..f444ad6e7e 100644
  
  #if defined(__APPLE__)
 diff --git a/third_party/vulkan-validation-layers/src/layers/vulkan/generated/vk_function_pointers.cpp b/third_party/vulkan-validation-layers/src/layers/vulkan/generated/vk_function_pointers.cpp
-index 4602143260..011c96605f 100644
+index cc03c4b11f..b698eecfbb 100644
 --- a/third_party/vulkan-validation-layers/src/layers/vulkan/generated/vk_function_pointers.cpp
 +++ b/third_party/vulkan-validation-layers/src/layers/vulkan/generated/vk_function_pointers.cpp
 @@ -53,7 +53,8 @@ static void *get_proc_address(dl_handle library, const char *name) {
@@ -4076,7 +4107,7 @@ index 88eef351c9..efda6834fa 100644
    deps = [
      "//gin",
 diff --git a/tools/json_schema_compiler/feature_compiler.py b/tools/json_schema_compiler/feature_compiler.py
-index 07dfe51fcb..a9f31cf9ad 100644
+index 9f7467bcf7..18c1f48dd6 100644
 --- a/tools/json_schema_compiler/feature_compiler.py
 +++ b/tools/json_schema_compiler/feature_compiler.py
 @@ -291,6 +291,7 @@ FEATURE_GRAMMAR = ({
@@ -4164,10 +4195,10 @@ index ffbe56813c..6e5d2a93c0 100755
 -    subprocess.check_call([args.path, args.input, "-o", args.output])
 +    subprocess.check_call([args.path + "/moc", args.input, "-o", args.output])
 diff --git a/v8/BUILD.gn b/v8/BUILD.gn
-index 9c5f6cf88f..4b19668a85 100644
+index 7dde903338..d84cbea294 100644
 --- a/v8/BUILD.gn
 +++ b/v8/BUILD.gn
-@@ -993,6 +993,7 @@ external_v8_defines = [
+@@ -991,6 +991,7 @@ external_v8_defines = [
    "V8_TARGET_OS_CHROMEOS",
    "V8_TARGET_OS_OPENBSD",
    "V8_TARGET_OS_FREEBSD",
@@ -4175,7 +4206,7 @@ index 9c5f6cf88f..4b19668a85 100644
  ]
  
  enabled_external_v8_defines = [
-@@ -1073,6 +1074,9 @@ if (target_os == "android") {
+@@ -1071,6 +1072,9 @@ if (target_os == "android") {
  } else if (target_os == "freebsd") {
    enabled_external_v8_defines += [ "V8_HAVE_TARGET_OS" ]
    enabled_external_v8_defines += [ "V8_TARGET_OS_FREEBSD" ]
@@ -4185,7 +4216,7 @@ index 9c5f6cf88f..4b19668a85 100644
  }
  
  disabled_external_v8_defines = external_v8_defines - enabled_external_v8_defines
-@@ -2454,6 +2458,23 @@ action("generate_bytecode_builtins_list") {
+@@ -2483,6 +2487,23 @@ action("generate_bytecode_builtins_list") {
    ]
  }
  
@@ -4209,7 +4240,7 @@ index 9c5f6cf88f..4b19668a85 100644
  # Template to generate different V8 snapshots based on different runtime flags.
  # Can be invoked with run_mksnapshot(<name>). The target will resolve to
  # run_mksnapshot_<name>. If <name> is "default", no file suffixes will be used.
-@@ -2472,7 +2493,11 @@ template("run_mksnapshot") {
+@@ -2501,7 +2522,11 @@ template("run_mksnapshot") {
      suffix = "_$name"
    }
    action("run_mksnapshot_" + name) {
@@ -4222,7 +4253,7 @@ index 9c5f6cf88f..4b19668a85 100644
      if (v8_verify_deterministic_mksnapshot) {
        # We archive the snapshot executable when verifying snapshot
        # determinism to ease debugging.
-@@ -4755,7 +4780,7 @@ v8_header_set("v8_internal_headers") {
+@@ -4806,7 +4831,7 @@ v8_header_set("v8_internal_headers") {
        # iOS Xcode simulator builds run on an x64 target. iOS and macOS are both
        # based on Darwin and thus POSIX-compliant to a similar degree.
        if (is_linux || is_chromeos || is_mac || is_ios ||
@@ -4231,7 +4262,7 @@ index 9c5f6cf88f..4b19668a85 100644
          sources += [ "src/trap-handler/handler-inside-posix.h" ]
        } else if (is_win) {
          sources += [ "src/trap-handler/handler-inside-win.h" ]
-@@ -6160,7 +6185,7 @@ v8_source_set("v8_base_without_compiler") {
+@@ -6221,7 +6246,7 @@ v8_source_set("v8_base_without_compiler") {
        # iOS Xcode simulator builds run on an x64 target. iOS and macOS are both
        # based on Darwin and thus POSIX-compliant to a similar degree.
        if (is_linux || is_chromeos || is_mac || is_ios ||
@@ -4240,7 +4271,7 @@ index 9c5f6cf88f..4b19668a85 100644
          sources += [
            "src/trap-handler/handler-inside-posix.cc",
            "src/trap-handler/handler-outside-posix.cc",
-@@ -6830,6 +6855,15 @@ v8_component("v8_libbase") {
+@@ -6905,6 +6930,15 @@ v8_component("v8_libbase") {
        "src/base/platform/platform-openbsd.cc",
      ]
      libs = [ "execinfo" ]
@@ -4257,7 +4288,7 @@ index 9c5f6cf88f..4b19668a85 100644
      sources += [
        "src/base/debug/stack_trace_posix.cc",
 diff --git a/v8/include/v8config.h b/v8/include/v8config.h
-index 1eb59a7d39..ec30551d85 100644
+index c77e257d22..327d03a436 100644
 --- a/v8/include/v8config.h
 +++ b/v8/include/v8config.h
 @@ -209,6 +209,7 @@ path. Add it with -I<path> to the command line
@@ -4289,7 +4320,7 @@ index 1eb59a7d39..ec30551d85 100644
  #ifdef V8_OS_MACOS
  # define V8_TARGET_OS_MACOS
  #endif
-@@ -410,6 +418,7 @@ path. Add it with -I<path> to the command line
+@@ -409,6 +417,7 @@ path. Add it with -I<path> to the command line
       || ((defined(__AARCH64EL__) || defined(_M_ARM64)) /* arm64, but ... */    \
           && !defined(_WIN32)))                         /* not on windows */    \
       && !defined(__OpenBSD__)                          /* not on OpenBSD */    \
@@ -4298,7 +4329,7 @@ index 1eb59a7d39..ec30551d85 100644
       && __clang_major__ >= 17                          /* clang >= 17 */
  # define V8_HAS_ATTRIBUTE_PRESERVE_MOST (__has_attribute(preserve_most))
 diff --git a/v8/src/api/api.cc b/v8/src/api/api.cc
-index f7ce04ffe4..f744ae994a 100644
+index 620392ecf7..3153b3be67 100644
 --- a/v8/src/api/api.cc
 +++ b/v8/src/api/api.cc
 @@ -159,7 +159,7 @@
@@ -4310,7 +4341,7 @@ index f7ce04ffe4..f744ae994a 100644
  #include <signal.h>
  #include <unistd.h>
  
-@@ -6487,7 +6487,7 @@ bool v8::V8::Initialize(const int build_config) {
+@@ -6480,7 +6480,7 @@ bool v8::V8::Initialize(const int build_config) {
    return true;
  }
  
