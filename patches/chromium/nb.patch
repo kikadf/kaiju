@@ -111,22 +111,6 @@ index 1986c69ccb..c092011a24 100644
    // Get the difference between the widget's client area bounds and window
    // bounds, and grow |window_bounds| by that amount.
    gfx::Insets native_frame_insets =
-diff --git a/ash/display/mirror_window_controller.cc b/ash/display/mirror_window_controller.cc
-index a6d74b7138..ddd0bbb0ed 100644
---- a/ash/display/mirror_window_controller.cc
-+++ b/ash/display/mirror_window_controller.cc
-@@ -283,7 +283,11 @@ void MirrorWindowController::UpdateWindow(
-       if (!base::Contains(display_info_list, iter->first,
-                           &display::ManagedDisplayInfo::id)) {
-         CloseAndDeleteHost(iter->second, true);
-+#if defined(__llvm__)
-+        mirroring_host_info_map_.erase(iter++);
-+#else
-         iter = mirroring_host_info_map_.erase(iter);
-+#endif
-       } else {
-         ++iter;
-       }
 diff --git a/base/BUILD.gn b/base/BUILD.gn
 index 931a8e3e03..ac02e76c56 100644
 --- a/base/BUILD.gn
@@ -5046,10 +5030,20 @@ index 9c92cdc022..6d42eec7fd 100644
        ozone_platform_wayland = true
        ozone_platform_x11 = true
 diff --git a/build/config/rust.gni b/build/config/rust.gni
-index 55bd7b78ee..425d44c466 100644
+index 55bd7b78ee..5200cf6d63 100644
 --- a/build/config/rust.gni
 +++ b/build/config/rust.gni
-@@ -180,7 +180,7 @@ if (is_linux || is_chromeos) {
+@@ -62,7 +62,8 @@ declare_args() {
+   # set this to the output of `rustc -V`. Changing this string will cause all
+   # Rust targets to be rebuilt, which allows you to update your toolchain and
+   # not break incremental builds.
+-  rustc_version = ""
++  rustc_version = exec_script("//build/gn_run_binary.py",
++    [ "@PREFIX@/bin/rustc", "-V" ], "trim string")
+ 
+   # Whether artifacts produced by the Rust compiler can participate in ThinLTO.
+   #
+@@ -180,7 +181,7 @@ if (is_linux || is_chromeos) {
    if (current_cpu == "arm64") {
      rust_abi_target = "aarch64-unknown-linux-gnu"
    } else if (current_cpu == "x86") {
@@ -5058,7 +5052,7 @@ index 55bd7b78ee..425d44c466 100644
    } else if (current_cpu == "x64") {
      rust_abi_target = "x86_64-unknown-linux-gnu"
    } else if (current_cpu == "arm") {
-@@ -329,7 +329,11 @@ if (is_linux || is_chromeos) {
+@@ -329,7 +330,11 @@ if (is_linux || is_chromeos) {
    }
  }
  
@@ -5099,6 +5093,18 @@ index c9d47e9139..ad49276af5 100755
    elif host_arch.startswith('arm'):
      host_arch = 'arm'
    elif host_arch.startswith('aarch64'):
+diff --git a/build/dotfile_settings.gni b/build/dotfile_settings.gni
+index 4911002e5c..d5c547d4f8 100644
+--- a/build/dotfile_settings.gni
++++ b/build/dotfile_settings.gni
+@@ -23,6 +23,7 @@ build_dotfile_settings = {
+     "//build/config/mac/mac_sdk.gni",
+     "//build/config/mac/rules.gni",
+     "//build/config/posix/BUILD.gn",
++    "//build/config/rust.gni",
+     "//build/config/win/BUILD.gn",
+     "//build/config/win/visual_studio_version.gni",
+     "//build/rust/analyze.gni",
 diff --git a/build/gn_run_binary.py b/build/gn_run_binary.py
 index 414f6952fe..8485a0a00a 100644
 --- a/build/gn_run_binary.py
@@ -5127,6 +5133,21 @@ index 3038318821..0efc065144 100644
    # Memory allocation symbols.  We want chrome and any libraries to
    # share the same heap, so it is correct to export these symbols.
    aligned_alloc;
+diff --git a/build/linux/strip_binary.gni b/build/linux/strip_binary.gni
+index 581d3760e8..b6edfb0348 100644
+--- a/build/linux/strip_binary.gni
++++ b/build/linux/strip_binary.gni
+@@ -21,8 +21,8 @@ template("strip_binary") {
+                            "testonly",
+                          ])
+   action("${target_name}") {
+-    llvm_strip_binary = "${clang_base_path}/bin/llvm-strip"
+-    llvm_objcopy_binary = "${clang_base_path}/bin/llvm-objcopy"
++    llvm_strip_binary = "@PREFIX@/bin/llvm-strip"
++    llvm_objcopy_binary = "@PREFIX@/bin/llvm-objcopy"
+     script = "//build/linux/strip_binary.py"
+ 
+     if (defined(invoker.stripped_binary_output)) {
 diff --git a/build/linux/strip_binary.py b/build/linux/strip_binary.py
 index 0302edf3d0..8efe266e65 100755
 --- a/build/linux/strip_binary.py
@@ -5859,7 +5880,7 @@ index 7280ef29b8..1bf607a817 100644
        sources += [
          "dbus_memory_pressure_evaluator_linux.cc",
 diff --git a/chrome/browser/about_flags.cc b/chrome/browser/about_flags.cc
-index e80a06d6cb..fbd284e26b 100644
+index dc3bfe52f4..3c88b12c4c 100644
 --- a/chrome/browser/about_flags.cc
 +++ b/chrome/browser/about_flags.cc
 @@ -334,12 +334,12 @@
@@ -5918,7 +5939,7 @@ index e80a06d6cb..fbd284e26b 100644
  
  // A limited number of combinations of the rich autocompletion params.
  const FeatureEntry::FeatureParam kOmniboxRichAutocompletionAggressive1[] = {
-@@ -3859,7 +3884,7 @@ const FeatureEntry::FeatureVariation
+@@ -3870,7 +3895,7 @@ const FeatureEntry::FeatureVariation
  #endif  // BUILDFLAG(IS_ANDROID)
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN) || \
@@ -5927,7 +5948,7 @@ index e80a06d6cb..fbd284e26b 100644
  const flags_ui::FeatureEntry::FeatureParam kPwaNavigationCapturingDefaultOn[] =
      {{"link_capturing_state", "on_by_default"}};
  const flags_ui::FeatureEntry::FeatureParam kPwaNavigationCapturingDefaultOff[] =
-@@ -4119,7 +4144,7 @@ const FeatureEntry::FeatureVariation kSkiaGraphiteVariations[] = {
+@@ -4130,7 +4155,7 @@ const FeatureEntry::FeatureVariation kSkiaGraphiteVariations[] = {
       std::size(kSkiaGraphite_DebugLabelsEnabled), nullptr},
  };
  
@@ -5936,7 +5957,7 @@ index e80a06d6cb..fbd284e26b 100644
  const FeatureEntry::FeatureParam kTranslationAPI_SkipLanguagePackLimit[] = {
      {"TranslationAPIAcceptLanguagesCheck", "false"},
      {"TranslationAPILimitLanguagePackCount", "false"}};
-@@ -4139,7 +4164,7 @@ const FeatureEntry::FeatureVariation kSensitiveContentVariations[] = {
+@@ -4150,7 +4175,7 @@ const FeatureEntry::FeatureVariation kSensitiveContentVariations[] = {
  };
  #endif  // BUILDFLAG(IS_ANDROID)
  
@@ -5945,7 +5966,7 @@ index e80a06d6cb..fbd284e26b 100644
  const FeatureEntry::FeatureParam kContextualCueingEnabledNoEngagementCap[] = {
      {"BackoffTime", "0h"},
      {"BackoffMultiplierBase", "0.0"},
-@@ -4888,7 +4913,7 @@ const FeatureEntry::FeatureVariation kMobilePromoOnDesktopVariations[] = {
+@@ -4899,7 +4924,7 @@ const FeatureEntry::FeatureVariation kMobilePromoOnDesktopVariations[] = {
  };
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN) || \
@@ -5954,7 +5975,7 @@ index e80a06d6cb..fbd284e26b 100644
  const FeatureEntry::FeatureParam kNtpEnterpriseShortcutsWithFakeData[] = {
      {"use_fake_data", "true"}};
  const FeatureEntry::FeatureVariation kNtpEnterpriseShortcutsVariations[] = {
-@@ -5534,7 +5559,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -5545,7 +5570,7 @@ const FeatureEntry kFeatureEntries[] = {
      },
  #endif  // BUILDFLAG(IS_WIN)
  
@@ -5963,7 +5984,7 @@ index e80a06d6cb..fbd284e26b 100644
      {
          "fluent-overlay-scrollbars",
          flag_descriptions::kFluentOverlayScrollbarsName,
-@@ -5829,7 +5854,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -5840,7 +5865,7 @@ const FeatureEntry kFeatureEntries[] = {
       flag_descriptions::kEnableIsolatedWebAppDevModeName,
       flag_descriptions::kEnableIsolatedWebAppDevModeDescription, kOsDesktop,
       FEATURE_VALUE_TYPE(features::kIsolatedWebAppDevMode)},
@@ -5972,7 +5993,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"enable-iwa-key-distribution-component",
       flag_descriptions::kEnableIwaKeyDistributionComponentName,
       flag_descriptions::kEnableIwaKeyDistributionComponentDescription,
-@@ -6021,7 +6046,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -6032,7 +6057,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(media::kUseSCContentSharingPicker)},
  #endif  // BUILDFLAG(IS_MAC)
  
@@ -5981,7 +6002,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"pulseaudio-loopback-for-cast",
       flag_descriptions::kPulseaudioLoopbackForCastName,
       flag_descriptions::kPulseaudioLoopbackForCastDescription, kOsLinux,
-@@ -6050,6 +6075,16 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -6061,6 +6086,16 @@ const FeatureEntry kFeatureEntries[] = {
       flag_descriptions::kWaylandSessionManagementName,
       flag_descriptions::kWaylandSessionManagementDescription, kOsLinux,
       FEATURE_VALUE_TYPE(features::kWaylandSessionManagement)},
@@ -5998,7 +6019,7 @@ index e80a06d6cb..fbd284e26b 100644
  #endif  // BUILDFLAG(IS_LINUX)
  
  #if BUILDFLAG(ENABLE_VR)
-@@ -6916,7 +6951,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -6927,7 +6962,7 @@ const FeatureEntry kFeatureEntries[] = {
                                      "MlUrlScoring")},
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_MAC) || \
@@ -6007,7 +6028,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"contextual-search-box-uses-contextual-search-provider",
       flag_descriptions::kContextualSearchBoxUsesContextualSearchProviderName,
       flag_descriptions::
-@@ -7326,7 +7361,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -7337,7 +7372,7 @@ const FeatureEntry kFeatureEntries[] = {
                                      kNumSrpZpsRelatedSearches,
                                      "PowerTools")},
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_MAC) || \
@@ -6016,7 +6037,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"history-embeddings", flag_descriptions::kHistoryEmbeddingsName,
       flag_descriptions::kHistoryEmbeddingsDescription, kOsDesktop,
       FEATURE_VALUE_TYPE(history_embeddings::kHistoryEmbeddings)},
-@@ -7804,7 +7839,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -7815,7 +7850,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(printing::features::kAddPrinterViaPrintscanmgr)},
  #endif  // BUILDFLAG(IS_CHROMEOS)
  
@@ -6025,7 +6046,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"cups-ipp-printing-backend",
       flag_descriptions::kCupsIppPrintingBackendName,
       flag_descriptions::kCupsIppPrintingBackendDescription, kOsDesktop,
-@@ -8766,7 +8801,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -8777,7 +8812,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(media::kGlobalMediaControlsUpdatedUI)},
  #endif  // !BUILDFLAG(IS_CHROMEOS)
  
@@ -6034,7 +6055,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"enable-network-service-sandbox",
       flag_descriptions::kEnableNetworkServiceSandboxName,
       flag_descriptions::kEnableNetworkServiceSandboxDescription,
-@@ -9344,7 +9379,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -9355,7 +9390,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(ash::features::kWallpaperGooglePhotosSharedAlbums)},
  #endif  // BUILDFLAG(IS_CHROMEOS)
  
@@ -6043,7 +6064,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"enable-get-all-screens-media", flag_descriptions::kGetAllScreensMediaName,
       flag_descriptions::kGetAllScreensMediaDescription, kOsCrOS | kOsLinux,
       FEATURE_VALUE_TYPE(blink::features::kGetAllScreensMedia)},
-@@ -9369,7 +9404,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -9380,7 +9415,7 @@ const FeatureEntry kFeatureEntries[] = {
       flag_descriptions::kGlobalVaapiLockDescription, kOsCrOS | kOsLinux,
       FEATURE_VALUE_TYPE(media::kGlobalVaapiLock)},
  
@@ -6052,7 +6073,7 @@ index e80a06d6cb..fbd284e26b 100644
      {
          "ui-debug-tools",
          flag_descriptions::kUIDebugToolsName,
-@@ -9822,7 +9857,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -9833,7 +9868,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || \
@@ -6061,7 +6082,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"media-session-enter-picture-in-picture",
       flag_descriptions::kMediaSessionEnterPictureInPictureName,
       flag_descriptions::kMediaSessionEnterPictureInPictureDescription,
-@@ -10012,7 +10047,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -10023,7 +10058,7 @@ const FeatureEntry kFeatureEntries[] = {
       flag_descriptions::kReduceTransferSizeUpdatedIPCDescription, kOsAll,
       FEATURE_VALUE_TYPE(network::features::kReduceTransferSizeUpdatedIPC)},
  
@@ -6070,7 +6091,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"reduce-user-agent-data-linux-platform-version",
       flag_descriptions::kReduceUserAgentDataLinuxPlatformVersionName,
       flag_descriptions::kReduceUserAgentDataLinuxPlatformVersionDescription,
-@@ -10484,7 +10519,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -10495,7 +10530,7 @@ const FeatureEntry kFeatureEntries[] = {
       kOsDesktop | kOsAndroid,
       FEATURE_VALUE_TYPE(features::kProcessPerSiteUpToMainFrameThreshold)},
  
@@ -6079,7 +6100,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"camera-mic-effects", flag_descriptions::kCameraMicEffectsName,
       flag_descriptions::kCameraMicEffectsDescription,
       static_cast<unsigned short>(kOsMac | kOsWin | kOsLinux),
-@@ -10595,7 +10630,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -10606,7 +10641,7 @@ const FeatureEntry kFeatureEntries[] = {
       flag_descriptions::kRcapsDynamicProfileCountryDescription, kOsAll,
       FEATURE_VALUE_TYPE(switches::kDynamicProfileCountry)},
  
@@ -6088,7 +6109,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"enable-generic-oidc-auth-profile-management",
       flag_descriptions::kEnableGenericOidcAuthProfileManagementName,
       flag_descriptions::kEnableGenericOidcAuthProfileManagementDescription,
-@@ -10616,7 +10651,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -10627,7 +10662,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN) || \
@@ -6097,7 +6118,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"enable-user-navigation-capturing-pwa",
       flag_descriptions::kPwaNavigationCapturingName,
       flag_descriptions::kPwaNavigationCapturingDescription,
-@@ -11154,7 +11189,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -11165,7 +11200,7 @@ const FeatureEntry kFeatureEntries[] = {
           kStandardBoundSessionCredentialsFederatedSessionsVariations,
           "standard-device-bound-sessions-federated-sessions")},
  
@@ -6106,7 +6127,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"replace-sync-promos-with-sign-in-promos-desktop",
       flag_descriptions::kReplaceSyncPromosWithSignInPromosName,
       flag_descriptions::kReplaceSyncPromosWithSignInPromosDescription,
-@@ -11314,7 +11349,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -11325,7 +11360,7 @@ const FeatureEntry kFeatureEntries[] = {
       flag_descriptions::kCanvasHibernationDescription, kOsAll,
       FEATURE_VALUE_TYPE(blink::features::kCanvas2DHibernation)},
  
@@ -6115,7 +6136,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"sync-enable-bookmarks-in-transport-mode",
       flag_descriptions::kSyncEnableBookmarksInTransportModeName,
       flag_descriptions::kSyncEnableBookmarksInTransportModeDescription,
-@@ -11400,7 +11435,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -11411,7 +11446,7 @@ const FeatureEntry kFeatureEntries[] = {
                                      "HistoryOptInEducationalTipVariations")},
  #endif  // BUILDFLAG(IS_ANDROID)
  
@@ -6124,7 +6145,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"supervised-user-local-web-approvals",
       flag_descriptions::kSupervisedUserLocalWebApprovalsName,
       flag_descriptions::kSupervisedUserLocalWebApprovalsDescription,
-@@ -11605,7 +11640,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -11616,7 +11651,7 @@ const FeatureEntry kFeatureEntries[] = {
           segmentation_platform::features::kSegmentationSurveyPage)},
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -6133,7 +6154,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"autofill-enable-buy-now-pay-later",
       flag_descriptions::kAutofillEnableBuyNowPayLaterName,
       flag_descriptions::kAutofillEnableBuyNowPayLaterDescription,
-@@ -11693,7 +11728,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -11704,7 +11739,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(
           autofill::features::kAutofillEnableCardInfoRuntimeRetrieval)},
  
@@ -6142,7 +6163,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"translation-api", flag_descriptions::kTranslationAPIName,
       flag_descriptions::kTranslationAPIDescription, kOsMac | kOsWin | kOsLinux,
       FEATURE_WITH_PARAMS_VALUE_TYPE(blink::features::kTranslationAPI,
-@@ -11727,7 +11762,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -11738,7 +11773,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(
           password_manager::features::kPasswordFormClientsideClassifier)},
  
@@ -6151,7 +6172,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"contextual-cueing", flag_descriptions::kContextualCueingName,
       flag_descriptions::kContextualCueingDescription,
       kOsLinux | kOsMac | kOsWin,
-@@ -12091,7 +12126,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12102,7 +12137,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(ui::kUseNewEtc1Encoder)},
  #endif  // !BUILDFLAG(IS_ANDROID)
  
@@ -6160,7 +6181,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"automatic-usb-detach", flag_descriptions::kAutomaticUsbDetachName,
       flag_descriptions::kAutomaticUsbDetachDescription, kOsAndroid | kOsLinux,
       FEATURE_VALUE_TYPE(features::kAutomaticUsbDetach)},
-@@ -12127,7 +12162,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12138,7 +12173,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif  // !BUILDFLAG(IS_ANDROID)
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -6169,7 +6190,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"autofill-enable-amount-extraction",
       flag_descriptions::kAutofillEnableAmountExtractionName,
       flag_descriptions::kAutofillEnableAmountExtractionDescription,
-@@ -12279,7 +12314,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12290,7 +12325,7 @@ const FeatureEntry kFeatureEntries[] = {
           apps::chrome_app_deprecation::kAllowUserInstalledChromeApps)},
  #endif  // BUILDFLAG(IS_CHROMEOS)
  
@@ -6178,7 +6199,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"chrome-web-store-navigation-throttle",
       flag_descriptions::kChromeWebStoreNavigationThrottleName,
       flag_descriptions::kChromeWebStoreNavigationThrottleDescription,
-@@ -12308,7 +12343,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12319,7 +12354,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(supervised_user::kSupervisedUserBlockInterstitialV3)},
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -6187,7 +6208,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"autofill-enable-amount-extraction-testing",
       flag_descriptions::kAutofillEnableAmountExtractionTestingName,
       flag_descriptions::kAutofillEnableAmountExtractionTestingDescription,
-@@ -12323,7 +12358,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12334,7 +12369,7 @@ const FeatureEntry kFeatureEntries[] = {
       flag_descriptions::kEnableWebAppPredictableAppUpdatingDescription, kOsAll,
       FEATURE_VALUE_TYPE(features::kWebAppPredictableAppUpdating)},
  
@@ -6196,7 +6217,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"root-scrollbar-follows-browser-theme",
       flag_descriptions::kRootScrollbarFollowsTheme,
       flag_descriptions::kRootScrollbarFollowsThemeDescription,
-@@ -12596,7 +12631,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12607,7 +12642,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif  // BUILDFLAG(IS_ANDROID)
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN) || \
@@ -6205,7 +6226,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"tab-group-home", tabs::flag_descriptions::kTabGroupHomeName,
       tabs::flag_descriptions::kTabGroupHomeDescription, kOsDesktop,
       FEATURE_VALUE_TYPE(tabs::kTabGroupHome)},
-@@ -12689,7 +12724,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12700,7 +12735,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif  // BUILDFLAG(IS_ANDROID)
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN) || \
@@ -6214,7 +6235,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"enable-site-search-allow-user-override-policy",
       flag_descriptions::kEnableSiteSearchAllowUserOverridePolicyName,
       flag_descriptions::kEnableSiteSearchAllowUserOverridePolicyDescription,
-@@ -12813,7 +12848,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12824,7 +12859,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif  // BUILDFLAG(IS_ANDROID)
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -6223,7 +6244,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"autofill-enable-buy-now-pay-later-for-klarna",
       flag_descriptions::kAutofillEnableBuyNowPayLaterForKlarnaName,
       flag_descriptions::kAutofillEnableBuyNowPayLaterForKlarnaDescription,
-@@ -12886,7 +12921,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12897,7 +12932,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif  // BUILDFLAG(ENABLE_DICE_SUPPORT)
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -6232,7 +6253,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"autofill-enable-buy-now-pay-later-for-externally-linked",
       flag_descriptions::kAutofillEnableBuyNowPayLaterForExternallyLinkedName,
       flag_descriptions::
-@@ -13163,7 +13198,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -13174,7 +13209,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif  // !BUILDFLAG(IS_ANDROID),
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN) || \
@@ -6241,7 +6262,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"enable-ntp-enterprise-shortcuts",
       flag_descriptions::kEnableNtpEnterpriseShortcutsName,
       flag_descriptions::kEnableNtpEnterpriseShortcutsDescription,
-@@ -13270,7 +13305,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -13281,7 +13316,7 @@ const FeatureEntry kFeatureEntries[] = {
           autofill::features::kAutofillAndPasswordsInSameSurface)},
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_MAC) || \
@@ -6250,7 +6271,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"contextual-suggestion-ui-improvements",
       flag_descriptions::kContextualSuggestionsUiImprovementsName,
       flag_descriptions::kContextualSuggestionsUiImprovementsDescription,
-@@ -13298,7 +13333,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -13309,7 +13344,7 @@ const FeatureEntry kFeatureEntries[] = {
                                      "EnableBlockCanvasReadback")},
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -6259,7 +6280,7 @@ index e80a06d6cb..fbd284e26b 100644
      {"autofill-enable-ai-based-amount-extraction",
       flag_descriptions::kAutofillEnableAiBasedAmountExtractionName,
       flag_descriptions::kAutofillEnableAiBasedAmountExtractionDescription,
-@@ -13343,7 +13378,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -13354,7 +13389,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(features::kCryptographyComplianceCnsa)},
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -9170,6 +9191,37 @@ index 496d4abae1..7e8778ef9d 100644
    std::unique_ptr<whats_new::WhatsNewRegistry> whats_new_registry_;
  #endif
  
+diff --git a/chrome/browser/headless/headless_mode_util.cc b/chrome/browser/headless/headless_mode_util.cc
+index 7bc55e2de3..ff2185a8fb 100644
+--- a/chrome/browser/headless/headless_mode_util.cc
++++ b/chrome/browser/headless/headless_mode_util.cc
+@@ -12,7 +12,7 @@
+ // New headless mode is available on Linux, Windows and Mac platforms.
+ // More platforms will be added later, so avoid function level clutter
+ // by providing stub implementations at the end of the file.
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_BSD)
+ 
+ #include "base/base_switches.h"
+ #include "base/files/file_path.h"
+@@ -23,7 +23,7 @@
+ #include "chrome/common/chrome_switches.h"
+ #include "content/public/common/content_switches.h"
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include "ui/gl/gl_switches.h"               // nogncheck
+ #include "ui/ozone/public/ozone_switches.h"  // nogncheck
+ #endif  // BUILDFLAG(IS_LINUX)
+@@ -113,7 +113,7 @@ class HeadlessModeHandleImpl : public HeadlessModeHandle {
+       command_line->AppendSwitchPath(switches::kUserDataDir, user_data_dir);
+     }
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+     // Headless mode on Linux relies on ozone/headless platform.
+     command_line->AppendSwitchASCII(::switches::kOzonePlatform,
+                                     switches::kHeadless);
 diff --git a/chrome/browser/intranet_redirect_detector.h b/chrome/browser/intranet_redirect_detector.h
 index 23480b7e12..6c5fde824a 100644
 --- a/chrome/browser/intranet_redirect_detector.h
@@ -10965,7 +11017,7 @@ index 80427cb69b..e5d3b67957 100644
            g_browser_process->variations_service());
  #else
 diff --git a/chrome/browser/renderer_context_menu/render_view_context_menu.cc b/chrome/browser/renderer_context_menu/render_view_context_menu.cc
-index 8963b37a32..7e80bcfc4f 100644
+index 91de9aa046..3aa95bd474 100644
 --- a/chrome/browser/renderer_context_menu/render_view_context_menu.cc
 +++ b/chrome/browser/renderer_context_menu/render_view_context_menu.cc
 @@ -243,7 +243,7 @@
@@ -10977,7 +11029,7 @@ index 8963b37a32..7e80bcfc4f 100644
  #include "components/webapps/isolated_web_apps/scheme.h"
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) ||
          // BUILDFLAG(IS_CHROMEOS)
-@@ -4987,7 +4987,7 @@ void RenderViewContextMenu::OpenLinkInSplitView() {
+@@ -4985,7 +4985,7 @@ void RenderViewContextMenu::OpenLinkInSplitView() {
  #endif  // !BUILDFLAG(IS_ANDROID)
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -12090,7 +12142,7 @@ index 8c2992ff8a..77e5da8b94 100644
                                  GetCustomFramePrefDefault());
  #endif
 diff --git a/chrome/browser/ui/browser_window/internal/browser_window_features.cc b/chrome/browser/ui/browser_window/internal/browser_window_features.cc
-index 5faac625aa..0a536b2628 100644
+index 78ce2144cc..ea647ac08c 100644
 --- a/chrome/browser/ui/browser_window/internal/browser_window_features.cc
 +++ b/chrome/browser/ui/browser_window/internal/browser_window_features.cc
 @@ -133,7 +133,7 @@
@@ -12102,7 +12154,7 @@ index 5faac625aa..0a536b2628 100644
  #include "chrome/browser/ui/views/session_restore_infobar/session_restore_infobar_controller.h"
  #endif
  
-@@ -373,7 +373,7 @@ void BrowserWindowFeatures::Init(BrowserWindowInterface* browser) {
+@@ -374,7 +374,7 @@ void BrowserWindowFeatures::Init(BrowserWindowInterface* browser) {
    browser_select_file_dialog_controller_ =
        std::make_unique<BrowserSelectFileDialogController>(profile);
  
@@ -12112,7 +12164,7 @@ index 5faac625aa..0a536b2628 100644
        std::make_unique<ProfileCustomizationBubbleSyncController>(browser,
                                                                   profile);
 diff --git a/chrome/browser/ui/browser_window/public/browser_window_features.h b/chrome/browser/ui/browser_window/public/browser_window_features.h
-index 19048c9478..64fa062d24 100644
+index 035cef53fe..be6b7a108b 100644
 --- a/chrome/browser/ui/browser_window/public/browser_window_features.h
 +++ b/chrome/browser/ui/browser_window/public/browser_window_features.h
 @@ -94,7 +94,7 @@ class PinInfoBarController;
@@ -12124,7 +12176,7 @@ index 19048c9478..64fa062d24 100644
  class ProfileCustomizationBubbleSyncController;
  namespace session_restore_infobar {
  class SessionRestoreInfobarController;
-@@ -424,7 +424,7 @@ class BrowserWindowFeatures {
+@@ -428,7 +428,7 @@ class BrowserWindowFeatures {
      return browser_select_file_dialog_controller_.get();
    }
  
@@ -12133,7 +12185,7 @@ index 19048c9478..64fa062d24 100644
    ProfileCustomizationBubbleSyncController*
    profile_customization_bubble_sync_controller() {
      return profile_customization_bubble_sync_controller_.get();
-@@ -593,7 +593,7 @@ class BrowserWindowFeatures {
+@@ -597,7 +597,7 @@ class BrowserWindowFeatures {
    std::unique_ptr<BrowserSelectFileDialogController>
        browser_select_file_dialog_controller_;
  
@@ -13392,10 +13444,10 @@ index f5f7800b04..4b484bc31e 100644
      // Instead we send an explicit IPC to crash on the renderer's IO thread.
      rph->ForceCrash();
 diff --git a/chrome/browser/ui/views/location_bar/location_bar_view.cc b/chrome/browser/ui/views/location_bar/location_bar_view.cc
-index af0475ed77..8bdf49a0a9 100644
+index 84ca546a93..64f63ed6ab 100644
 --- a/chrome/browser/ui/views/location_bar/location_bar_view.cc
 +++ b/chrome/browser/ui/views/location_bar/location_bar_view.cc
-@@ -527,7 +527,7 @@ bool LocationBarView::IsInitialized() const {
+@@ -539,7 +539,7 @@ bool LocationBarView::IsInitialized() const {
  }
  
  void LocationBarView::OnPopupOpened() {
@@ -13730,10 +13782,10 @@ index 7c57dfc36c..194cc4283e 100644
        textfield_placeholder_color_id_(kColorTaskManagerSearchBarPlaceholderText)
  #endif
 diff --git a/chrome/browser/ui/views/user_education/browser_user_education_service.cc b/chrome/browser/ui/views/user_education/browser_user_education_service.cc
-index 3e43318086..68aaa85f19 100644
+index cc5de166d7..0e5a23a5d8 100644
 --- a/chrome/browser/ui/views/user_education/browser_user_education_service.cc
 +++ b/chrome/browser/ui/views/user_education/browser_user_education_service.cc
-@@ -1131,7 +1131,7 @@ void MaybeRegisterChromeFeaturePromos(
+@@ -1165,7 +1165,7 @@ void MaybeRegisterChromeFeaturePromos(
                  "Triggered when a shared tab becomes the active tab.")));
    }
  
@@ -13742,7 +13794,7 @@ index 3e43318086..68aaa85f19 100644
    // kIPHSupervisedUserProfileSigninFeature:
    registry.RegisterFeature(std::move(
        FeaturePromoSpecification::CreateForCustomAction(
-@@ -1399,7 +1399,7 @@ void MaybeRegisterChromeFeaturePromos(
+@@ -1433,7 +1433,7 @@ void MaybeRegisterChromeFeaturePromos(
                         "Triggered to inform users of the availability of the "
                         "new translate screen feature on the Lens Overlay.")));
  
@@ -15332,7 +15384,7 @@ index d6803fe694..a76738c5f5 100644
    schemes->cors_enabled_schemes.push_back(webapps::kIsolatedAppScheme);
    schemes->service_worker_schemes.push_back(webapps::kIsolatedAppScheme);
 diff --git a/chrome/common/chrome_features.cc b/chrome/common/chrome_features.cc
-index dc31b5eddc..7bc27b59dd 100644
+index 851a5dec4f..aedcfc883d 100644
 --- a/chrome/common/chrome_features.cc
 +++ b/chrome/common/chrome_features.cc
 @@ -86,7 +86,7 @@ BASE_FEATURE(kUseAdHocSigningForWebAppShims, base::FEATURE_DISABLED_BY_DEFAULT);
@@ -15371,7 +15423,7 @@ index dc31b5eddc..7bc27b59dd 100644
  // Controls whether Chrome Apps are supported. See https://crbug.com/1221251.
  // If the feature is disabled, Chrome Apps continue to work. If enabled, Chrome
  // Apps will not launch and will be marked in the UI as deprecated.
-@@ -627,7 +627,7 @@ BASE_FEATURE(kGlicDisableWarming, base::FEATURE_ENABLED_BY_DEFAULT);
+@@ -625,7 +625,7 @@ BASE_FEATURE(kGlicWarming, base::FEATURE_DISABLED_BY_DEFAULT);
  // Killswitch that controls whether the guest WebContents visibility state is
  // set to hidden when the Glic panel is warming.
  BASE_FEATURE(kGlicGuestContentsVisibilityState,
@@ -15380,7 +15432,7 @@ index dc31b5eddc..7bc27b59dd 100644
               base::FEATURE_ENABLED_BY_DEFAULT);
  #else
               base::FEATURE_DISABLED_BY_DEFAULT);
-@@ -1088,7 +1088,7 @@ BASE_FEATURE(kKAnonymityServiceOHTTPRequests, base::FEATURE_ENABLED_BY_DEFAULT);
+@@ -1086,7 +1086,7 @@ BASE_FEATURE(kKAnonymityServiceOHTTPRequests, base::FEATURE_ENABLED_BY_DEFAULT);
  // public keys.
  BASE_FEATURE(kKAnonymityServiceStorage, base::FEATURE_ENABLED_BY_DEFAULT);
  
@@ -15389,7 +15441,7 @@ index dc31b5eddc..7bc27b59dd 100644
  BASE_FEATURE(kLinuxLowMemoryMonitor, base::FEATURE_DISABLED_BY_DEFAULT);
  // Values taken from the low-memory-monitor documentation and also apply to the
  // portal API:
-@@ -1099,7 +1099,7 @@ constexpr base::FeatureParam<int> kLinuxLowMemoryMonitorCriticalLevel{
+@@ -1097,7 +1097,7 @@ constexpr base::FeatureParam<int> kLinuxLowMemoryMonitorCriticalLevel{
      &kLinuxLowMemoryMonitor, "critical_level", 255};
  #endif  // BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CHROMEOS)
  
@@ -15399,7 +15451,7 @@ index dc31b5eddc..7bc27b59dd 100644
  #endif
  
 diff --git a/chrome/common/chrome_features.h b/chrome/common/chrome_features.h
-index 80dde37a0f..debb51bdcd 100644
+index 28fe9da4ad..1ac7cf9a66 100644
 --- a/chrome/common/chrome_features.h
 +++ b/chrome/common/chrome_features.h
 @@ -83,13 +83,13 @@ BASE_DECLARE_FEATURE(kUseAdHocSigningForWebAppShims);
@@ -15427,7 +15479,7 @@ index 80dde37a0f..debb51bdcd 100644
  COMPONENT_EXPORT(CHROME_FEATURES) BASE_DECLARE_FEATURE(kChromeAppsDeprecation);
  COMPONENT_EXPORT(CHROME_FEATURES)
  BASE_DECLARE_FEATURE(kShortcutsNotApps);
-@@ -808,7 +808,7 @@ BASE_DECLARE_FEATURE(kKAnonymityServiceOHTTPRequests);
+@@ -806,7 +806,7 @@ BASE_DECLARE_FEATURE(kKAnonymityServiceOHTTPRequests);
  COMPONENT_EXPORT(CHROME_FEATURES)
  BASE_DECLARE_FEATURE(kKAnonymityServiceStorage);
  
@@ -15436,7 +15488,7 @@ index 80dde37a0f..debb51bdcd 100644
  COMPONENT_EXPORT(CHROME_FEATURES) BASE_DECLARE_FEATURE(kLinuxLowMemoryMonitor);
  COMPONENT_EXPORT(CHROME_FEATURES)
  extern const base::FeatureParam<int> kLinuxLowMemoryMonitorModerateLevel;
-@@ -816,7 +816,7 @@ COMPONENT_EXPORT(CHROME_FEATURES)
+@@ -814,7 +814,7 @@ COMPONENT_EXPORT(CHROME_FEATURES)
  extern const base::FeatureParam<int> kLinuxLowMemoryMonitorCriticalLevel;
  #endif  // BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CHROMEOS)
  
@@ -16325,94 +16377,6 @@ index c272aa9f81..1d9315bbe4 100644
    services.Add(RunSystemSignalsService);
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
  
-diff --git a/chromecast/browser/cast_browser_main_parts.cc b/chromecast/browser/cast_browser_main_parts.cc
-index b3973708b3..9240229525 100644
---- a/chromecast/browser/cast_browser_main_parts.cc
-+++ b/chromecast/browser/cast_browser_main_parts.cc
-@@ -99,7 +99,7 @@
- #include "ui/ozone/public/ozone_platform.h"
- #endif  // BUILDFLAG(IS_OZONE)
- 
--#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
- #include <fontconfig/fontconfig.h>
- #include <signal.h>
- #include <sys/prctl.h>
-@@ -280,7 +280,7 @@ class CastViewsDelegate : public views::ViewsDelegate {
- 
- #endif  // defined(USE_AURA)
- 
--#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
- 
- base::FilePath GetApplicationFontsDir() {
-   std::unique_ptr<base::Environment> env(base::Environment::Create());
-@@ -325,7 +325,7 @@ const DefaultCommandLineSwitch kDefaultSwitches[] = {
-     {switches::kDisableThreadedAnimation, ""},
- #endif  // BUILDFLAG(IS_ANDROID)
- #endif  // BUILDFLAG(IS_CAST_AUDIO_ONLY)
--#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
- #if defined(ARCH_CPU_X86_FAMILY)
-     // This is needed for now to enable the x11 Ozone platform to work with
-     // current Linux/NVidia OpenGL drivers.
-@@ -502,7 +502,7 @@ void CastBrowserMainParts::ToolkitInitialized() {
-     views_delegate_ = std::make_unique<CastViewsDelegate>();
- #endif  // defined(USE_AURA)
- 
--#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
-   base::FilePath dir_font = GetApplicationFontsDir();
-   const FcChar8* dir_font_char8 =
-       reinterpret_cast<const FcChar8*>(dir_font.value().data());
-diff --git a/chromecast/browser/cast_content_browser_client.cc b/chromecast/browser/cast_content_browser_client.cc
-index a1b2ac35f0..9bef17b861 100644
---- a/chromecast/browser/cast_content_browser_client.cc
-+++ b/chromecast/browser/cast_content_browser_client.cc
-@@ -432,7 +432,7 @@ void CastContentBrowserClient::AppendExtraCommandLineSwitches(
-                                           switches::kAudioOutputChannels));
-     }
-   } else if (process_type == switches::kGpuProcess) {
--#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
-     // Necessary for accelerated 2d canvas.  By default on Linux, Chromium
-     // assumes GLES2 contexts can be lost to a power-save mode, which breaks GPU
-     // canvas apps.
-diff --git a/chromecast/cast_core/runtime/browser/runtime_application_service_impl.cc b/chromecast/cast_core/runtime/browser/runtime_application_service_impl.cc
-index 4e4a9e9370..dbbf1322f8 100644
---- a/chromecast/cast_core/runtime/browser/runtime_application_service_impl.cc
-+++ b/chromecast/cast_core/runtime/browser/runtime_application_service_impl.cc
-@@ -364,7 +364,7 @@ CastWebView::Scoped RuntimeApplicationServiceImpl::CreateCastWebView() {
-   params->force_720p_resolution =
-       GetFlagEntry(feature::kCastCoreForce720p, config_.extra_features(),
-                    /*default_value=*/false);
--#if BUILDFLAG(ENABLE_CAST_RECEIVER) && BUILDFLAG(IS_LINUX)
-+#if BUILDFLAG(ENABLE_CAST_RECEIVER) && (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD))
-   // Starboard-based (linux) cast receivers may not render their UI at 720p, so
-   // we need to scale to the proper resolution. For example, a 4k TV may render
-   // the window at 1920x1080, so a scaling factor of 1.5 is necessary for a 720p
-diff --git a/chromecast/media/base/default_monotonic_clock.cc b/chromecast/media/base/default_monotonic_clock.cc
-index df98b60695..7f208b10f9 100644
---- a/chromecast/media/base/default_monotonic_clock.cc
-+++ b/chromecast/media/base/default_monotonic_clock.cc
-@@ -11,7 +11,7 @@
- #include "base/time/time.h"
- #include "build/build_config.h"
- 
--#if BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-+#if BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
- #include "chromecast/media/base/buildflags.h"
- #endif  // BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_LINUX) ||
-         // BUILDFLAG(IS_CHROMEOS)
-@@ -28,7 +28,7 @@ std::unique_ptr<MonotonicClock> MonotonicClock::Create() {
-   return std::make_unique<DefaultMonotonicClock>();
- }
- 
--#if BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-+#if BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
- int64_t MonotonicClockNow() {
-   timespec now = {0, 0};
- #if BUILDFLAG(MEDIA_CLOCK_MONOTONIC_RAW)
 diff --git a/components/BUILD.gn b/components/BUILD.gn
 index 16f2d6f5cb..624d4af3b9 100644
 --- a/components/BUILD.gn
@@ -17532,7 +17496,7 @@ index 53bdb178d6..17b330de29 100644
    if (kIPHAutofillCreditCardBenefitFeature.name == feature->name) {
      // The credit card benefit IPH appears up to three times over 10 years and
 diff --git a/components/feature_engagement/public/feature_constants.cc b/components/feature_engagement/public/feature_constants.cc
-index 843f7952e6..3c7506935f 100644
+index e6c262848a..19fd5cc7c5 100644
 --- a/components/feature_engagement/public/feature_constants.cc
 +++ b/components/feature_engagement/public/feature_constants.cc
 @@ -32,7 +32,7 @@ bool IsOnDeviceStorageEnabled() {
@@ -17544,7 +17508,7 @@ index 843f7952e6..3c7506935f 100644
  #if BUILDFLAG(GOOGLE_CHROME_BRANDING)
  BASE_FEATURE(kEsbDownloadRowPromoFeature,
               "EsbDownloadRowPromo",
-@@ -843,7 +843,7 @@ BASE_FEATURE(kIPHiOSAIHubNewBadge,
+@@ -846,7 +846,7 @@ BASE_FEATURE(kIPHiOSAIHubNewBadge,
  
  #endif  // BUILDFLAG(IS_IOS)
  
@@ -17553,7 +17517,7 @@ index 843f7952e6..3c7506935f 100644
      BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_FUCHSIA)
  BASE_FEATURE(kIPHAutofillBnplAffirmOrZipSuggestionFeature,
               "IPH_AutofillBnplAffirmOrZipSuggestion",
-@@ -999,7 +999,7 @@ BASE_FEATURE(kIPHScalableIphGamingFeature,
+@@ -1002,7 +1002,7 @@ BASE_FEATURE(kIPHScalableIphGamingFeature,
               base::FEATURE_DISABLED_BY_DEFAULT);
  #endif
  
@@ -17563,7 +17527,7 @@ index 843f7952e6..3c7506935f 100644
  // flag is needed for the IPH linked to this feature to work, and
  // use-cases to show the IPH are guarded by that flag.
 diff --git a/components/feature_engagement/public/feature_constants.h b/components/feature_engagement/public/feature_constants.h
-index e44c3fd987..24fa403a06 100644
+index 61aacf6650..26c88df6cd 100644
 --- a/components/feature_engagement/public/feature_constants.h
 +++ b/components/feature_engagement/public/feature_constants.h
 @@ -31,7 +31,7 @@ FEATURE_CONSTANTS_DECLARE_FEATURE(kIPHDemoMode);
@@ -17575,7 +17539,7 @@ index e44c3fd987..24fa403a06 100644
  #if BUILDFLAG(GOOGLE_CHROME_BRANDING)
  FEATURE_CONSTANTS_DECLARE_FEATURE(kEsbDownloadRowPromoFeature);
  #endif
-@@ -379,7 +379,7 @@ FEATURE_CONSTANTS_DECLARE_FEATURE(kIPHiOSAIHubNewBadge);
+@@ -380,7 +380,7 @@ FEATURE_CONSTANTS_DECLARE_FEATURE(kIPHiOSAIHubNewBadge);
  
  #endif  // BUILDFLAG(IS_IOS)
  
@@ -17584,7 +17548,7 @@ index e44c3fd987..24fa403a06 100644
      BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_FUCHSIA)
  FEATURE_CONSTANTS_DECLARE_FEATURE(kIPHAutofillBnplAffirmOrZipSuggestionFeature);
  FEATURE_CONSTANTS_DECLARE_FEATURE(
-@@ -443,7 +443,7 @@ FEATURE_CONSTANTS_DECLARE_FEATURE(kIPHScalableIphHelpAppBasedTenFeature);
+@@ -444,7 +444,7 @@ FEATURE_CONSTANTS_DECLARE_FEATURE(kIPHScalableIphHelpAppBasedTenFeature);
  FEATURE_CONSTANTS_DECLARE_FEATURE(kIPHScalableIphGamingFeature);
  #endif
  
@@ -17594,7 +17558,7 @@ index e44c3fd987..24fa403a06 100644
  FEATURE_CONSTANTS_DECLARE_FEATURE(kIPHDesktopPWAsLinkCapturingLaunchAppInTab);
  FEATURE_CONSTANTS_DECLARE_FEATURE(kIPHSignInBenefitsFeature);
 diff --git a/components/feature_engagement/public/feature_list.cc b/components/feature_engagement/public/feature_list.cc
-index 51f38e9e6b..68520230e7 100644
+index 02a47bb616..33e8b07151 100644
 --- a/components/feature_engagement/public/feature_list.cc
 +++ b/components/feature_engagement/public/feature_list.cc
 @@ -203,7 +203,7 @@ const base::Feature* const kAllFeatures[] = {
@@ -17606,7 +17570,7 @@ index 51f38e9e6b..68520230e7 100644
  #if BUILDFLAG(GOOGLE_CHROME_BRANDING)
      &kEsbDownloadRowPromoFeature,
  #endif
-@@ -277,7 +277,7 @@ const base::Feature* const kAllFeatures[] = {
+@@ -278,7 +278,7 @@ const base::Feature* const kAllFeatures[] = {
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_LINUX) ||
          // BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FUCHSIA)
  
@@ -17615,7 +17579,7 @@ index 51f38e9e6b..68520230e7 100644
      BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_FUCHSIA)
      &kIPHAutofillAiOptInFeature,
      &kIPHAutofillBnplAffirmOrZipSuggestionFeature,
-@@ -335,7 +335,7 @@ const base::Feature* const kAllFeatures[] = {
+@@ -336,7 +336,7 @@ const base::Feature* const kAllFeatures[] = {
      &kIPHScalableIphGamingFeature,
  #endif  // BUILDFLAG(IS_CHROMEOS)
  
@@ -17625,10 +17589,10 @@ index 51f38e9e6b..68520230e7 100644
      &kIPHDesktopPWAsLinkCapturingLaunchAppInTab,
      &kIPHSignInBenefitsFeature,
 diff --git a/components/feature_engagement/public/feature_list.h b/components/feature_engagement/public/feature_list.h
-index fd817acec3..64d5c4cb32 100644
+index 620d0a4e29..de7ad0c5eb 100644
 --- a/components/feature_engagement/public/feature_list.h
 +++ b/components/feature_engagement/public/feature_list.h
-@@ -359,7 +359,7 @@ DEFINE_VARIATION_PARAM(kIPHiOSAIHubNewBadge, "IPH_iOSAIHubNewBadge");
+@@ -357,7 +357,7 @@ DEFINE_VARIATION_PARAM(kIPHiOSAIHubNewBadge, "IPH_iOSAIHubNewBadge");
  #endif  // BUILDFLAG(IS_IOS)
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_LINUX) || \
@@ -17637,7 +17601,7 @@ index fd817acec3..64d5c4cb32 100644
  #if BUILDFLAG(GOOGLE_CHROME_BRANDING)
  DEFINE_VARIATION_PARAM(kEsbDownloadRowPromoFeature, "EsbDownloadRowPromo");
  #endif
-@@ -479,7 +479,8 @@ DEFINE_VARIATION_PARAM(kIPHTabGroupsSharedTabFeedbackFeature,
+@@ -478,7 +478,8 @@ DEFINE_VARIATION_PARAM(kIPHTabGroupsSharedTabFeedbackFeature,
          // BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FUCHSIA)
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_LINUX) || \
@@ -17647,7 +17611,7 @@ index fd817acec3..64d5c4cb32 100644
  DEFINE_VARIATION_PARAM(kIPHAutofillAiOptInFeature, "IPH_AutofillAiOptIn");
  DEFINE_VARIATION_PARAM(kIPHAutofillBnplAffirmOrZipSuggestionFeature,
                         "IPH_AutofillBnplAffirmOrZipSuggestion");
-@@ -581,7 +582,7 @@ DEFINE_VARIATION_PARAM(kIPHScalableIphHelpAppBasedTenFeature,
+@@ -580,7 +581,7 @@ DEFINE_VARIATION_PARAM(kIPHScalableIphHelpAppBasedTenFeature,
  DEFINE_VARIATION_PARAM(kIPHScalableIphGamingFeature, "IPH_ScalableIphGaming");
  #endif  // BUILDFLAG(IS_CHROMEOS)
  
@@ -17656,7 +17620,7 @@ index fd817acec3..64d5c4cb32 100644
  DEFINE_VARIATION_PARAM(kIPHDesktopPWAsLinkCapturingLaunch,
                         "IPH_DesktopPWAsLinkCapturingLaunch");
  DEFINE_VARIATION_PARAM(kIPHDesktopPWAsLinkCapturingLaunchAppInTab,
-@@ -783,7 +784,7 @@ inline constexpr flags_ui::FeatureEntry::FeatureVariation
+@@ -782,7 +783,7 @@ inline constexpr flags_ui::FeatureEntry::FeatureVariation
          VARIATION_ENTRY(kIPHIOSPageActionMenu),
          VARIATION_ENTRY(kIPHiOSAIHubNewBadge),
  #elif BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -24137,20 +24101,6 @@ index 285f305c06..e141710a74 100644
    // Vulkan is only supported with X11 on Linux for now.
    return false;
  #else
-diff --git a/gpu/webgpu/dawn_commit_hash.h b/gpu/webgpu/dawn_commit_hash.h
-new file mode 100644
-index 0000000000..7928643aea
---- /dev/null
-+++ b/gpu/webgpu/dawn_commit_hash.h
-@@ -0,0 +1,8 @@
-+/* Generated by lastchange.py, do not edit.*/
-+
-+#ifndef GPU_WEBGPU_DAWN_COMMIT_HASH_H_
-+#define GPU_WEBGPU_DAWN_COMMIT_HASH_H_
-+
-+#define DAWN_COMMIT_HASH "cee9cb0d67e749bf42f5e90cb3b8a6f525dbb920"
-+
-+#endif  // GPU_WEBGPU_DAWN_COMMIT_HASH_H_
 diff --git a/headless/BUILD.gn b/headless/BUILD.gn
 index c9a2a69b73..0d1bc37fa0 100644
 --- a/headless/BUILD.gn
@@ -27250,7 +27200,7 @@ index 6975ed49b2..0bfe2b6b9e 100644
    }
  
 diff --git a/net/base/features.cc b/net/base/features.cc
-index fc6da73277..ee3b64c202 100644
+index 0c634fc44c..140cb63940 100644
 --- a/net/base/features.cc
 +++ b/net/base/features.cc
 @@ -29,7 +29,7 @@ BASE_FEATURE(kCapReferrerToOriginOnCrossOrigin,
@@ -34306,6 +34256,19 @@ index 1f9972ec21..88cae42f21 100644
        deps += [ "//third_party/xnnpack" ]
      }
      public_deps = [
+diff --git a/services/on_device_model/ml/gpu_blocklist.cc b/services/on_device_model/ml/gpu_blocklist.cc
+index c60f737744..185d618f29 100644
+--- a/services/on_device_model/ml/gpu_blocklist.cc
++++ b/services/on_device_model/ml/gpu_blocklist.cc
+@@ -24,7 +24,7 @@ const base::FeatureParam<std::string> kGpuBlockList{
+     &optimization_guide::features::kOnDeviceModelPerformanceParams,
+     "on_device_model_gpu_block_list",
+     // These devices are nearly always crashing or have very low performance.
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+     "8086:64a0|"  // TODO(b/456603738): Remove when fixed.
+ #endif  // BUILDFLAG(IS_LINUX)
+     "8086:412|8086:a16|8086:41e|8086:416|8086:402|8086:166|8086:1616|8086:22b1|"
 diff --git a/services/on_device_model/ml/on_device_model_executor.cc b/services/on_device_model/ml/on_device_model_executor.cc
 index 59e09123fe..1e640f7976 100644
 --- a/services/on_device_model/ml/on_device_model_executor.cc
@@ -36201,7 +36164,7 @@ index c6cef6d269..156da6959d 100644
  #elif BUILDFLAG(IS_WIN)
    return std::make_unique<FontUniqueNameLookupWin>();
 diff --git a/third_party/blink/renderer/platform/fonts/skia/font_cache_skia.cc b/third_party/blink/renderer/platform/fonts/skia/font_cache_skia.cc
-index 239bbc98ff..0d48d69a76 100644
+index 16ad5a2fa9..dc4e7b41ee 100644
 --- a/third_party/blink/renderer/platform/fonts/skia/font_cache_skia.cc
 +++ b/third_party/blink/renderer/platform/fonts/skia/font_cache_skia.cc
 @@ -66,7 +66,7 @@ AtomicString ToAtomicString(const SkString& str) {
@@ -36213,7 +36176,7 @@ index 239bbc98ff..0d48d69a76 100644
  // This function is called on android or when we are emulating android fonts on
  // linux and the embedder has overriden the default fontManager with
  // WebFontRendering::setSkiaFontMgr.
-@@ -259,7 +259,7 @@ const FontPlatformData* FontCache::CreateFontPlatformData(
+@@ -278,7 +278,7 @@ const FontPlatformData* FontCache::CreateFontPlatformData(
    std::string name;
  
    sk_sp<SkTypeface> typeface;
@@ -36318,7 +36281,7 @@ index d975686cf6..ee63307170 100644
            base::FeatureList::IsEnabled(kPlatformH264CbpEncoding) &&
            profile.profile == media::VideoCodecProfile::H264PROFILE_BASELINE;
 diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
-index b10b1fe379..d6d0db23d9 100644
+index a25e99fac5..03cc5bb456 100644
 --- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
 +++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
 @@ -340,7 +340,7 @@
@@ -36366,7 +36329,7 @@ index b10b1fe379..d6d0db23d9 100644
        base_feature: "WebAppEnableAppTitle",
      },
      {
-@@ -1775,7 +1775,7 @@
+@@ -1781,7 +1781,7 @@
      {
        name: "DeviceBoundSessionCredentials",
        origin_trial_feature_name: "DeviceBoundSessionCredentials",
@@ -36375,7 +36338,7 @@ index b10b1fe379..d6d0db23d9 100644
        status: "experimental",
        // Killswitch is net::features::kDeviceBoundSessions
        base_feature: "none",
-@@ -1783,7 +1783,7 @@
+@@ -1789,7 +1789,7 @@
      {
        name: "DeviceBoundSessionCredentials2",
        origin_trial_feature_name: "DeviceBoundSessionCredentials2",
@@ -36384,7 +36347,7 @@ index b10b1fe379..d6d0db23d9 100644
        status: "experimental",
        // Killswitch is net::features::kDeviceBoundSessions
        base_feature: "none",
-@@ -1926,7 +1926,7 @@
+@@ -1932,7 +1932,7 @@
        name: "DocumentIsolationPolicy",
        status: "experimental",
        origin_trial_feature_name: "DocumentIsolationPolicy",
@@ -36393,7 +36356,7 @@ index b10b1fe379..d6d0db23d9 100644
        base_feature: "none",
      },
      {
-@@ -2169,7 +2169,7 @@
+@@ -2175,7 +2175,7 @@
        base_feature: "none",
        public: true,
        origin_trial_feature_name: "FedCmMultipleIdentityProviders",
@@ -36402,7 +36365,7 @@ index b10b1fe379..d6d0db23d9 100644
        origin_trial_allows_third_party: true,
      },
      {
-@@ -3714,7 +3714,7 @@
+@@ -3721,7 +3721,7 @@
        // Tracking bug for the implementation: https://crbug.com/1462930
        name: "PermissionElement",
        origin_trial_feature_name: "PermissionElement",
@@ -36411,7 +36374,7 @@ index b10b1fe379..d6d0db23d9 100644
        status: "experimental",
        public: true,
        base_feature_status: "enabled",
-@@ -5306,7 +5306,7 @@
+@@ -5312,7 +5312,7 @@
        name: "UnrestrictedSharedArrayBuffer",
        base_feature: "none",
        origin_trial_feature_name: "UnrestrictedSharedArrayBuffer",
@@ -36420,7 +36383,7 @@ index b10b1fe379..d6d0db23d9 100644
      },
      // Enables using policy-controlled feature "usb-unrestricted" to allow
      // isolated context to access protected USB interface classes and to
-@@ -5500,7 +5500,7 @@
+@@ -5506,7 +5506,7 @@
      {
        name: "WebAppScopeExtensions",
        origin_trial_feature_name: "WebAppScopeExtensions",
@@ -36429,7 +36392,7 @@ index b10b1fe379..d6d0db23d9 100644
        status: "experimental",
        base_feature: "none",
      },
-@@ -5608,7 +5608,7 @@
+@@ -5614,7 +5614,7 @@
      {
        name: "WebAuthenticationImmediateGet",
        origin_trial_feature_name: "WebAuthenticationImmediateGet",
@@ -38437,6 +38400,31 @@ index fad9fab8e0..69dad75326 100644
    std::string stat;
    if (!base::ReadFile("/proc/self/stat", &stat))
      return 0u;
+diff --git a/third_party/protobuf/proto_library.gni b/third_party/protobuf/proto_library.gni
+index 43f12f10c7..676deb20e2 100644
+--- a/third_party/protobuf/proto_library.gni
++++ b/third_party/protobuf/proto_library.gni
+@@ -260,7 +260,19 @@ _protoc_gen_ts_runtime_deps = [
+ 
+ # When use_remoteexec=true, node actions may run on remote
+ # Linux worker. So it should include linux node binary in inputs.
+-if (is_linux || is_chromeos || use_remoteexec) {
++if (is_openbsd) {
++  _protoc_gen_ts_runtime_deps +=
++      [ "//third_party/node/openbsd/node-openbsd/bin/node" ]
++}
++if (is_freebsd) {
++  _protoc_gen_ts_runtime_deps +=
++      [ "//third_party/node/freebsd/node-freebsd/bin/node" ]
++}
++if (is_netbsd) {
++  _protoc_gen_ts_runtime_deps +=
++      [ "//third_party/node/netbsd/node-netbsd/bin/node" ]
++}
++if (!is_bsd && (is_linux || is_chromeos || use_remoteexec)) {
+   _protoc_gen_ts_runtime_deps +=
+       [ "//third_party/node/linux/node-linux-x64/bin/node" ]
+ }
 diff --git a/third_party/protobuf/src/google/protobuf/stubs/platform_macros.h b/third_party/protobuf/src/google/protobuf/stubs/platform_macros.h
 index ab51c7face..8987128e64 100644
 --- a/third_party/protobuf/src/google/protobuf/stubs/platform_macros.h
@@ -40118,7 +40106,7 @@ index 2edb425fb2..c78a900ba5 100644
  #elif BUILDFLAG(IS_MAC)
    task_t task_;
 diff --git a/tools/perf/chrome_telemetry_build/BUILD.gn b/tools/perf/chrome_telemetry_build/BUILD.gn
-index a1f921ced8..cf22b240bb 100644
+index 674ef41823..bfd7a42a71 100644
 --- a/tools/perf/chrome_telemetry_build/BUILD.gn
 +++ b/tools/perf/chrome_telemetry_build/BUILD.gn
 @@ -56,7 +56,7 @@ group("telemetry_chrome_test") {
