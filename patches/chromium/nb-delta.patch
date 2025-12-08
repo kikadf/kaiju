@@ -1039,25 +1039,6 @@ index f74875e2b8..b6edfb0348 100644
      script = "//build/linux/strip_binary.py"
  
      if (defined(invoker.stripped_binary_output)) {
-diff --git a/build/linux/unbundle/icu.gn b/build/linux/unbundle/icu.gn
-index a755062165..816e5663de 100644
---- a/build/linux/unbundle/icu.gn
-+++ b/build/linux/unbundle/icu.gn
-@@ -65,6 +65,14 @@ source_set("icui18n") {
-   ]
- }
- 
-+source_set("icui18n_hidden_visibility") {
-+  deps = [ ":icui18n_shim" ]
-+  public_configs = [
-+    ":icu_config",
-+    ":system_icui18n",
-+  ]
-+}
-+
- source_set("icuuc") {
-   deps = [ ":icuuc_shim" ]
-   public_configs = [
 diff --git a/build/rust/rust_bindgen.gni b/build/rust/rust_bindgen.gni
 index 25f6891b92..ddcae42f65 100644
 --- a/build/rust/rust_bindgen.gni

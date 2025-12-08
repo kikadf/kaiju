@@ -5161,7 +5161,7 @@ index 0302edf3d0..8efe266e65 100755
    parser.add_argument("--llvm-strip-binary-path",
                        help="Path to llvm-strip executable.")
 diff --git a/build/linux/unbundle/icu.gn b/build/linux/unbundle/icu.gn
-index 87c960161f..816e5663de 100644
+index 87c960161f..a755062165 100644
 --- a/build/linux/unbundle/icu.gn
 +++ b/build/linux/unbundle/icu.gn
 @@ -17,6 +17,15 @@ config("icu_config") {
@@ -5190,21 +5190,6 @@ index 87c960161f..816e5663de 100644
    ]
  }
  
-@@ -53,6 +65,14 @@ source_set("icui18n") {
-   ]
- }
- 
-+source_set("icui18n_hidden_visibility") {
-+  deps = [ ":icui18n_shim" ]
-+  public_configs = [
-+    ":icu_config",
-+    ":system_icui18n",
-+  ]
-+}
-+
- source_set("icuuc") {
-   deps = [ ":icuuc_shim" ]
-   public_configs = [
 diff --git a/build/linux/unbundle/libpng.gn b/build/linux/unbundle/libpng.gn
 index 91e0ee45da..948a9cf040 100644
 --- a/build/linux/unbundle/libpng.gn
