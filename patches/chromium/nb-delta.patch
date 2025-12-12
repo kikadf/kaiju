@@ -1243,6 +1243,38 @@ index 06ef89a82a..5fb6bb9341 100644
  #else
        cur = base::FilePath(
            FILE_PATH_LITERAL("/etc/chromium/native-messaging-hosts"));
+diff --git a/chrome/enterprise_companion/ipc_security_linux.cc b/chrome/enterprise_companion/ipc_security_linux.cc
+index f55fbb9ab3..ff4f80da39 100644
+--- a/chrome/enterprise_companion/ipc_security_linux.cc
++++ b/chrome/enterprise_companion/ipc_security_linux.cc
+@@ -15,7 +15,11 @@ namespace enterprise_companion {
+ IpcTrustDecider CreateIpcTrustDecider() {
+   return base::BindRepeating(
+       [](const named_mojo_ipc_server::ConnectionInfo& connector) {
++#if BUILDFLAG(IS_NETBSD)
++        return connector.credentials.unp_euid == geteuid();
++#else
+         return connector.credentials.uid == geteuid();
++#endif
+       });
+ }
+ 
+diff --git a/chrome/updater/ipc/ipc_security_linux.cc b/chrome/updater/ipc/ipc_security_linux.cc
+index 885ed94796..87c7e63a96 100644
+--- a/chrome/updater/ipc/ipc_security_linux.cc
++++ b/chrome/updater/ipc/ipc_security_linux.cc
+@@ -13,7 +13,11 @@ namespace updater {
+ 
+ bool IsConnectionTrusted(
+     const named_mojo_ipc_server::ConnectionInfo& connector) {
++#if BUILDFLAG(IS_NETBSD)
++  return connector.credentials.unp_euid == geteuid();
++#else
+   return connector.credentials.uid == geteuid();
++#endif
+ }
+ 
+ }  // namespace updater
 diff --git a/components/crash/core/app/chrome_crashpad_handler.cc b/components/crash/core/app/chrome_crashpad_handler.cc
 index 9aa752e77f..5c3ba36cc3 100644
 --- a/components/crash/core/app/chrome_crashpad_handler.cc
@@ -1257,10 +1289,10 @@ index 9aa752e77f..5c3ba36cc3 100644
  #else
    return CrashpadHandlerMain(argc, argv);
 diff --git a/components/named_mojo_ipc_server/connection_info.h b/components/named_mojo_ipc_server/connection_info.h
-index 14b4a9ed0d..5c51e2566b 100644
+index 14b4a9ed0d..9aac63f6c5 100644
 --- a/components/named_mojo_ipc_server/connection_info.h
 +++ b/components/named_mojo_ipc_server/connection_info.h
-@@ -17,6 +17,12 @@
+@@ -17,6 +17,11 @@
  #include <sys/ucred.h>
  #endif
  #include <sys/socket.h>
@@ -1268,11 +1300,35 @@ index 14b4a9ed0d..5c51e2566b 100644
 +#include <sys/un.h>
 +#define ucred unpcbid
 +#define SO_PEERCRED LOCAL_PEEREID
-+#define pid unp_pid
 +#endif
  #endif
  
  namespace named_mojo_ipc_server {
+@@ -32,7 +37,7 @@ struct ConnectionInfo {
+   base::ProcessId pid{};
+ #if BUILDFLAG(IS_MAC)
+   audit_token_t audit_token{};
+-#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_OPENBSD)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_OPENBSD) || BUILDFLAG(IS_NETBSD)
+   ucred credentials{};
+ #endif
+ };
+diff --git a/components/named_mojo_ipc_server/named_mojo_server_endpoint_connector_linux.cc b/components/named_mojo_ipc_server/named_mojo_server_endpoint_connector_linux.cc
+index 69eb023204..1aa655791a 100644
+--- a/components/named_mojo_ipc_server/named_mojo_server_endpoint_connector_linux.cc
++++ b/components/named_mojo_ipc_server/named_mojo_server_endpoint_connector_linux.cc
+@@ -90,7 +90,11 @@ void NamedMojoServerEndpointConnectorLinux::OnSocketReady() {
+     return;
+   }
+ #if !BUILDFLAG(IS_OPENBSD)
++#if BUILDFLAG(IS_NETBSD)
++  info->pid = info->credentials.unp_pid;
++#else
+   info->pid = info->credentials.pid;
++#endif
+ #endif
+ 
+   mojo::PlatformChannelEndpoint endpoint(
 diff --git a/components/policy/core/common/cloud/cloud_policy_util.cc b/components/policy/core/common/cloud/cloud_policy_util.cc
 index 2b5a9a1cdb..24a7e12c3c 100644
 --- a/components/policy/core/common/cloud/cloud_policy_util.cc
