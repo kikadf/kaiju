@@ -1167,7 +1167,7 @@ index 0000000000..27240dd95a
 +  }
 +}
 diff --git a/chrome/browser/about_flags.cc b/chrome/browser/about_flags.cc
-index 280dbec718..13fdda83eb 100644
+index d4d4186aec..3b7649d7d5 100644
 --- a/chrome/browser/about_flags.cc
 +++ b/chrome/browser/about_flags.cc
 @@ -871,6 +871,8 @@ const FeatureEntry::FeatureParam kAudioBackendPulseAudio[] = {
@@ -3346,7 +3346,7 @@ index 703e54a7b8..b24d91923d 100755
  
  
 diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
-index d2774893f3..778c442b52 100644
+index b21f4b7a3f..7b721f53b8 100644
 --- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
 +++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
 @@ -348,7 +348,7 @@
