@@ -4132,6 +4132,19 @@ index 88eef351c9..efda6834fa 100644
  
    deps = [
      "//gin",
+diff --git a/tools/gn/src/gn/args.cc b/tools/gn/src/gn/args.cc
+index 72e96cf914..4ea00eca67 100644
+--- a/tools/gn/src/gn/args.cc
++++ b/tools/gn/src/gn/args.cc
+@@ -386,7 +386,7 @@ void Args::SetSystemVarsLocked(Scope* dest) const {
+     arch = kX86;
+   else if (os_arch == "x86_64")
+     arch = kX64;
+-  else if (os_arch == "aarch64" || os_arch == "arm64")
++  else if (os_arch == "aarch64" || os_arch == "arm64" || os_arch == "evbarm")
+     arch = kArm64;
+   else if (os_arch.substr(0, 3) == "arm")
+     arch = kArm;
 diff --git a/tools/json_schema_compiler/feature_compiler.py b/tools/json_schema_compiler/feature_compiler.py
 index 9f7467bcf7..18c1f48dd6 100644
 --- a/tools/json_schema_compiler/feature_compiler.py
