@@ -2787,10 +2787,28 @@ index 3ec190d146..c56ee36afa 100644
  #else
  #error OS not supported (see build_config.h)
 diff --git a/third_party/perfetto/include/perfetto/base/time.h b/third_party/perfetto/include/perfetto/base/time.h
-index 1aab3f8c5a..c4224ab007 100644
+index 1aab3f8c5a..13c1ab5654 100644
 --- a/third_party/perfetto/include/perfetto/base/time.h
 +++ b/third_party/perfetto/include/perfetto/base/time.h
-@@ -242,7 +242,7 @@ inline TimeNanos GetWallTimeNs() {
+@@ -228,6 +228,7 @@ inline TimeNanos GetTimeInternalNs(clockid_t clk_id) {
+ // Return ns from boot. Conversely to GetWallTimeNs, this clock counts also time
+ // during suspend (when supported).
+ inline TimeNanos GetBootTimeNs() {
++#ifdef CLOCK_BOOTTIME
+   // Determine if CLOCK_BOOTTIME is available on the first call.
+   static const clockid_t kBootTimeClockSource = [] {
+     struct timespec ts = {};
+@@ -235,6 +236,9 @@ inline TimeNanos GetBootTimeNs() {
+     return res == 0 ? CLOCK_BOOTTIME : kWallTimeClockSource;
+   }();
+   return GetTimeInternalNs(kBootTimeClockSource);
++#else
++  return GetTimeInternalNs(kWallTimeClockSource);
++#endif
+ }
+ 
+ inline TimeNanos GetWallTimeNs() {
+@@ -242,7 +246,7 @@ inline TimeNanos GetWallTimeNs() {
  }
  
  inline TimeNanos GetWallTimeRawNs() {
