@@ -2817,6 +2817,18 @@ index 1aab3f8c5a..13c1ab5654 100644
    // Note: CLOCK_MONOTONIC_RAW is a Linux extension.
    // FreeBSD doesn't implement it and its CLOCK_MONOTONIC_FAST
    // doesnt implement the same semantics as CLOCK_MONOTONIC_RAW.
+diff --git a/third_party/perfetto/src/base/clock_snapshots.cc b/third_party/perfetto/src/base/clock_snapshots.cc
+index d8fe70f8c8..235e1a93f7 100644
+--- a/third_party/perfetto/src/base/clock_snapshots.cc
++++ b/third_party/perfetto/src/base/clock_snapshots.cc
+@@ -28,6 +28,7 @@ ClockSnapshotVector CaptureClockSnapshots() {
+     !PERFETTO_BUILDFLAG(PERFETTO_OS_WIN) &&     \
+     !PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) && \
+     !PERFETTO_BUILDFLAG(PERFETTO_OS_OPENBSD) && \
++    !PERFETTO_BUILDFLAG(PERFETTO_OS_NETBSD) && \
+     !PERFETTO_BUILDFLAG(PERFETTO_OS_NACL) &&    \
+     !PERFETTO_BUILDFLAG(PERFETTO_OS_QNX)
+   struct {
 diff --git a/third_party/perfetto/src/base/periodic_task.cc b/third_party/perfetto/src/base/periodic_task.cc
 index 07ac53e447..9d8ac677b7 100644
 --- a/third_party/perfetto/src/base/periodic_task.cc
