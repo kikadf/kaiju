@@ -2817,6 +2817,28 @@ index 1aab3f8c5a..13c1ab5654 100644
    // Note: CLOCK_MONOTONIC_RAW is a Linux extension.
    // FreeBSD doesn't implement it and its CLOCK_MONOTONIC_FAST
    // doesnt implement the same semantics as CLOCK_MONOTONIC_RAW.
+diff --git a/third_party/perfetto/src/base/periodic_task.cc b/third_party/perfetto/src/base/periodic_task.cc
+index 07ac53e447..9d8ac677b7 100644
+--- a/third_party/perfetto/src/base/periodic_task.cc
++++ b/third_party/perfetto/src/base/periodic_task.cc
+@@ -27,7 +27,7 @@
+ #if (PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX_BUT_NOT_QNX) || \
+     PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) ||           \
+     (PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) && __ANDROID_API__ >= 19)) && \
+-    !PERFETTO_BUILDFLAG(PERFETTO_OS_OPENBSD)
++    !PERFETTO_BUILDFLAG(PERFETTO_OS_OPENBSD) && !PERFETTO_BUILDFLAG(PERFETTO_OS_NETBSD)
+ #include <sys/timerfd.h>
+ #endif
+ 
+@@ -49,7 +49,7 @@ ScopedPlatformHandle CreateTimerFd(const PeriodicTask::Args& args) {
+ #if (PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX_BUT_NOT_QNX) || \
+     PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) ||           \
+     (PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) && __ANDROID_API__ >= 19)) && \
+-    !PERFETTO_BUILDFLAG(PERFETTO_OS_OPENBSD)
++    !PERFETTO_BUILDFLAG(PERFETTO_OS_OPENBSD) && !PERFETTO_BUILDFLAG(PERFETTO_OS_NETBSD)
+   ScopedPlatformHandle tfd(
+       timerfd_create(CLOCK_BOOTTIME, TFD_CLOEXEC | TFD_NONBLOCK));
+   uint32_t phase_ms = GetNextDelayMs(GetBootTimeMs(), args);
 diff --git a/third_party/perfetto/src/base/unix_socket.cc b/third_party/perfetto/src/base/unix_socket.cc
 index 30d1b2802e..ab39c13a22 100644
 --- a/third_party/perfetto/src/base/unix_socket.cc

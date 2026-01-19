@@ -37192,7 +37192,7 @@ index 55f286eed0..b2a644ffc9 100644
  
  EventFd::EventFd() {
 diff --git a/third_party/perfetto/src/base/periodic_task.cc b/third_party/perfetto/src/base/periodic_task.cc
-index 6e31bb55bc..07ac53e447 100644
+index 6e31bb55bc..9d8ac677b7 100644
 --- a/third_party/perfetto/src/base/periodic_task.cc
 +++ b/third_party/perfetto/src/base/periodic_task.cc
 @@ -24,9 +24,10 @@
@@ -37204,7 +37204,7 @@ index 6e31bb55bc..07ac53e447 100644
      PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) ||           \
 -    (PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) && __ANDROID_API__ >= 19)
 +    (PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) && __ANDROID_API__ >= 19)) && \
-+    !PERFETTO_BUILDFLAG(PERFETTO_OS_OPENBSD)
++    !PERFETTO_BUILDFLAG(PERFETTO_OS_OPENBSD) && !PERFETTO_BUILDFLAG(PERFETTO_OS_NETBSD)
  #include <sys/timerfd.h>
  #endif
  
@@ -37217,7 +37217,7 @@ index 6e31bb55bc..07ac53e447 100644
      PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) ||           \
 -    (PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) && __ANDROID_API__ >= 19)
 +    (PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) && __ANDROID_API__ >= 19)) && \
-+    !PERFETTO_BUILDFLAG(PERFETTO_OS_OPENBSD)
++    !PERFETTO_BUILDFLAG(PERFETTO_OS_OPENBSD) && !PERFETTO_BUILDFLAG(PERFETTO_OS_NETBSD)
    ScopedPlatformHandle tfd(
        timerfd_create(CLOCK_BOOTTIME, TFD_CLOEXEC | TFD_NONBLOCK));
    uint32_t phase_ms = GetNextDelayMs(GetBootTimeMs(), args);
