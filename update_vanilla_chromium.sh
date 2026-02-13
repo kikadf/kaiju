@@ -9,6 +9,9 @@ _startdir=$(pwd)
 c_tarball_url="https://commondatastorage.googleapis.com/chromium-browser-official"
 #c_tarball_url="https://nerd.hu/distfiles"
 
+_rollup_ver="4.22.4"
+#_esbuild_ver="0.25.9"
+
 # func
 # die [what]
 die () {
@@ -40,6 +43,19 @@ if [ ! -f "$tools_workdir/chromium-${c_ver}-download_done" ]; then
     curl "${c_tarball_url}/chromium-${c_ver}.tar.xz.hashes" -o "chromium-${c_ver}.tar.xz.hashes" || die "curl hashes"
     cd "$distfiles" || die
     sed -n 's|sha256 *\(.*\)|\1|p' "$tools_workdir/chromium-${c_ver}.tar.xz.hashes" | sha256 -c || die checksum
+
+    # Extra sources
+    if [ ! -f "$distfiles/rollup-rollup-v${_rollup_ver}.tar.gz" ]; then
+        curl -L "https://github.com/rollup/rollup/archive/v${_rollup_ver}.tar.gz" \
+             -o "$distfiles/rollup-rollup-v${_rollup_ver}.tar.gz" \
+             || die "curl rollup"
+    fi
+#    if [ ! -f "$distfiles/evanw-esbuild-v${_esbuild_ver}.tar.gz" ]; then
+#        curl -L "https://github.com/evanw/esbuild/archive/v${_esbuild_ver}.tar.gz" \
+#             -o "$distfiles/evanw-esbuild-v${_esbuild_ver}.tar.gz" \
+#             || die "curl esbuild"
+#    fi
+
     cd "$_startdir" || die
     touch "$tools_workdir/chromium-${c_ver}-download_done"
 fi
@@ -54,6 +70,13 @@ if [ ! -f "$tools_workdir/chromium-${c_ver}-extract_done" ]; then
     sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "chromium-${c_ver}/third_party/vulkan-deps/.gitignore"
     sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "chromium-${c_ver}/third_party/.gitignore"
     sed -i'' 's/dawn_commit_hash/dawn_commit_hashXXX/g' "chromium-${c_ver}/gpu/webgpu/.gitignore"
+
+    # Extra sources
+    mkdir "chromium-${c_ver}/rollup" || die
+    tar -xzf "$distfiles/rollup-rollup-v${_rollup_ver}.tar.gz" --strip-components=1 -C "chromium-${c_ver}/rollup" || die "extract rollup"
+#    mkdir "chromium-${c_ver}/esbuild" || die
+#    tar -xzf "$distfiles/evanw-esbuild-v${_esbuild_ver}.tar.gz" --strip-components=1 -C "chromium-${c_ver}/esbuild" || die "extract esbuild"
+
     cd "$_startdir" || die
     touch "$tools_workdir/chromium-${c_ver}-extract_done"
 fi

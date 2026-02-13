@@ -141,7 +141,7 @@ if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-extract_done" ]; then
     tar -xzf "$distfiles/Mantle-Mantle-${_m_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac/vendor/Mantle" || die "extract mantle"
     mkdir "electron${_e_main}-netbsd-${e_ver}/third_party/engflow-reclient-configs" || die
     tar -xzf "$distfiles/EngFlow-reclient-configs-${_eng_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/third_party/engflow-reclient-configs" || die "extract engflow"
-    
+
     if [ -f "$distfiles/chromium-netbsd-${_c_ver}.tar.xz" ]; then
         echo "Extract distfiles to electron${_e_main}-netbsd-reused-${e_ver}..."
         mkdir "electron${_e_main}-netbsd-reused-${e_ver}" || die
