@@ -112,7 +112,12 @@ echo ">>> Generate new patches with mkpatches"
 cd "$_path" || die
 mkpatches || die mkpatches
 rm patches/*.orig
-rm patches/*Cargo.toml
+for _toml in patches/*Cargo.toml; do
+    if [ "$_toml" != "patches/patches-rollup_rust_bindings__napi_Cargo.toml" ]; then
+        rm "$_toml"
+    fi
+done
+
 for _patch in patches/patch-*; do
     if [ "$_pkg" = "chromium" ]; then
         # shellcheck disable=SC3003
