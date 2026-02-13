@@ -29569,7 +29569,7 @@ index 39a320c356..a4bb733b02 100644
  #else
  constexpr char kDeviceIdPrefix[] = "crd-unknown-host-";
 diff --git a/rollup/rust/bindings_napi/Cargo.toml b/rollup/rust/bindings_napi/Cargo.toml
-index 6cd572b95b..a5f15693f4 100644
+index 6cd572b95b..af9f396c26 100644
 --- a/rollup/rust/bindings_napi/Cargo.toml
 +++ b/rollup/rust/bindings_napi/Cargo.toml
 @@ -15,10 +15,10 @@ napi-derive = "2.16.12"
@@ -29577,7 +29577,7 @@ index 6cd572b95b..a5f15693f4 100644
  xxhash = { path = "../xxhash" }
  
 -[target.'cfg(not(target_os = "linux"))'.dependencies]
-+[target.'cfg(not(any(target_os = "linux", target_os = "freebsd", target_os = "openbsd", target_os = "nettbsd")))'.dependencies]
++[target.'cfg(not(any(target_os = "linux", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd")))'.dependencies]
  mimalloc-rust = { version = "0.2.1" }
  
 -[target.'cfg(all(target_os = "linux", not(all(target_env = "musl", target_arch = "aarch64"))))'.dependencies]
