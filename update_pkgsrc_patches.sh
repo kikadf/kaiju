@@ -113,7 +113,7 @@ cd "$_path" || die
 mkpatches || die mkpatches
 rm patches/*.orig
 for _toml in patches/*Cargo.toml; do
-    if [ "$_toml" != "patches/patches-rollup_rust_bindings__napi_Cargo.toml" ]; then
+    if [ "$_toml" != "patches/patch-rollup_rust_bindings__napi_Cargo.toml" ]; then
         rm "$_toml"
     fi
 done
