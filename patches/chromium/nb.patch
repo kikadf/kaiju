@@ -26560,6 +26560,39 @@ index d4cac5573c..0b640193af 100644
    if (video_fourcc == Fourcc(Fourcc::MM21)) {
      modifiers = DRM_FORMAT_MOD_MTK_16L_32S_TILE;
    }
+diff --git a/media/gpu/vaapi/vaapi_jpeg_encoder.cc b/media/gpu/vaapi/vaapi_jpeg_encoder.cc
+index e87494c736..ac3c49e6b0 100644
+--- a/media/gpu/vaapi/vaapi_jpeg_encoder.cc
++++ b/media/gpu/vaapi/vaapi_jpeg_encoder.cc
+@@ -98,24 +98,24 @@ void FillHuffmanTableParameters(
+ 
+     // Load DC Table.
+     auto num_dc_codes = base::span(huffman_tables[i].num_dc_codes);
+-    static_assert(num_dc_codes.size() == dcTable.code_length.size());
++//    static_assert(num_dc_codes.size() == dcTable.code_length.size());
+     num_dc_codes.copy_from_nonoverlapping(dcTable.code_length);
+     // |code_values| of JpegHuffmanTable needs to hold DC and AC code values
+     // so it has different size than
+     // |huff_table_param->huffman_table[i].dc_values|. Therefore we can't use
+     // SafeArrayMemcpy() here.
+     auto dc_values = base::span(huffman_tables[i].dc_values);
+-    static_assert(dc_values.size() <= dcTable.code_value.size());
++//    static_assert(dc_values.size() <= dcTable.code_value.size());
+     dc_values.copy_from_nonoverlapping(
+         base::span(dcTable.code_value).first(dc_values.size()));
+ 
+     // Load AC Table.
+     auto num_ac_codes = base::span(huffman_tables[i].num_ac_codes);
+-    static_assert(num_ac_codes.size() == acTable.code_length.size());
++//    static_assert(num_ac_codes.size() == acTable.code_length.size());
+     num_ac_codes.copy_from_nonoverlapping(acTable.code_length);
+ 
+     auto ac_values = base::span(huffman_tables[i].ac_values);
+-    static_assert(ac_values.size() == acTable.code_value.size());
++//    static_assert(ac_values.size() == acTable.code_value.size());
+     ac_values.copy_from_nonoverlapping(acTable.code_value);
+ 
+     std::ranges::fill(huffman_tables[i].pad, 0);
 diff --git a/media/gpu/vaapi/vaapi_video_decoder.cc b/media/gpu/vaapi/vaapi_video_decoder.cc
 index 4070e20ee3..3766556eb4 100644
 --- a/media/gpu/vaapi/vaapi_video_decoder.cc
@@ -35415,6 +35448,21 @@ index 0038013465..677ade3b96 100644
    bool forceReadback = true;
  #elif BUILDFLAG(IS_ANDROID)
    // TODO(crbug.com/dawn/1969): Some Android devices don't fail to copy from
+diff --git a/third_party/blink/renderer/modules/xr/xr_rigid_transform.h b/third_party/blink/renderer/modules/xr/xr_rigid_transform.h
+index 0049b98bc7..a3752ac89e 100644
+--- a/third_party/blink/renderer/modules/xr/xr_rigid_transform.h
++++ b/third_party/blink/renderer/modules/xr/xr_rigid_transform.h
+@@ -12,9 +12,7 @@
+ #include "third_party/blink/renderer/modules/modules_export.h"
+ #include "third_party/blink/renderer/platform/bindings/script_wrappable.h"
+ 
+-namespace gfx {
+-class Transform;
+-}
++#include "ui/gfx/geometry/transform.h"
+ 
+ namespace blink {
+ 
 diff --git a/third_party/blink/renderer/platform/BUILD.gn b/third_party/blink/renderer/platform/BUILD.gn
 index d0a36746a9..786c90c7dc 100644
 --- a/third_party/blink/renderer/platform/BUILD.gn
@@ -36345,6 +36393,19 @@ index 78366c4048..92312561d2 100644
  constexpr char kVulkanLibName[] = "libvulkan.so";
  #else
  constexpr char kVulkanLibName[] = "libvulkan.so.1";
+diff --git a/third_party/dawn/third_party/renderdoc/renderdoc/api/app/renderdoc_app.h b/third_party/dawn/third_party/renderdoc/renderdoc/api/app/renderdoc_app.h
+index 291c065979..bc84358d3c 100644
+--- a/third_party/dawn/third_party/renderdoc/renderdoc/api/app/renderdoc_app.h
++++ b/third_party/dawn/third_party/renderdoc/renderdoc/api/app/renderdoc_app.h
+@@ -35,7 +35,7 @@
+ 
+ #if defined(WIN32) || defined(__WIN32__) || defined(_WIN32) || defined(_MSC_VER)
+ #define RENDERDOC_CC __cdecl
+-#elif defined(__linux__) || defined(__FreeBSD__) || defined(__sun__) || defined(__OpenBSD__)
++#elif defined(__linux__) || defined(__FreeBSD__) || defined(__sun__) || defined(__OpenBSD__) || defined(__NetBSD__)
+ #define RENDERDOC_CC
+ #elif defined(__APPLE__)
+ #define RENDERDOC_CC
 diff --git a/third_party/devtools-frontend/src/node_modules/rollup/dist/native.js b/third_party/devtools-frontend/src/node_modules/rollup/dist/native.js
 index e0d54b8cf0..70d4cbbe9c 100644
 --- a/third_party/devtools-frontend/src/node_modules/rollup/dist/native.js
