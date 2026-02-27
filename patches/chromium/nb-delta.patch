@@ -2718,6 +2718,19 @@ index 1381df4066..82a08c3a72 100644
  
  #define FC_FONTPATH ""
  
+diff --git a/third_party/google_benchmark/BUILD.gn b/third_party/google_benchmark/BUILD.gn
+index 6d1e9b1dd3..1f52f010b7 100644
+--- a/third_party/google_benchmark/BUILD.gn
++++ b/third_party/google_benchmark/BUILD.gn
+@@ -79,7 +79,7 @@ component("google_benchmark") {
+     "BENCHMARK_VERSION=\"1.9.0\"",
+   ]
+ 
+-  if (is_linux) {
++  if (is_linux && !is_bsd) {
+     # Include hardware performance counter support.
+     defines += [ "HAVE_LIBPFM=1" ]
+     deps = [ "//third_party/libpfm4" ]
 diff --git a/third_party/libc++/src/src/chrono.cpp b/third_party/libc++/src/src/chrono.cpp
 index 2c747c263e..e754ac5016 100644
 --- a/third_party/libc++/src/src/chrono.cpp
@@ -3223,28 +3236,59 @@ index b87ab0b41b..9609843664 100644
  #elif !defined(__Fuchsia__) && !defined(__EMSCRIPTEN__) && !defined(__OpenBSD__) && !defined(__FreeBSD__)
    pthread_setname_np(pthread_self(), name);
  #endif
+diff --git a/third_party/test_fonts/fontconfig/BUILD.gn b/third_party/test_fonts/fontconfig/BUILD.gn
+index 1d0facad24..097b46f89e 100644
+--- a/third_party/test_fonts/fontconfig/BUILD.gn
++++ b/third_party/test_fonts/fontconfig/BUILD.gn
+@@ -26,11 +26,7 @@ if (is_linux || is_chromeos) {
+ 
+   copy("fonts_conf") {
+     sources = [ "fonts.conf" ]
+-    if (is_freebsd) {
+-      outputs = [ "$root_out_dir/usr/local/etc/fonts/{{source_file_part}}" ]
+-    } else {
+-      outputs = [ "$root_out_dir/etc/fonts/{{source_file_part}}" ]
+-    }
++    outputs = [ "$root_out_dir@PKG_SYSCONFBASE@/fontconfig/{{source_file_part}}" ]
+   }
+ 
+   if (current_toolchain == host_toolchain) {
+@@ -51,13 +47,9 @@ if (is_linux || is_chromeos) {
+         "//third_party/test_fonts",
+       ]
+       args = []
+-      if (is_freebsd) {
+-        inputs = [ "$root_out_dir/usr/local/etc/fonts/fonts.conf" ]
+-      } else {
+-        inputs = [ "$root_out_dir/etc/fonts/fonts.conf" ]
+-      }
++      inputs = [ "$root_out_dir@PKG_SYSCONFBASE@/fontconfig/fonts.conf" ]
+       outputs = [
+-        "$root_out_dir/fontconfig_caches/fb5c91b2895aa445d23aebf7f9e2189c-le64.cache-11",
++        "$root_out_dir/fontconfig_caches/fb5c91b2895aa445d23aebf7f9e2189c-le64.cache-9",
+         "$root_out_dir/fontconfig_caches/CACHEDIR.TAG",
+       ]
+     }
 diff --git a/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc b/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc
-index 47b5b51412..68d65ed278 100644
+index 47b5b51412..9173cf465c 100644
 --- a/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc
 +++ b/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc
-@@ -28,7 +28,7 @@ int main() {
+@@ -28,6 +28,7 @@ int main() {
    // fontconfig cache.
    //     $ echo -n /test_fonts | md5sum
    //     fb5c91b2895aa445d23aebf7f9e2189c  -
--  static const char kCacheKey[] = "fb5c91b2895aa445d23aebf7f9e2189c";
-+  static const char kCacheKey[] = "cd4b5bc7-6cfc-41dc-8982-f2db624179ba";
++  //static const char kCacheKey[] = "cd4b5bc7-6cfc-41dc-8982-f2db624179ba";
+   static const char kCacheKey[] = "fb5c91b2895aa445d23aebf7f9e2189c";
  
    // fontconfig writes the mtime of the test_fonts directory into the cache. It
-   // presumably checks this later to ensure that the cache is still up to date.
-@@ -56,7 +56,7 @@ int main() {
+@@ -56,6 +57,7 @@ int main() {
    FcFini();
  
    // Check existence of intended fontconfig cache file.
--  auto cache = fontconfig_caches + "/" + kCacheKey + "-le64.cache-" + FC_CACHE_VERSION;
-+  auto cache = fontconfig_caches + "/" + kCacheKey + "-x86_64.cache-" + FC_CACHE_VERSION;
++  //auto cache = fontconfig_caches + "/" + kCacheKey + "-x86_64.cache-" + FC_CACHE_VERSION;
+   auto cache = fontconfig_caches + "/" + kCacheKey + "-le64.cache-" + FC_CACHE_VERSION;
    bool cache_exists = access(cache.c_str(), F_OK) == 0;
    return !cache_exists;
- }
 diff --git a/third_party/vulkan-validation-layers/src/layers/external/vma/vk_mem_alloc.h b/third_party/vulkan-validation-layers/src/layers/external/vma/vk_mem_alloc.h
 index eb86c3c3ed..f444ad6e7e 100644
 --- a/third_party/vulkan-validation-layers/src/layers/external/vma/vk_mem_alloc.h
