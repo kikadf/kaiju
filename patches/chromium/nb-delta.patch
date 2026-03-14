@@ -2087,6 +2087,18 @@ index 3e85482849..caa0cf618f 100644
  #include "services/device/usb/usb_service_fake.h"
  #endif
  
+diff --git a/services/device/usb/usb_service_fake.cc b/services/device/usb/usb_service_fake.cc
+index 19134a2a7c..b7923ff662 100644
+--- a/services/device/usb/usb_service_fake.cc
++++ b/services/device/usb/usb_service_fake.cc
+@@ -12,7 +12,6 @@
+ #include <utility>
+ 
+ #include "base/barrier_closure.h"
+-#include "base/containers/contains.h"
+ #include "base/location.h"
+ #include "base/notimplemented.h"
+ #include "base/memory/ref_counted_memory.h"
 diff --git a/services/network/network_sandbox_hook_linux.h b/services/network/network_sandbox_hook_linux.h
 index 9d39bb72c6..20ff2dfaea 100644
 --- a/services/network/network_sandbox_hook_linux.h
