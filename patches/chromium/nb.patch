@@ -36322,6 +36322,93 @@ index f9e1600a34..bb3c4dde74 100644
  #else
  #error Unsupported getStackStart on this platform.
  #endif
+diff --git a/third_party/boringssl/src/crypto/cpu_aarch64_openbsd.cc b/third_party/boringssl/src/crypto/cpu_aarch64_openbsd.cc
+index 235c14ae2b..e8cd4ce692 100644
+--- a/third_party/boringssl/src/crypto/cpu_aarch64_openbsd.cc
++++ b/third_party/boringssl/src/crypto/cpu_aarch64_openbsd.cc
+@@ -43,3 +43,67 @@ void bssl::OPENSSL_cpuid_setup() {
+ }
+ 
+ #endif  // OPENSSL_AARCH64 && OPENSSL_OPENBSD && !OPENSSL_STATIC_ARMCAP
++
++#if defined(OPENSSL_AARCH64) && defined(OPENSSL_NETBSD) && \
++    !defined(OPENSSL_STATIC_ARMCAP) && !defined(OPENSSL_NO_ASM)
++
++#include <sys/param.h>
++#include <sys/sysctl.h>
++#include <machine/armreg.h>
++#include <stdio.h>
++
++#include "internal.h"
++
++using namespace bssl;
++
++
++void bssl::OPENSSL_cpuid_setup() {
++  size_t len;
++  unsigned int curcpu;
++  int mib[] = { CTL_HW, HW_NCPU };
++  int ncpu;
++  struct aarch64_sysctl_cpu_id id;
++  char path[32];
++  int num_aes = 0;
++  int num_pmull = 0;
++  int num_sha1 = 0;
++  int num_sha256 = 0;
++  int num_sha512 = 0;
++
++  OPENSSL_armcap_P |= ARMV7_NEON;
++
++  len = sizeof(ncpu);
++  if (sysctl(mib, 2, &ncpu, &len, NULL, 0) < 0)
++    return;
++
++  for (curcpu = 0; curcpu < ncpu; curcpu++) {
++    len = sizeof(id);
++    snprintf(path, sizeof(path), "machdep.cpu%d.cpu_id", curcpu);
++    if (sysctlbyname(path, &id, &len, NULL, 0) < 0)
++      continue;
++
++    if (__SHIFTOUT(id.ac_aa64isar0, ID_AA64ISAR0_EL1_AES) >= ID_AA64ISAR0_EL1_AES_AES)
++      num_aes++;
++    if (__SHIFTOUT(id.ac_aa64isar0, ID_AA64ISAR0_EL1_AES) >= ID_AA64ISAR0_EL1_AES_PMUL)
++      num_pmull++;
++    if (__SHIFTOUT(id.ac_aa64isar0, ID_AA64ISAR0_EL1_SHA1) >= ID_AA64ISAR0_EL1_SHA1_SHA1CPMHSU)
++      num_sha1++;
++    if (__SHIFTOUT(id.ac_aa64isar0, ID_AA64ISAR0_EL1_SHA2) >= ID_AA64ISAR0_EL1_SHA2_SHA256HSU)
++      num_sha256++;
++    if (__SHIFTOUT(id.ac_aa64isar0, ID_AA64ISAR0_EL1_SHA2) >= ID_AA64ISAR0_EL1_SHA2_SHA512HSU)
++      num_sha512++;
++  }
++
++  if (num_aes == ncpu)
++    OPENSSL_armcap_P |= ARMV8_AES;
++  if (num_pmull == ncpu)
++    OPENSSL_armcap_P |= ARMV8_PMULL;
++  if (num_sha1 == ncpu)
++    OPENSSL_armcap_P |= ARMV8_SHA1;
++  if (num_sha256 == ncpu)
++    OPENSSL_armcap_P |= ARMV8_SHA256;
++  if (num_sha512 == ncpu)
++    OPENSSL_armcap_P |= ARMV8_SHA512;
++}
++
++#endif  // OPENSSL_AARCH64 && OPENSSL_NETBSD && !OPENSSL_STATIC_ARMCAP
+diff --git a/third_party/boringssl/src/include/openssl/target.h b/third_party/boringssl/src/include/openssl/target.h
+index 8d4763d0b3..aba1242643 100644
+--- a/third_party/boringssl/src/include/openssl/target.h
++++ b/third_party/boringssl/src/include/openssl/target.h
+@@ -175,6 +175,10 @@
+ #define OPENSSL_OPENBSD
+ #endif
+ 
++#if defined(__NetBSD__)
++#define OPENSSL_NETBSD
++#endif
++
+ // BoringSSL requires platform's locking APIs to make internal global state
+ // thread-safe, including the PRNG. On some single-threaded embedded platforms,
+ // locking APIs may not exist, so this dependency may be disabled with the
 diff --git a/third_party/brotli/common/platform.h b/third_party/brotli/common/platform.h
 index 0e0e8aa49e..4e470b6e28 100644
 --- a/third_party/brotli/common/platform.h
@@ -39516,30 +39603,44 @@ index 3a9bfe46e0..ee6f985b49 100644
  #include <endian.h>
  #else
 diff --git a/third_party/webrtc/rtc_base/cpu_info.cc b/third_party/webrtc/rtc_base/cpu_info.cc
-index 32e2eb35b2..a1f6ecb3a8 100644
+index 32e2eb35b2..8acce9a801 100644
 --- a/third_party/webrtc/rtc_base/cpu_info.cc
 +++ b/third_party/webrtc/rtc_base/cpu_info.cc
-@@ -37,7 +37,9 @@
+@@ -37,9 +37,13 @@
  #include <intrin.h>
  #endif
  #if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_LINUX)
 +#if !defined(WEBRTC_BSD)
  #include <asm/hwcap.h>
 +#endif
++#if !defined(__NetBSD__)
  #include <sys/auxv.h>
  #endif
++#endif
  
-@@ -178,7 +180,11 @@ bool Supports(ISA instruction_set_architecture) {
+ // Parts of this file derived from Chromium's base/cpu.cc.
+ 
+@@ -178,11 +182,21 @@ bool Supports(ISA instruction_set_architecture) {
      return 0 != (android_getCpuFeatures() & ANDROID_CPU_ARM_FEATURE_NEON);
  #elif defined(WEBRTC_LINUX)
      uint64_t hwcap = 0;
-+#if defined(WEBRTC_BSD)
++#if defined(WEBRTC_BSD) && defined(__NetBSD__)
++    hwcap = 0;
++#elif defined(WEBRTC_BSD)
 +    elf_aux_info(AT_HWCAP, &hwcap, sizeof(hwcap));
 +#else
      hwcap = getauxval(AT_HWCAP);
 +#endif
  #if defined(__aarch64__)
++#if defined(__NetBSD__)
++    return true; /* No need to check. ASIMD/NEON mandatory in ARMV8.0-A */
++#else
      if ((hwcap & HWCAP_ASIMD) != 0) {
+       return true;
+     }
++#endif
+ #else
+     if ((hwcap & HWCAP_NEON) != 0) {
        return true;
 diff --git a/third_party/webrtc/rtc_base/ip_address.cc b/third_party/webrtc/rtc_base/ip_address.cc
 index 179bc37bbc..eed36e575c 100644
@@ -39772,7 +39873,7 @@ index e31de0a552..de204df3bc 100644
      (target_os == "win" &&
       (target_cpu == "x86" || target_cpu == "x64" || target_cpu == "arm64"))
 diff --git a/third_party/zlib/BUILD.gn b/third_party/zlib/BUILD.gn
-index eff72b22a2..a8c79ac547 100644
+index eff72b22a2..c2862f58ad 100644
 --- a/third_party/zlib/BUILD.gn
 +++ b/third_party/zlib/BUILD.gn
 @@ -123,7 +123,7 @@ if (use_arm_neon_optimizations) {
@@ -39784,7 +39885,7 @@ index eff72b22a2..a8c79ac547 100644
        defines += [ "ARMV8_OS_LINUX" ]
      } else if (is_mac) {
        defines += [ "ARMV8_OS_MACOS" ]
-@@ -133,6 +133,10 @@ if (use_arm_neon_optimizations) {
+@@ -133,6 +133,12 @@ if (use_arm_neon_optimizations) {
        defines += [ "ARMV8_OS_FUCHSIA" ]
      } else if (is_win) {
        defines += [ "ARMV8_OS_WINDOWS" ]
@@ -39792,10 +39893,12 @@ index eff72b22a2..a8c79ac547 100644
 +      defines += [ "ARMV8_OS_OPENBSD" ]
 +    } else if (is_freebsd) {
 +      defines += [ "ARMV8_OS_FREEBSD" ]
++    } else if (is_netbsd) {
++      defines += [ "ARMV8_OS_NETBSD" ]
      } else {
        assert(false, "Unsupported ARM OS")
      }
-@@ -414,7 +418,7 @@ static_library("minizip") {
+@@ -414,7 +420,7 @@ static_library("minizip") {
      ]
    }
  
@@ -39805,20 +39908,21 @@ index eff72b22a2..a8c79ac547 100644
      # use fopen, ftell, and fseek instead on these systems.
      defines = [ "USE_FILE32API" ]
 diff --git a/third_party/zlib/cpu_features.c b/third_party/zlib/cpu_features.c
-index 34ae7b913a..f1fc2314f7 100644
+index 34ae7b913a..236e2f00f3 100644
 --- a/third_party/zlib/cpu_features.c
 +++ b/third_party/zlib/cpu_features.c
-@@ -39,7 +39,8 @@ int ZLIB_INTERNAL riscv_cpu_enable_vclmul = 0;
+@@ -39,7 +39,9 @@ int ZLIB_INTERNAL riscv_cpu_enable_vclmul = 0;
  #ifndef CPU_NO_SIMD
  
  #if defined(ARMV8_OS_ANDROID) || defined(ARMV8_OS_LINUX) || \
 -    defined(ARMV8_OS_FUCHSIA) || defined(ARMV8_OS_IOS)
 +    defined(ARMV8_OS_FUCHSIA) || defined(ARMV8_OS_IOS) || \
-+    defined(ARMV8_OS_OPENBSD) || defined(ARMV8_OS_FREEBSD)
++    defined(ARMV8_OS_OPENBSD) || defined(ARMV8_OS_FREEBSD) || \
++    defined(ARMV8_OS_NETBSD)
  #include <pthread.h>
  #endif
  
-@@ -56,6 +57,10 @@ int ZLIB_INTERNAL riscv_cpu_enable_vclmul = 0;
+@@ -56,6 +58,14 @@ int ZLIB_INTERNAL riscv_cpu_enable_vclmul = 0;
  #include <windows.h>
  #elif defined(ARMV8_OS_IOS)
  #include <sys/sysctl.h>
@@ -39826,20 +39930,24 @@ index 34ae7b913a..f1fc2314f7 100644
 +#include <sys/sysctl.h>
 +#include <machine/cpu.h>
 +#include <machine/armreg.h>
++#elif defined(ARMV8_OS_NETBSD)
++#include <sys/sysctl.h>
++#include <machine/armreg.h>
++#include <stdio.h>
  #elif !defined(_MSC_VER)
  #include <pthread.h>
  #else
-@@ -69,7 +74,8 @@ static void _cpu_check_features(void);
+@@ -69,7 +79,8 @@ static void _cpu_check_features(void);
  #if defined(ARMV8_OS_ANDROID) || defined(ARMV8_OS_LINUX) || \
      defined(ARMV8_OS_MACOS) || defined(ARMV8_OS_FUCHSIA) || \
      defined(X86_NOT_WINDOWS) || defined(ARMV8_OS_IOS) || \
 -    defined(RISCV_RVV)
 +    defined(RISCV_RVV) || defined(ARMV8_OS_OPENBSD) || \
-+    defined(ARMV8_OS_FREEBSD)
++    defined(ARMV8_OS_FREEBSD) || defined(ARMV8_OS_NETBSD)
  #if !defined(ARMV8_OS_MACOS)
  // _cpu_check_features() doesn't need to do anything on mac/arm since all
  // features are known at build time, so don't call it.
-@@ -122,6 +128,17 @@ static void _cpu_check_features(void)
+@@ -122,6 +133,47 @@ static void _cpu_check_features(void)
      unsigned long features = getauxval(AT_HWCAP2);
      arm_cpu_enable_crc32 = !!(features & HWCAP2_CRC32);
      arm_cpu_enable_pmull = !!(features & HWCAP2_PMULL);
@@ -39853,6 +39961,36 @@ index 34ae7b913a..f1fc2314f7 100644
 +        arm_cpu_enable_pmull = 1;
 +
 +    if (ID_AA64ISAR0_CRC32(cpu_id) >= ID_AA64ISAR0_CRC32_BASE)
++        arm_cpu_enable_crc32 = 1;
++#elif defined(ARMV8_OS_NETBSD)
++    size_t len;
++    unsigned int curcpu;
++    int mib[] = { CTL_HW, HW_NCPU };
++    int ncpu;
++    struct aarch64_sysctl_cpu_id id;
++    char path[32];
++    int num_pmull = 0;
++    int num_crc32 = 0;
++
++    len = sizeof(ncpu);
++    if (sysctl(mib, 2, &ncpu, &len, NULL, 0) < 0)
++        return;
++
++    for (curcpu = 0; curcpu < ncpu; curcpu++) {
++        len = sizeof(id);
++        snprintf(path, sizeof(path), "machdep.cpu%d.cpu_id", curcpu);
++        if (sysctlbyname(path, &id, &len, NULL, 0) < 0)
++            continue;
++
++        if (__SHIFTOUT(id.ac_aa64isar0, ID_AA64ISAR0_EL1_AES) >= ID_AA64ISAR0_EL1_AES_PMUL)
++           num_pmull++;
++        if (__SHIFTOUT(id.ac_aa64isar0, ID_AA64ISAR0_EL1_CRC32) >= ID_AA64ISAR0_EL1_CRC32_CRC32X)
++           num_crc32++;
++    }
++
++    if (num_pmull == ncpu)
++        arm_cpu_enable_pmull = 1;
++    if (num_crc32 == ncpu)
 +        arm_cpu_enable_crc32 = 1;
  #elif defined(ARMV8_OS_FUCHSIA)
      uint32_t features;
