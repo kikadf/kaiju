@@ -9432,7 +9432,7 @@ index 7d6874a524..9b5d49948e 100644
      // time the metric was sampled.
      int idle_wakeups = 0;
 diff --git a/chrome/browser/net/profile_network_context_service.cc b/chrome/browser/net/profile_network_context_service.cc
-index 226a386395..78b293e430 100644
+index 226a386395..1fa5f3d35a 100644
 --- a/chrome/browser/net/profile_network_context_service.cc
 +++ b/chrome/browser/net/profile_network_context_service.cc
 @@ -145,7 +145,7 @@
@@ -9462,15 +9462,6 @@ index 226a386395..78b293e430 100644
    return GetWrappedCertStore(profile_, std::move(store));
  #else
    return store;
-@@ -1306,7 +1306,7 @@ std::vector<uint8_t>
- ProfileNetworkContextService::GetEncryptedCachePrimaryKey() {
-   std::string encoded_encrypted_primary_key = profile_->GetPrefs()->GetString(
-       enterprise_connectors::kEncryptedCachePrimaryKey);
--  return base::Base64Decode(encoded_encrypted_primary_key).value_or({});
-+  return base::Base64Decode(encoded_encrypted_primary_key).value_or(std::vector<uint8_t>{});
- }
- 
- #endif  // BUILDFLAG(ENTERPRISE_CACHE_ENCRYPTION)
 diff --git a/chrome/browser/net/profile_network_context_service_factory.cc b/chrome/browser/net/profile_network_context_service_factory.cc
 index f1b49243a7..6ba8e22a8e 100644
 --- a/chrome/browser/net/profile_network_context_service_factory.cc
@@ -16505,19 +16496,6 @@ index 32e252134a..268a8710fc 100644
    payments_autofill_client().GetPaymentsDataManager().SetAutofillHasSeenBnpl();
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) ||
          // BUILDFLAG(IS_CHROMEOS)
-diff --git a/components/autofill/core/browser/payments/full_card_request.cc b/components/autofill/core/browser/payments/full_card_request.cc
-index 149c2aa241..3322486613 100644
---- a/components/autofill/core/browser/payments/full_card_request.cc
-+++ b/components/autofill/core/browser/payments/full_card_request.cc
-@@ -124,7 +124,7 @@ void FullCardRequest::GetFullCardImpl(
-   request_->card = std::move(card);
-   request_->last_committed_primary_main_frame_origin =
-       last_committed_primary_main_frame_origin;
--  request_->context_token = std::move(context_token).value_or({});
-+  request_->context_token = std::move(context_token).value_or(std::string{});
-   request_->selected_challenge_option = std::move(selected_challenge_option);
- 
-   should_unmask_card_ = request_->card.masked() ||
 diff --git a/components/autofill/core/browser/webdata/payments/payments_sync_bridge_util.cc b/components/autofill/core/browser/webdata/payments/payments_sync_bridge_util.cc
 index 4f74577b09..98aa9490cc 100644
 --- a/components/autofill/core/browser/webdata/payments/payments_sync_bridge_util.cc
@@ -17253,17 +17231,15 @@ index b621d17055..c93b544f0c 100644
        signals_dict.Set("distribution_version",
                         os_report.distribution_version());
 diff --git a/components/enterprise/client_certificates/core/private_key_factory.cc b/components/enterprise/client_certificates/core/private_key_factory.cc
-index f2365aaf5a..87985bd1f9 100644
+index f2365aaf5a..7f94445006 100644
 --- a/components/enterprise/client_certificates/core/private_key_factory.cc
 +++ b/components/enterprise/client_certificates/core/private_key_factory.cc
-@@ -123,8 +123,8 @@ void PrivateKeyFactoryImpl::OnPrivateKeyCreated(
-     scoped_refptr<PrivateKey> private_key) {
+@@ -124,7 +124,7 @@ void PrivateKeyFactoryImpl::OnPrivateKeyCreated(
    if (!private_key && source != PrivateKeySource::kSoftwareKey) {
      for (auto fallback_source =
--             ++std::find(std::begin(kKeySourcesOrderedBySecurity),
+              ++std::find(std::begin(kKeySourcesOrderedBySecurity),
 -                         std::end(kKeySourcesOrderedBySecurity), source);
-+             (std::find(std::begin(kKeySourcesOrderedBySecurity),
-+                         std::end(kKeySourcesOrderedBySecurity), source)+1);
++                         std::end(kKeySourcesOrderedBySecurity), source));
           fallback_source != std::end(kKeySourcesOrderedBySecurity);
           fallback_source++) {
        auto it = sub_factories_.find(*fallback_source);
@@ -18000,7 +17976,7 @@ index d3c3173c9b..e028a7b052 100644
  #elif BUILDFLAG(IS_MAC)
    mojo::PlatformChannelEndpoint endpoint =
 diff --git a/components/named_mojo_ipc_server/named_mojo_server_endpoint_connector_linux.cc b/components/named_mojo_ipc_server/named_mojo_server_endpoint_connector_linux.cc
-index 1cfa150c7b..20c03cae12 100644
+index 1cfa150c7b..33a7b409d9 100644
 --- a/components/named_mojo_ipc_server/named_mojo_server_endpoint_connector_linux.cc
 +++ b/components/named_mojo_ipc_server/named_mojo_server_endpoint_connector_linux.cc
 @@ -8,6 +8,10 @@
@@ -18039,15 +18015,6 @@ index 1cfa150c7b..20c03cae12 100644
  
    mojo::PlatformChannelEndpoint endpoint(
        mojo::PlatformHandle(std::move(connection_fd)));
-@@ -116,7 +132,7 @@ bool NamedMojoServerEndpointConnectorLinux::TryStart() {
-   if (!options_.require_same_peer_user) {
-     // Allow any user to write to the UDS. fchmod doesn't work after bind(), so
-     // we need to call chmod on the socket filename, which is the server name.
--    if (chmod(options_.server_name.c_str(), 0o666) != 0) {
-+    if (chmod(options_.server_name.c_str(), 0666) != 0) {
-       PLOG(ERROR) << "chmod failed";
-       return false;
-     }
 diff --git a/components/named_system_lock/BUILD.gn b/components/named_system_lock/BUILD.gn
 index f66d83fbf3..804b337094 100644
 --- a/components/named_system_lock/BUILD.gn
@@ -27111,39 +27078,6 @@ index 68ea6cbe88..a7bc517f1a 100644
    if (video_fourcc == Fourcc(Fourcc::MM21)) {
      modifiers = DRM_FORMAT_MOD_MTK_16L_32S_TILE;
    }
-diff --git a/media/gpu/vaapi/vaapi_jpeg_encoder.cc b/media/gpu/vaapi/vaapi_jpeg_encoder.cc
-index e87494c736..ac3c49e6b0 100644
---- a/media/gpu/vaapi/vaapi_jpeg_encoder.cc
-+++ b/media/gpu/vaapi/vaapi_jpeg_encoder.cc
-@@ -98,24 +98,24 @@ void FillHuffmanTableParameters(
- 
-     // Load DC Table.
-     auto num_dc_codes = base::span(huffman_tables[i].num_dc_codes);
--    static_assert(num_dc_codes.size() == dcTable.code_length.size());
-+//    static_assert(num_dc_codes.size() == dcTable.code_length.size());
-     num_dc_codes.copy_from_nonoverlapping(dcTable.code_length);
-     // |code_values| of JpegHuffmanTable needs to hold DC and AC code values
-     // so it has different size than
-     // |huff_table_param->huffman_table[i].dc_values|. Therefore we can't use
-     // SafeArrayMemcpy() here.
-     auto dc_values = base::span(huffman_tables[i].dc_values);
--    static_assert(dc_values.size() <= dcTable.code_value.size());
-+//    static_assert(dc_values.size() <= dcTable.code_value.size());
-     dc_values.copy_from_nonoverlapping(
-         base::span(dcTable.code_value).first(dc_values.size()));
- 
-     // Load AC Table.
-     auto num_ac_codes = base::span(huffman_tables[i].num_ac_codes);
--    static_assert(num_ac_codes.size() == acTable.code_length.size());
-+//    static_assert(num_ac_codes.size() == acTable.code_length.size());
-     num_ac_codes.copy_from_nonoverlapping(acTable.code_length);
- 
-     auto ac_values = base::span(huffman_tables[i].ac_values);
--    static_assert(ac_values.size() == acTable.code_value.size());
-+//    static_assert(ac_values.size() == acTable.code_value.size());
-     ac_values.copy_from_nonoverlapping(acTable.code_value);
- 
-     std::ranges::fill(huffman_tables[i].pad, 0);
 diff --git a/media/gpu/vaapi/vaapi_video_decoder.cc b/media/gpu/vaapi/vaapi_video_decoder.cc
 index 4070e20ee3..3766556eb4 100644
 --- a/media/gpu/vaapi/vaapi_video_decoder.cc
@@ -27432,25 +27366,6 @@ index 5746cad8a8..bd0983af66 100644
 +#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_BSD)
  COMPONENT_EXPORT(MOJO_CORE_EMBEDDER_FEATURES)
  BASE_DECLARE_FEATURE(kMojoUseEventFd);
- 
-diff --git a/mojo/public/cpp/bindings/clone_traits.h b/mojo/public/cpp/bindings/clone_traits.h
-index 1cb9629761..74cd0996dc 100644
---- a/mojo/public/cpp/bindings/clone_traits.h
-+++ b/mojo/public/cpp/bindings/clone_traits.h
-@@ -30,12 +30,12 @@ struct CloneTraits {
-     } else if constexpr (std::copyable<T>) {
-       return input;
-     } else {
--      static_assert(
-+/*      static_assert(
-           false,
-           "T is not copyable and has no Clone() method, so the default "
-           "mojo::CloneTraits cannot be used; please make sure to include the "
-           "header that defines the mojo::CloneTraits<T> specialization");
--    }
-+*/    }
-   }
- };
  
 diff --git a/mojo/public/cpp/platform/socket_utils_posix.cc b/mojo/public/cpp/platform/socket_utils_posix.cc
 index 8cebec59fd..94d3adf662 100644
@@ -34292,19 +34207,6 @@ index 382416fa6f..befb9e2340 100644
               base::FEATURE_ENABLED_BY_DEFAULT
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
-diff --git a/services/network/public/cpp/permissions_policy/origin_with_possible_wildcards.cc b/services/network/public/cpp/permissions_policy/origin_with_possible_wildcards.cc
-index e14d79aa57..d1b177ebca 100644
---- a/services/network/public/cpp/permissions_policy/origin_with_possible_wildcards.cc
-+++ b/services/network/public/cpp/permissions_policy/origin_with_possible_wildcards.cc
-@@ -94,7 +94,7 @@ bool OriginWithPossibleWildcards::DoesMatchOrigin(
- }
- 
- bool operator==(const OriginWithPossibleWildcards& lhs,
--                const OriginWithPossibleWildcards& rhs) = default;
-+                const OriginWithPossibleWildcards& rhs) { return lhs.csp_source == rhs.csp_source; }
- 
- std::strong_ordering operator<=>(const OriginWithPossibleWildcards& lhs,
-                                  const OriginWithPossibleWildcards& rhs) {
 diff --git a/services/network/public/mojom/BUILD.gn b/services/network/public/mojom/BUILD.gn
 index d954e77742..5bc1be1167 100644
 --- a/services/network/public/mojom/BUILD.gn
@@ -36136,21 +36038,6 @@ index 90b32ee5f2..fb37b285eb 100644
    bool forceReadback = true;
  #elif BUILDFLAG(IS_ANDROID)
    // TODO(crbug.com/dawn/1969): Some Android devices don't fail to copy from
-diff --git a/third_party/blink/renderer/modules/xr/xr_rigid_transform.h b/third_party/blink/renderer/modules/xr/xr_rigid_transform.h
-index 0049b98bc7..a3752ac89e 100644
---- a/third_party/blink/renderer/modules/xr/xr_rigid_transform.h
-+++ b/third_party/blink/renderer/modules/xr/xr_rigid_transform.h
-@@ -12,9 +12,7 @@
- #include "third_party/blink/renderer/modules/modules_export.h"
- #include "third_party/blink/renderer/platform/bindings/script_wrappable.h"
- 
--namespace gfx {
--class Transform;
--}
-+#include "ui/gfx/geometry/transform.h"
- 
- namespace blink {
- 
 diff --git a/third_party/blink/renderer/platform/BUILD.gn b/third_party/blink/renderer/platform/BUILD.gn
 index eb2472737b..60fcf5693b 100644
 --- a/third_party/blink/renderer/platform/BUILD.gn
@@ -42291,37 +42178,6 @@ index c078fef498..e66e097d38 100644
  // Linux doesn't have a native accessibility type.
  using NativeViewAccessible = AtkObject*;
  #else
-diff --git a/ui/gfx/paint_vector_icon.cc b/ui/gfx/paint_vector_icon.cc
-index eef47b4c9b..710f070b01 100644
---- a/ui/gfx/paint_vector_icon.cc
-+++ b/ui/gfx/paint_vector_icon.cc
-@@ -235,7 +235,7 @@ void PaintPath(Canvas* canvas,
-         break;
- 
-       case H_LINE_TO: {
--        const SkPoint last_point = path.getLastPt().value_or({0, 0});
-+        const SkPoint last_point = path.getLastPt().value_or(SkPoint{0, 0});
-         path.lineTo(arg(0), last_point.fY);
-         break;
-       }
-@@ -245,7 +245,7 @@ void PaintPath(Canvas* canvas,
-         break;
- 
-       case V_LINE_TO: {
--        const SkPoint last_point = path.getLastPt().value_or({0, 0});
-+        const SkPoint last_point = path.getLastPt().value_or(SkPoint{0, 0});
-         path.lineTo(last_point.fX, arg(0));
-         break;
-       }
-@@ -273,7 +273,7 @@ void PaintPath(Canvas* canvas,
-         // details.
-         // Note that |x1| and |y1| will correspond to the sole control point if
-         // calculating a quadratic curve.
--        const SkPoint last_point = path.getLastPt().value_or({0, 0});
-+        const SkPoint last_point = path.getLastPt().value_or(SkPoint{0, 0});
-         SkScalar delta_x = 0;
-         SkScalar delta_y = 0;
-         if (IsCommandTypeCurve(previous_command_type)) {
 diff --git a/ui/gfx/platform_font_skia.cc b/ui/gfx/platform_font_skia.cc
 index 99b85736e1..0ad324dbe1 100644
 --- a/ui/gfx/platform_font_skia.cc
