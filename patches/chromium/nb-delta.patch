@@ -454,7 +454,7 @@ index 02934fde1e..faeba580b7 100644
  is_wasm = current_os == "emscripten"
  is_watchos = current_os == "watchos"
 diff --git a/build/config/compiler/BUILD.gn b/build/config/compiler/BUILD.gn
-index 3d7c3080b0..c8875e3d77 100644
+index de9b49c501..d1f35eb5f7 100644
 --- a/build/config/compiler/BUILD.gn
 +++ b/build/config/compiler/BUILD.gn
 @@ -1334,7 +1334,7 @@ config("compiler_cpu_abi") {
@@ -688,7 +688,7 @@ index 0000000000..27240dd95a
 +  }
 +}
 diff --git a/chrome/browser/about_flags.cc b/chrome/browser/about_flags.cc
-index fb52c1b4b2..80bc16a6ce 100644
+index e898fe0f4c..4d9f1dd948 100644
 --- a/chrome/browser/about_flags.cc
 +++ b/chrome/browser/about_flags.cc
 @@ -835,6 +835,8 @@ const FeatureEntry::FeatureParam kAudioBackendPulseAudio[] = {
@@ -723,10 +723,10 @@ index 9b74dcd8c7..9f104e03a8 100644
      info->os = extensions::api::runtime::PlatformOs::kAndroid;
    } else {
 diff --git a/chrome/browser/flag_descriptions.h b/chrome/browser/flag_descriptions.h
-index 7d45f3d296..79da82b02c 100644
+index 76930cc4f4..8ac7779752 100644
 --- a/chrome/browser/flag_descriptions.h
 +++ b/chrome/browser/flag_descriptions.h
-@@ -8409,6 +8409,8 @@ inline constexpr char kAudioBackendName[] =
+@@ -8419,6 +8419,8 @@ inline constexpr char kAudioBackendName[] =
  inline constexpr char kAudioBackendDescription[] =
  #if BUILDFLAG(IS_OPENBSD)
      "Select the desired audio backend to use. The default is sndio.";
@@ -996,7 +996,7 @@ index 9e015028f9..986c03f30b 100644
  #error "unknown os"
  #endif
 diff --git a/content/test/BUILD.gn b/content/test/BUILD.gn
-index be65cd3d06..64d41ff935 100644
+index ed062cbbbb..12e4352013 100644
 --- a/content/test/BUILD.gn
 +++ b/content/test/BUILD.gn
 @@ -1870,7 +1870,7 @@ test("content_browsertests") {
@@ -1971,10 +1971,10 @@ index 44f331a70f..4a27162638 100644
  #include "sandbox/policy/freebsd/sandbox_freebsd.h"
  #endif
 diff --git a/services/device/hid/BUILD.gn b/services/device/hid/BUILD.gn
-index 0eb19e2487..b861bcbfce 100644
+index 2e26114eb8..138f058328 100644
 --- a/services/device/hid/BUILD.gn
 +++ b/services/device/hid/BUILD.gn
-@@ -53,6 +53,15 @@ source_set("hid") {
+@@ -55,6 +55,15 @@ source_set("hid") {
      ]
    }
  
@@ -2451,7 +2451,7 @@ index 0049b98bc7..a3752ac89e 100644
  namespace blink {
  
 diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
-index 6b2641367f..aff70bebd6 100644
+index 33dc2ce10e..989716e8a3 100644
 --- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
 +++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
 @@ -377,7 +377,7 @@
@@ -2508,7 +2508,7 @@ index 6b2641367f..aff70bebd6 100644
        base_feature: "WebAppEnableAppTitle",
      },
      {
-@@ -1373,7 +1373,7 @@
+@@ -1365,7 +1365,7 @@
        name: "CSPHashesV1",
        base_feature: "none",
        origin_trial_feature_name: "CSPExtendedScriptSrcHashes",
@@ -2517,7 +2517,7 @@ index 6b2641367f..aff70bebd6 100644
        status: "experimental",
        public: true,
      },
-@@ -2019,7 +2019,7 @@
+@@ -2011,7 +2011,7 @@
      {
        name: "DeviceBoundSessionCredentials",
        origin_trial_feature_name: "DeviceBoundSessionCredentials",
@@ -2526,7 +2526,7 @@ index 6b2641367f..aff70bebd6 100644
        status: "experimental",
        // Killswitch is net::features::kDeviceBoundSessions
        base_feature: "none",
-@@ -2027,7 +2027,7 @@
+@@ -2019,7 +2019,7 @@
      {
        name: "DeviceBoundSessionCredentials2",
        origin_trial_feature_name: "DeviceBoundSessionCredentials2",
@@ -2535,7 +2535,7 @@ index 6b2641367f..aff70bebd6 100644
        status: "experimental",
        // Killswitch is net::features::kDeviceBoundSessions
        base_feature: "none",
-@@ -2186,7 +2186,7 @@
+@@ -2178,7 +2178,7 @@
        name: "DocumentIsolationPolicy",
        status: "experimental",
        origin_trial_feature_name: "DocumentIsolationPolicy",
@@ -2544,7 +2544,7 @@ index 6b2641367f..aff70bebd6 100644
        base_feature: "none",
      },
      {
-@@ -2502,7 +2502,7 @@
+@@ -2494,7 +2494,7 @@
        base_feature: "none",
        public: true,
        origin_trial_feature_name: "FedCmMultipleIdentityProviders",
@@ -2553,7 +2553,7 @@ index 6b2641367f..aff70bebd6 100644
        origin_trial_allows_third_party: true,
      },
      {
-@@ -5882,7 +5882,7 @@
+@@ -5879,7 +5879,7 @@
        name: "UnrestrictedSharedArrayBuffer",
        base_feature: "none",
        origin_trial_feature_name: "UnrestrictedSharedArrayBuffer",
@@ -2562,7 +2562,7 @@ index 6b2641367f..aff70bebd6 100644
      },
      // Enables using policy-controlled feature "usb-unrestricted" to allow
      // isolated context to access protected USB interface classes and to
-@@ -5973,7 +5973,7 @@
+@@ -5970,7 +5970,7 @@
        status: "experimental",
        origin_trial_feature_name: "UserMediaElement",
        public: true,
@@ -2571,7 +2571,7 @@ index 6b2641367f..aff70bebd6 100644
        base_feature_status: "enabled",
        copied_from_base_feature_if: "overridden",
      },
-@@ -6084,7 +6084,7 @@
+@@ -6081,7 +6081,7 @@
        name: "WebAppInstallation",
        status: {"Android": "", "default": "test"},
        origin_trial_feature_name: "WebAppInstallation",
@@ -2580,7 +2580,7 @@ index 6b2641367f..aff70bebd6 100644
        base_feature_status: "enabled",
        copied_from_base_feature_if: "overridden",
      },
-@@ -6097,7 +6097,7 @@
+@@ -6094,7 +6094,7 @@
      {
        name: "WebAppScopeExtensions",
        origin_trial_feature_name: "WebAppScopeExtensions",
