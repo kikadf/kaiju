@@ -13,6 +13,13 @@ _rollup_ver="4.22.4"
 #_esbuild_ver="0.25.9"
 
 # func
+# err [what]
+err () {
+    _errc=$?
+    if [ -n "$1" ]; then
+        echo ">>> $1 failed ($_errc)"
+    fi
+}
 # die [what]
 die () {
     _errc=$?
@@ -26,7 +33,7 @@ if [ "$1" != "" ]; then
 	c_ver="$1"
 else
 	echo "Error: not set chromium version"
-    echo "Usage: ./update_vanilla_chromium.sh <chromium version>"
+	echo "Usage: ./update_vanilla_chromium.sh <chromium version>"
 	exit 1
 fi
 
@@ -112,7 +119,7 @@ if [ ! -f "$tools_workdir/chromium-${c_ver}-obpatches_done" ]; then
     cd "chromium-${c_ver}" || die
     for _patch in "$p_dir"/patch-*; do
         if [ -e "$_patch" ]; then
-            patch -Np0 -i "$_patch" || die "Apply OpenBSD patches"
+            patch -Np0 -t -i "$_patch" || err "Apply OpenBSD patches"
         fi
     done
 
