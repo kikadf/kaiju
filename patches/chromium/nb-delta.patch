@@ -268,6 +268,26 @@ index d0b07c2acc..29365bbe1b 100644
    if (result < 0) {
      return std::nullopt;
    }
+diff --git a/base/posix/unix_domain_socket.cc b/base/posix/unix_domain_socket.cc
+index da47323643..48b073c0e1 100644
+--- a/base/posix/unix_domain_socket.cc
++++ b/base/posix/unix_domain_socket.cc
+@@ -196,6 +196,15 @@ ssize_t UnixDomainSocket::RecvMsgWithFlags(int fd,
+     if (getsockopt(fd, SOL_LOCAL, LOCAL_PEERPID, &pid, &pid_size) != 0) {
+       pid = -1;
+     }
++#elif BUILDFLAG(IS_NETBSD)
++    struct unpcbid cred;
++    socklen_t len = sizeof(cred);
++    if (getsockopt(fd, 0, LOCAL_PEEREID, &cred, &len) == 0) {
++      pid = cred.unp_pid;
++    } else {
++      DPLOG(ERROR) << "getsockopt LOCAL_PEEREID failed";
++      pid = -1;
++    }
+ #elif BUILDFLAG(IS_BSD)
+     NOTIMPLEMENTED();
+     pid = -1;
 diff --git a/base/process/launch.h b/base/process/launch.h
 index 85317e4429..d0a51054eb 100644
 --- a/base/process/launch.h

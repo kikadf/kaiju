@@ -1894,7 +1894,7 @@ index 02c65fb6ea..29365bbe1b 100644
      return std::nullopt;
    }
 diff --git a/base/posix/unix_domain_socket.cc b/base/posix/unix_domain_socket.cc
-index 8cb4a7156f..da47323643 100644
+index 8cb4a7156f..48b073c0e1 100644
 --- a/base/posix/unix_domain_socket.cc
 +++ b/base/posix/unix_domain_socket.cc
 @@ -16,6 +16,7 @@
@@ -1950,10 +1950,19 @@ index 8cb4a7156f..da47323643 100644
        // macOS does not support SCM_CREDENTIALS.
        if (cmsg->cmsg_level == SOL_SOCKET &&
            cmsg->cmsg_type == SCM_CREDENTIALS) {
-@@ -195,6 +196,9 @@ ssize_t UnixDomainSocket::RecvMsgWithFlags(int fd,
+@@ -195,6 +196,18 @@ ssize_t UnixDomainSocket::RecvMsgWithFlags(int fd,
      if (getsockopt(fd, SOL_LOCAL, LOCAL_PEERPID, &pid, &pid_size) != 0) {
        pid = -1;
      }
++#elif BUILDFLAG(IS_NETBSD)
++    struct unpcbid cred;
++    socklen_t len = sizeof(cred);
++    if (getsockopt(fd, 0, LOCAL_PEEREID, &cred, &len) == 0) {
++      pid = cred.unp_pid;
++    } else {
++      DPLOG(ERROR) << "getsockopt LOCAL_PEEREID failed";
++      pid = -1;
++    }
 +#elif BUILDFLAG(IS_BSD)
 +    NOTIMPLEMENTED();
 +    pid = -1;
