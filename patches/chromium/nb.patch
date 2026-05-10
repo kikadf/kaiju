@@ -39813,6 +39813,19 @@ index e0cfb64fda..d3ea0d9f9e 100644
 +    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 +    let a = std::arch::is_x86_feature_detected!("sse2");
 +}
+diff --git a/third_party/skia/src/base/SkAutoLocaleSetter.h b/third_party/skia/src/base/SkAutoLocaleSetter.h
+index 90bcbb32bc..68a0f8a9e3 100644
+--- a/third_party/skia/src/base/SkAutoLocaleSetter.h
++++ b/third_party/skia/src/base/SkAutoLocaleSetter.h
+@@ -27,7 +27,7 @@
+ #define HAVE_XLOCALE 0
+ #endif
+ 
+-#if defined(SK_BUILD_FOR_ANDROID) || defined(__UCLIBC__) || defined(_NEWLIB_VERSION)
++#if defined(SK_BUILD_FOR_ANDROID) || defined(__UCLIBC__) || defined(_NEWLIB_VERSION) || defined(__NetBSD__)
+ #define HAVE_LOCALE_T 0
+ #else
+ #define HAVE_LOCALE_T 1
 diff --git a/third_party/skia/src/ports/SkMemory_malloc.cpp b/third_party/skia/src/ports/SkMemory_malloc.cpp
 index d784af53ef..564e572e23 100644
 --- a/third_party/skia/src/ports/SkMemory_malloc.cpp
