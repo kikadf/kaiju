@@ -4579,7 +4579,7 @@ index 1852226e3e..cda380d268 100755
        sys.stdout.write("")
        return 0
 diff --git a/build/config/ozone.gni b/build/config/ozone.gni
-index 9c92cdc022..6d42eec7fd 100644
+index 9c92cdc022..d54795aeac 100644
 --- a/build/config/ozone.gni
 +++ b/build/config/ozone.gni
 @@ -80,7 +80,19 @@ declare_args() {
@@ -4597,7 +4597,7 @@ index 9c92cdc022..6d42eec7fd 100644
 +      ozone_platform_x11 = true
 +    } else if (is_netbsd) {
 +      ozone_platform = "x11"
-+      ozone_platform_wayland = false
++      ozone_platform_wayland = true
 +      ozone_platform_x11 = true
 +    } else if (is_freebsd) {
        ozone_platform = "x11"
@@ -40654,16 +40654,18 @@ index 940313c5e2..c2ffa2820c 100644
      # to pass the path where these headers are located.
      include_dirs += [ "$root_gen_dir/third_party/wayland/src/protocol" ]
 diff --git a/third_party/wayland/include/config.h b/third_party/wayland/include/config.h
-index 6386aa1be9..622ea7fea8 100644
+index 6386aa1be9..04c65225e5 100644
 --- a/third_party/wayland/include/config.h
 +++ b/third_party/wayland/include/config.h
-@@ -9,7 +9,14 @@
+@@ -9,13 +9,26 @@
  
  #define HAVE_BROKEN_MSG_CMSG_CLOEXEC 0
  
 +#if defined(__FreeBSD__)
 +#include <osreldate.h>
 +#if defined(__FreeBSD_version) && __FreeBSD_version < 1300048
++#undef HAVE_MEMFD_CREATE
++#elif defined(__NetBSD__)
 +#undef HAVE_MEMFD_CREATE
 +#else
  #define HAVE_MEMFD_CREATE
@@ -40672,7 +40674,17 @@ index 6386aa1be9..622ea7fea8 100644
  
  #define HAVE_MKOSTEMP
  
-@@ -25,7 +32,11 @@
+ #define HAVE_MREMAP
+ 
++#if defined(__NetBSD__)
++#undef HAVE_POSIX_FALLOCATE
++#else
+ #define HAVE_POSIX_FALLOCATE
++#endif
+ 
+ #define HAVE_PRCTL
+ 
+@@ -25,7 +38,11 @@
  
  #undef HAVE_SYS_PROCCTL_H
  
@@ -40684,6 +40696,35 @@ index 6386aa1be9..622ea7fea8 100644
  
  #define HAVE_XUCRED_CR_PID 0
  
+diff --git a/third_party/wayland/src/src/wayland-os.c b/third_party/wayland/src/src/wayland-os.c
+index f00ead4b95..32876dc894 100644
+--- a/third_party/wayland/src/src/wayland-os.c
++++ b/third_party/wayland/src/src/wayland-os.c
+@@ -106,6 +106,24 @@ wl_os_socket_peercred(int sockfd, uid_t *uid, gid_t *gid, pid_t *pid)
+ #endif
+ 	return 0;
+ }
++#elif defined(__NetBSD__)
++#ifndef SOL_LOCAL
++#define SOL_LOCAL (0)
++#endif
++int
++wl_os_socket_peercred(int sockfd, uid_t *uid, gid_t *gid, pid_t *pid)
++{
++	socklen_t len;
++	struct sockcred ucred;
++
++	len = sizeof(ucred);
++	if (getsockopt(sockfd, SOL_LOCAL, LOCAL_CREDS, &ucred, &len) < 0)
++		return -1;
++	*uid = ucred.sc_uid;
++	*gid = ucred.sc_gid;
++	*pid = 0;
++	return 0;
++}
+ #elif defined(SO_PEERCRED)
+ int
+ wl_os_socket_peercred(int sockfd, uid_t *uid, gid_t *gid, pid_t *pid)
 diff --git a/third_party/webrtc/BUILD.gn b/third_party/webrtc/BUILD.gn
 index 4d154f8e19..8e23fc5027 100644
 --- a/third_party/webrtc/BUILD.gn
