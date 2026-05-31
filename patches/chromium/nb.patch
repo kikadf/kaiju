@@ -39677,10 +39677,10 @@ index eb8c0b10d1..3f774c54b5 100644
  #if PERFETTO_MEMFD_ENABLED()
  
 diff --git a/third_party/perfetto/src/tracing/platform_posix.cc b/third_party/perfetto/src/tracing/platform_posix.cc
-index c45d9bcde1..ac141a8012 100644
+index c45d9bcde1..25452195a1 100644
 --- a/third_party/perfetto/src/tracing/platform_posix.cc
 +++ b/third_party/perfetto/src/tracing/platform_posix.cc
-@@ -111,13 +111,15 @@ std::unique_ptr<base::TaskRunner> PlatformPosix::CreateTaskRunner(
+@@ -111,13 +111,16 @@ std::unique_ptr<base::TaskRunner> PlatformPosix::CreateTaskRunner(
  }
  
  std::string PlatformPosix::GetCurrentProcessName() {
@@ -39695,7 +39695,8 @@ index c45d9bcde1..ac141a8012 100644
  #elif PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE) || \
 -    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD)
 +    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) || \
-+    PERFETTO_BUILDFLAG(PERFETTO_OS_OPENBSD)
++    PERFETTO_BUILDFLAG(PERFETTO_OS_OPENBSD) || \
++    PERFETTO_BUILDFLAG(PERFETTO_OS_NETBSD
    return std::string(getprogname());
  #else
    return "unknown_producer";
@@ -42770,7 +42771,7 @@ index 6c33d89bf1..1f232b6ad5 100644
  EVENTS_BASE_EXPORT extern const char kPenDevices[];
  #endif
 diff --git a/ui/events/keycodes/dom/keycode_converter.cc b/ui/events/keycodes/dom/keycode_converter.cc
-index e7072792d3..cfdc3a3077 100644
+index e7072792d3..bf29c8aa21 100644
 --- a/ui/events/keycodes/dom/keycode_converter.cc
 +++ b/ui/events/keycodes/dom/keycode_converter.cc
 @@ -14,7 +14,7 @@
@@ -42778,7 +42779,7 @@ index e7072792d3..cfdc3a3077 100644
  #include "ui/events/keycodes/dom/dom_key.h"
  
 -#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FREEBSD)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FREEBSD) || BUILDFLAG(IS_NETBSD)
  #include <linux/input.h>
  #endif
  
@@ -42796,7 +42797,7 @@ index e7072792d3..cfdc3a3077 100644
  #undef DOM_KEY_MAP_DECLARATION_END
  
 -#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FREEBSD)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FREEBSD)  || BUILDFLAG(IS_NETBSD)
  
  // The offset between XKB Keycode and evdev code.
  constexpr int kXkbKeycodeOffset = 8;
@@ -42805,12 +42806,12 @@ index e7072792d3..cfdc3a3077 100644
  }
  
 -#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FREEBSD)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FREEBSD) || BUILDFLAG(IS_NETBSD)
  // static
  DomCode KeycodeConverter::XkbKeycodeToDomCode(uint32_t xkb_keycode) {
    // Currently XKB keycode is the native keycode.
 diff --git a/ui/events/keycodes/dom/keycode_converter.h b/ui/events/keycodes/dom/keycode_converter.h
-index 0d17f5e549..80f86f4ad6 100644
+index 0d17f5e549..29656c9518 100644
 --- a/ui/events/keycodes/dom/keycode_converter.h
 +++ b/ui/events/keycodes/dom/keycode_converter.h
 @@ -64,7 +64,7 @@ class KeycodeConverter {
@@ -42818,7 +42819,7 @@ index 0d17f5e549..80f86f4ad6 100644
    static int DomCodeToNativeKeycode(DomCode code);
  
 -#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FREEBSD)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FREEBSD) || BUILDFLAG(IS_NETBSD)
    // Convert a XKB keycode into a DomCode.
    static DomCode XkbKeycodeToDomCode(uint32_t xkb_keycode);
  

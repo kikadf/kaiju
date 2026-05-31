@@ -3125,6 +3125,20 @@ index e2b5291886..ef1e493574 100644
    if ((buf = getenv("CHROME_EXE_PATH")) != NULL)
      self_path = std::string(buf);
    else
+diff --git a/third_party/perfetto/src/tracing/platform_posix.cc b/third_party/perfetto/src/tracing/platform_posix.cc
+index ac141a8012..25452195a1 100644
+--- a/third_party/perfetto/src/tracing/platform_posix.cc
++++ b/third_party/perfetto/src/tracing/platform_posix.cc
+@@ -119,7 +119,8 @@ std::string PlatformPosix::GetCurrentProcessName() {
+   return cmdline.substr(0, cmdline.find('\0'));
+ #elif PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE) || \
+     PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) || \
+-    PERFETTO_BUILDFLAG(PERFETTO_OS_OPENBSD)
++    PERFETTO_BUILDFLAG(PERFETTO_OS_OPENBSD) || \
++    PERFETTO_BUILDFLAG(PERFETTO_OS_NETBSD
+   return std::string(getprogname());
+ #else
+   return "unknown_producer";
 diff --git a/third_party/protobuf/proto_library.gni b/third_party/protobuf/proto_library.gni
 index 001a3b33ce..8e9b32066c 100644
 --- a/third_party/protobuf/proto_library.gni
@@ -3746,6 +3760,50 @@ index 306c10a103..8f1efd80ef 100755
  ]
  
  _form_factors = [
+diff --git a/ui/events/keycodes/dom/keycode_converter.cc b/ui/events/keycodes/dom/keycode_converter.cc
+index cfdc3a3077..bf29c8aa21 100644
+--- a/ui/events/keycodes/dom/keycode_converter.cc
++++ b/ui/events/keycodes/dom/keycode_converter.cc
+@@ -14,7 +14,7 @@
+ #include "ui/events/keycodes/dom/dom_code.h"
+ #include "ui/events/keycodes/dom/dom_key.h"
+ 
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FREEBSD)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FREEBSD) || BUILDFLAG(IS_NETBSD)
+ #include <linux/input.h>
+ #endif
+ 
+@@ -66,7 +66,7 @@ struct DomKeyMapEntry {
+ #undef DOM_KEY_UNI
+ #undef DOM_KEY_MAP_DECLARATION_END
+ 
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FREEBSD)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FREEBSD)  || BUILDFLAG(IS_NETBSD)
+ 
+ // The offset between XKB Keycode and evdev code.
+ constexpr int kXkbKeycodeOffset = 8;
+@@ -187,7 +187,7 @@ int KeycodeConverter::DomCodeToNativeKeycode(DomCode code) {
+   return UsbKeycodeToNativeKeycode(static_cast<uint32_t>(code));
+ }
+ 
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FREEBSD)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FREEBSD) || BUILDFLAG(IS_NETBSD)
+ // static
+ DomCode KeycodeConverter::XkbKeycodeToDomCode(uint32_t xkb_keycode) {
+   // Currently XKB keycode is the native keycode.
+diff --git a/ui/events/keycodes/dom/keycode_converter.h b/ui/events/keycodes/dom/keycode_converter.h
+index 80f86f4ad6..29656c9518 100644
+--- a/ui/events/keycodes/dom/keycode_converter.h
++++ b/ui/events/keycodes/dom/keycode_converter.h
+@@ -64,7 +64,7 @@ class KeycodeConverter {
+   // Convert a DomCode into a native keycode.
+   static int DomCodeToNativeKeycode(DomCode code);
+ 
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FREEBSD)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FREEBSD) || BUILDFLAG(IS_NETBSD)
+   // Convert a XKB keycode into a DomCode.
+   static DomCode XkbKeycodeToDomCode(uint32_t xkb_keycode);
+ 
 diff --git a/ui/qt/moc_wrapper.py b/ui/qt/moc_wrapper.py
 index ffbe56813c..6e5d2a93c0 100755
 --- a/ui/qt/moc_wrapper.py
