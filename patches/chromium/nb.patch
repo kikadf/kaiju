@@ -112,7 +112,7 @@ index 5cb19d1cad..c557e02c33 100644
    // bounds, and grow |window_bounds| by that amount.
    gfx::Insets native_frame_insets =
 diff --git a/base/BUILD.gn b/base/BUILD.gn
-index aad39d7927..6ad09702d7 100644
+index aad39d7927..2da2a27c5d 100644
 --- a/base/BUILD.gn
 +++ b/base/BUILD.gn
 @@ -987,7 +987,7 @@ component("base") {
@@ -230,7 +230,7 @@ index aad39d7927..6ad09702d7 100644
    header_dir = "base/memory"
  
 -  protected_memory_enabled = !is_component_build && is_clang &&
-+  protected_memory_enabled = !is_openbsd && !is_component_build && is_clang &&
++  protected_memory_enabled = !is_openbsd && !is_netbsd && !is_component_build && is_clang &&
                               (is_win || is_linux || is_android || is_mac)
  
    flags = [ "PROTECTED_MEMORY_ENABLED=$protected_memory_enabled" ]
@@ -39677,7 +39677,7 @@ index eb8c0b10d1..3f774c54b5 100644
  #if PERFETTO_MEMFD_ENABLED()
  
 diff --git a/third_party/perfetto/src/tracing/platform_posix.cc b/third_party/perfetto/src/tracing/platform_posix.cc
-index c45d9bcde1..25452195a1 100644
+index c45d9bcde1..ecbf2891e4 100644
 --- a/third_party/perfetto/src/tracing/platform_posix.cc
 +++ b/third_party/perfetto/src/tracing/platform_posix.cc
 @@ -111,13 +111,16 @@ std::unique_ptr<base::TaskRunner> PlatformPosix::CreateTaskRunner(
