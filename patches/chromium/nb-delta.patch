@@ -206,6 +206,28 @@ index 948d54cc84..ac4eef4831 100644
      (defined(__GLIBC__) && !defined(__UCLIBC__) && !defined(__AIX) && !BUILDFLAG(IS_BSD))
  #define HAVE_BACKTRACE
  #include <execinfo.h>
+diff --git a/base/features.cc b/base/features.cc
+index c38e13a173..3243a67a10 100644
+--- a/base/features.cc
++++ b/base/features.cc
+@@ -15,7 +15,7 @@
+ #include "build/build_config.h"
+ #include "build/buildflag.h"
+ 
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_BSD)
+ #include "base/message_loop/message_pump_epoll.h"
+ #endif
+ 
+@@ -252,7 +252,7 @@ void Init() {
+   debug::StackTrace::InitializeFeatures();
+   FilePath::InitializeFeatures();
+ 
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_BSD)
+   MessagePumpEpoll::InitializeFeatures();
+ #endif
+ 
 diff --git a/base/logging_unittest.cc b/base/logging_unittest.cc
 index 154a627d04..c4d877213c 100644
 --- a/base/logging_unittest.cc
