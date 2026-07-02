@@ -1727,22 +1727,6 @@ index ea2c03da14..7c4af11bac 100644
      {EPOLLPRI, POLLPRI}, {EPOLLERR, POLLERR}, {EPOLLHUP, POLLHUP}};
  
  void SetEventsForPoll(const uint32_t epoll_events, struct pollfd* poll_entry) {
-diff --git a/base/message_loop/message_pump_epoll.h b/base/message_loop/message_pump_epoll.h
-index f8fe03dbdd..652713174a 100644
---- a/base/message_loop/message_pump_epoll.h
-+++ b/base/message_loop/message_pump_epoll.h
-@@ -51,7 +51,11 @@ namespace base {
- // every call, don't do it when we have too many FDs.
- BASE_FEATURE(kUsePollForMessagePumpEpoll,
-              "UsePollForMessagePumpEpoll",
-+#if BUILDFLAG(IS_BSD)
-+             base::FEATURE_ENABLED_BY_DEFAULT);
-+#else
-              base::FEATURE_DISABLED_BY_DEFAULT);
-+#endif
- 
- // A MessagePump implementation suitable for I/O message loops on Linux-based
- // systems with epoll API support.
 diff --git a/base/message_loop/message_pump_glib.cc b/base/message_loop/message_pump_glib.cc
 index b7ff50ec9e..ede3a4621b 100644
 --- a/base/message_loop/message_pump_glib.cc
@@ -27892,7 +27876,7 @@ index 249c0a431f..022ccf607f 100644
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
 diff --git a/net/base/network_change_notifier.cc b/net/base/network_change_notifier.cc
-index 451250e5dc..03d69c0e1d 100644
+index 451250e5dc..731d945468 100644
 --- a/net/base/network_change_notifier.cc
 +++ b/net/base/network_change_notifier.cc
 @@ -38,7 +38,7 @@
@@ -27904,6 +27888,15 @@ index 451250e5dc..03d69c0e1d 100644
  #include "net/base/network_change_notifier_passive.h"
  #elif BUILDFLAG(IS_FUCHSIA)
  #include "net/base/network_change_notifier_fuchsia.h"
+@@ -314,7 +314,7 @@ std::unique_ptr<NetworkChangeNotifier> NetworkChangeNotifier::CreateIfNeeded(
+   // running network service in a separate process.
+   return std::make_unique<NetworkChangeNotifierPassive>(initial_type,
+                                                         initial_subtype);
+-#elif BUILDFLAG(IS_CHROMEOS)
++#elif BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_NETBSD)
+   return std::make_unique<NetworkChangeNotifierPassive>(initial_type,
+                                                         initial_subtype);
+ #elif BUILDFLAG(IS_LINUX)
 @@ -325,6 +325,9 @@ std::unique_ptr<NetworkChangeNotifier> NetworkChangeNotifier::CreateIfNeeded(
  #elif BUILDFLAG(IS_FUCHSIA)
    return std::make_unique<NetworkChangeNotifierFuchsia>(
@@ -28124,7 +28117,7 @@ index c2206ae73b..59967d6006 100644
  #endif
  #include <vector>
 diff --git a/net/dns/dns_config_service_posix.cc b/net/dns/dns_config_service_posix.cc
-index f863fceb0b..af37e1289d 100644
+index f863fceb0b..2525fae5bd 100644
 --- a/net/dns/dns_config_service_posix.cc
 +++ b/net/dns/dns_config_service_posix.cc
 @@ -35,6 +35,11 @@
@@ -28139,20 +28132,22 @@ index f863fceb0b..af37e1289d 100644
  namespace net {
  
  namespace internal {
-@@ -132,6 +137,11 @@ class DnsConfigServicePosix::Watcher : public DnsConfigService::Watcher {
+@@ -132,6 +137,13 @@ class DnsConfigServicePosix::Watcher : public DnsConfigService::Watcher {
    bool Watch() override {
      CheckOnCorrectSequence();
  
 +// pledge + unveil
++#if !BUILDFLAG(IS_NETBSD)
 +    base::CommandLine* command_line = base::CommandLine::ForCurrentProcess();
 +    if (!command_line->HasSwitch(sandbox::policy::switches::kNoSandbox))
 +      return false;
++#endif
 +
      bool success = true;
      if (!config_watcher_.Watch(base::BindRepeating(&Watcher::OnConfigChanged,
                                                     base::Unretained(this)))) {
 diff --git a/net/dns/dns_reloader.cc b/net/dns/dns_reloader.cc
-index e95bf654c6..275794e827 100644
+index e95bf654c6..1250b157fb 100644
 --- a/net/dns/dns_reloader.cc
 +++ b/net/dns/dns_reloader.cc
 @@ -10,6 +10,7 @@
@@ -28180,7 +28175,7 @@ index e95bf654c6..275794e827 100644
        // been called above.
 +#if BUILDFLAG(IS_NETBSD)
 +      res_nclose(&reload_state->res);
-+      //memset(&reload_state->res, 0, sizeof(reload_state->res));
++      memset(&reload_state->res, 0, sizeof(reload_state->res));
 +      res_ninit(&reload_state->res);
 +#else
        res_nclose(&_res);

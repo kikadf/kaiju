@@ -241,6 +241,22 @@ index 154a627d04..c4d877213c 100644
    crash_addr = reinterpret_cast<uintptr_t>(info->si_addr);
  #else  // OS_*
    ucontext_t* context = reinterpret_cast<ucontext_t*>(context_ptr);
+diff --git a/base/message_loop/message_pump_epoll.h b/base/message_loop/message_pump_epoll.h
+index 652713174a..f8fe03dbdd 100644
+--- a/base/message_loop/message_pump_epoll.h
++++ b/base/message_loop/message_pump_epoll.h
+@@ -51,11 +51,7 @@ namespace base {
+ // every call, don't do it when we have too many FDs.
+ BASE_FEATURE(kUsePollForMessagePumpEpoll,
+              "UsePollForMessagePumpEpoll",
+-#if BUILDFLAG(IS_BSD)
+-             base::FEATURE_ENABLED_BY_DEFAULT);
+-#else
+              base::FEATURE_DISABLED_BY_DEFAULT);
+-#endif
+ 
+ // A MessagePump implementation suitable for I/O message loops on Linux-based
+ // systems with epoll API support.
 diff --git a/base/message_loop/message_pump_glib.cc b/base/message_loop/message_pump_glib.cc
 index 6d864fe987..ede3a4621b 100644
 --- a/base/message_loop/message_pump_glib.cc
@@ -1546,9 +1562,18 @@ index 4b60d93405..ef5f701e8d 100644
        enabled_features += [ "is_freebsd" ]
        enabled_features += [ "is_bsd" ]
 diff --git a/net/base/network_change_notifier.cc b/net/base/network_change_notifier.cc
-index 146524c67c..03d69c0e1d 100644
+index 146524c67c..731d945468 100644
 --- a/net/base/network_change_notifier.cc
 +++ b/net/base/network_change_notifier.cc
+@@ -314,7 +314,7 @@ std::unique_ptr<NetworkChangeNotifier> NetworkChangeNotifier::CreateIfNeeded(
+   // running network service in a separate process.
+   return std::make_unique<NetworkChangeNotifierPassive>(initial_type,
+                                                         initial_subtype);
+-#elif BUILDFLAG(IS_CHROMEOS)
++#elif BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_NETBSD)
+   return std::make_unique<NetworkChangeNotifierPassive>(initial_type,
+                                                         initial_subtype);
+ #elif BUILDFLAG(IS_LINUX)
 @@ -540,7 +540,7 @@ base::cstring_view NetworkChangeNotifier::IPAddressChangeTypeToString(
    return kChangeTypeNames[type];
  }
@@ -1598,8 +1623,24 @@ index dcd06a2aad..4be0c3b505 100644
    // Returns the AddressMapOwnerLinux if present.
    virtual AddressMapOwnerLinux* GetAddressMapOwnerInternal();
  #endif
+diff --git a/net/dns/dns_config_service_posix.cc b/net/dns/dns_config_service_posix.cc
+index af37e1289d..2525fae5bd 100644
+--- a/net/dns/dns_config_service_posix.cc
++++ b/net/dns/dns_config_service_posix.cc
+@@ -138,9 +138,11 @@ class DnsConfigServicePosix::Watcher : public DnsConfigService::Watcher {
+     CheckOnCorrectSequence();
+ 
+ // pledge + unveil
++#if !BUILDFLAG(IS_NETBSD)
+     base::CommandLine* command_line = base::CommandLine::ForCurrentProcess();
+     if (!command_line->HasSwitch(sandbox::policy::switches::kNoSandbox))
+       return false;
++#endif
+ 
+     bool success = true;
+     if (!config_watcher_.Watch(base::BindRepeating(&Watcher::OnConfigChanged,
 diff --git a/net/dns/dns_reloader.cc b/net/dns/dns_reloader.cc
-index d07385e531..275794e827 100644
+index d07385e531..1250b157fb 100644
 --- a/net/dns/dns_reloader.cc
 +++ b/net/dns/dns_reloader.cc
 @@ -89,20 +89,37 @@ class DnsReloader : public NetworkChangeNotifier::DNSObserver {
@@ -1619,7 +1660,7 @@ index d07385e531..275794e827 100644
        // been called above.
 +#if BUILDFLAG(IS_NETBSD)
 +      res_nclose(&reload_state->res);
-+      //memset(&reload_state->res, 0, sizeof(reload_state->res));
++      memset(&reload_state->res, 0, sizeof(reload_state->res));
 +      res_ninit(&reload_state->res);
 +#else
        res_nclose(&_res);
