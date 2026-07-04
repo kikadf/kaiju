@@ -9,7 +9,7 @@ _startdir=$(pwd)
 c_tarball_url="https://commondatastorage.googleapis.com/chromium-browser-official"
 #c_tarball_url="https://nerd.hu/distfiles"
 
-_rollup_ver="4.22.4"
+_rollup_ver="4.60.4"
 #_esbuild_ver="0.25.9"
 
 # func
