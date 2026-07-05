@@ -27862,7 +27862,7 @@ index 06f2c84180..60f9e5e155 100644
    }
  
 diff --git a/net/base/features.cc b/net/base/features.cc
-index fbd9f26e13..65e01ddd00 100644
+index fbd9f26e13..d75c79dae9 100644
 --- a/net/base/features.cc
 +++ b/net/base/features.cc
 @@ -40,7 +40,7 @@ BASE_FEATURE(kCapReferrerToOriginOnCrossOrigin,
@@ -27874,15 +27874,6 @@ index fbd9f26e13..65e01ddd00 100644
               base::FEATURE_ENABLED_BY_DEFAULT
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
-@@ -314,7 +314,7 @@ inline constexpr auto kMigrateSessionsOnNetworkChangeV2Default =
- BASE_FEATURE(kMigrateSessionsOnNetworkChangeV2,
-              kMigrateSessionsOnNetworkChangeV2Default);
- 
--#if BUILDFLAG(IS_LINUX)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
- BASE_FEATURE(kAddressTrackerLinuxIsProxied, base::FEATURE_ENABLED_BY_DEFAULT);
- #endif  // BUILDFLAG(IS_LINUX)
- 
 @@ -426,7 +426,7 @@ BASE_FEATURE(kReportingApiEnableEnterpriseCookieIssues,
               base::FEATURE_DISABLED_BY_DEFAULT);
  
@@ -27893,7 +27884,7 @@ index fbd9f26e13..65e01ddd00 100644
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
 diff --git a/net/base/network_change_notifier.cc b/net/base/network_change_notifier.cc
-index 451250e5dc..731d945468 100644
+index 451250e5dc..b1d74c8c53 100644
 --- a/net/base/network_change_notifier.cc
 +++ b/net/base/network_change_notifier.cc
 @@ -38,7 +38,7 @@
@@ -27924,55 +27915,6 @@ index 451250e5dc..731d945468 100644
  #else
    NOTIMPLEMENTED();
    return nullptr;
-@@ -537,7 +540,7 @@ base::cstring_view NetworkChangeNotifier::IPAddressChangeTypeToString(
-   return kChangeTypeNames[type];
- }
- 
--#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
- // static
- AddressMapOwnerLinux* NetworkChangeNotifier::GetAddressMapOwner() {
-   return g_network_change_notifier
-@@ -886,7 +889,7 @@ NetworkChangeNotifier::NetworkChangeNotifier(
-   }
- }
- 
--#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
- AddressMapOwnerLinux* NetworkChangeNotifier::GetAddressMapOwnerInternal() {
-   return nullptr;
- }
-diff --git a/net/base/network_change_notifier.h b/net/base/network_change_notifier.h
-index dcd06a2aad..4be0c3b505 100644
---- a/net/base/network_change_notifier.h
-+++ b/net/base/network_change_notifier.h
-@@ -20,7 +20,7 @@
- #include "net/base/network_handle.h"
- #include "third_party/perfetto/include/perfetto/tracing/track.h"
- 
--#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
- #include "net/base/address_map_linux.h"
- #endif
- 
-@@ -470,7 +470,7 @@ class NET_EXPORT NetworkChangeNotifier {
-   // packets sent lazily.
-   static bool IsDefaultNetworkActive();
- 
--#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
-   // Returns the AddressTrackerLinux if present.
-   static AddressMapOwnerLinux* GetAddressMapOwner();
- #endif
-@@ -645,7 +645,7 @@ class NET_EXPORT NetworkChangeNotifier {
-       SystemDnsConfigChangeNotifier* system_dns_config_notifier = nullptr,
-       bool omit_observers_in_constructor_for_testing = false);
- 
--#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
-   // Returns the AddressMapOwnerLinux if present.
-   virtual AddressMapOwnerLinux* GetAddressMapOwnerInternal();
- #endif
 diff --git a/net/base/network_change_notifier_passive.cc b/net/base/network_change_notifier_passive.cc
 index a5d54954ef..4a64d7335c 100644
 --- a/net/base/network_change_notifier_passive.cc
@@ -37878,14 +37820,14 @@ index eea2a80d60..3d5b003986 100644
  #else
  constexpr char kVulkanLibName[] = "libvulkan.so.1";
 diff --git a/third_party/dawn/src/utils/platform.h b/third_party/dawn/src/utils/platform.h
-index 4dd58a4878..f0d358a374 100644
+index 4dd58a4878..d03606cb10 100644
 --- a/third_party/dawn/src/utils/platform.h
 +++ b/third_party/dawn/src/utils/platform.h
 @@ -60,6 +60,11 @@
  #error "Unsupported Windows platform."
  #endif
  
-+#elif defined(__OpenBSD__) || defined(__FreeBSD__)
++#elif defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__NetBSD__)
 +#define DAWN_PLATFORM_IS_LINUX 1
 +#define DAWN_PLATFORM_IS_BSD 1
 +#define DAWN_PLATFORM_IS_POSIX 1

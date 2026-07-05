@@ -1559,8 +1559,21 @@ index 3e81e6468a..efc74ee5a5 100644
      if (is_freebsd) {
        enabled_features += [ "is_freebsd" ]
        enabled_features += [ "is_bsd" ]
+diff --git a/net/base/features.cc b/net/base/features.cc
+index 65e01ddd00..d75c79dae9 100644
+--- a/net/base/features.cc
++++ b/net/base/features.cc
+@@ -314,7 +314,7 @@ inline constexpr auto kMigrateSessionsOnNetworkChangeV2Default =
+ BASE_FEATURE(kMigrateSessionsOnNetworkChangeV2,
+              kMigrateSessionsOnNetworkChangeV2Default);
+ 
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
++#if BUILDFLAG(IS_LINUX)
+ BASE_FEATURE(kAddressTrackerLinuxIsProxied, base::FEATURE_ENABLED_BY_DEFAULT);
+ #endif  // BUILDFLAG(IS_LINUX)
+ 
 diff --git a/net/base/network_change_notifier.cc b/net/base/network_change_notifier.cc
-index 146524c67c..731d945468 100644
+index 146524c67c..b1d74c8c53 100644
 --- a/net/base/network_change_notifier.cc
 +++ b/net/base/network_change_notifier.cc
 @@ -314,7 +314,7 @@ std::unique_ptr<NetworkChangeNotifier> NetworkChangeNotifier::CreateIfNeeded(
@@ -1572,55 +1585,6 @@ index 146524c67c..731d945468 100644
    return std::make_unique<NetworkChangeNotifierPassive>(initial_type,
                                                          initial_subtype);
  #elif BUILDFLAG(IS_LINUX)
-@@ -540,7 +540,7 @@ base::cstring_view NetworkChangeNotifier::IPAddressChangeTypeToString(
-   return kChangeTypeNames[type];
- }
- 
--#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
- // static
- AddressMapOwnerLinux* NetworkChangeNotifier::GetAddressMapOwner() {
-   return g_network_change_notifier
-@@ -889,7 +889,7 @@ NetworkChangeNotifier::NetworkChangeNotifier(
-   }
- }
- 
--#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
- AddressMapOwnerLinux* NetworkChangeNotifier::GetAddressMapOwnerInternal() {
-   return nullptr;
- }
-diff --git a/net/base/network_change_notifier.h b/net/base/network_change_notifier.h
-index dcd06a2aad..4be0c3b505 100644
---- a/net/base/network_change_notifier.h
-+++ b/net/base/network_change_notifier.h
-@@ -20,7 +20,7 @@
- #include "net/base/network_handle.h"
- #include "third_party/perfetto/include/perfetto/tracing/track.h"
- 
--#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
- #include "net/base/address_map_linux.h"
- #endif
- 
-@@ -470,7 +470,7 @@ class NET_EXPORT NetworkChangeNotifier {
-   // packets sent lazily.
-   static bool IsDefaultNetworkActive();
- 
--#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
-   // Returns the AddressTrackerLinux if present.
-   static AddressMapOwnerLinux* GetAddressMapOwner();
- #endif
-@@ -645,7 +645,7 @@ class NET_EXPORT NetworkChangeNotifier {
-       SystemDnsConfigChangeNotifier* system_dns_config_notifier = nullptr,
-       bool omit_observers_in_constructor_for_testing = false);
- 
--#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
-   // Returns the AddressMapOwnerLinux if present.
-   virtual AddressMapOwnerLinux* GetAddressMapOwnerInternal();
- #endif
 diff --git a/net/dns/dns_config_service_posix.cc b/net/dns/dns_config_service_posix.cc
 index af37e1289d..2525fae5bd 100644
 --- a/net/dns/dns_config_service_posix.cc
@@ -2683,6 +2647,19 @@ index de67992bd3..d7e49f800d 100644
  
  // Common properties of external images represented by FDs. On successful import the file
  // descriptor's ownership is transferred to the Dawn implementation and they shouldn't be
+diff --git a/third_party/dawn/src/utils/platform.h b/third_party/dawn/src/utils/platform.h
+index f0d358a374..d03606cb10 100644
+--- a/third_party/dawn/src/utils/platform.h
++++ b/third_party/dawn/src/utils/platform.h
+@@ -60,7 +60,7 @@
+ #error "Unsupported Windows platform."
+ #endif
+ 
+-#elif defined(__OpenBSD__) || defined(__FreeBSD__)
++#elif defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__NetBSD__)
+ #define DAWN_PLATFORM_IS_LINUX 1
+ #define DAWN_PLATFORM_IS_BSD 1
+ #define DAWN_PLATFORM_IS_POSIX 1
 diff --git a/third_party/dawn/third_party/renderdoc/renderdoc/api/app/renderdoc_app.h b/third_party/dawn/third_party/renderdoc/renderdoc/api/app/renderdoc_app.h
 index 291c065979..bc84358d3c 100644
 --- a/third_party/dawn/third_party/renderdoc/renderdoc/api/app/renderdoc_app.h
