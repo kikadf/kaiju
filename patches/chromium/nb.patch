@@ -878,7 +878,7 @@ index 07ca0f252a..ea8a2b24a5 100644
  #define PRESERVE_MOST [[clang::preserve_most]]
  #else
 diff --git a/base/debug/debugger_posix.cc b/base/debug/debugger_posix.cc
-index d5dc8c4131..6f4f3ad318 100644
+index d5dc8c4131..01d528ab42 100644
 --- a/base/debug/debugger_posix.cc
 +++ b/base/debug/debugger_posix.cc
 @@ -39,6 +39,10 @@
@@ -900,7 +900,7 @@ index d5dc8c4131..6f4f3ad318 100644
    int mib[] = {CTL_KERN,
                 KERN_PROC,
                 KERN_PROC_PID,
-@@ -94,37 +99,75 @@ bool BeingDebugged() {
+@@ -94,37 +99,70 @@ bool BeingDebugged() {
                 0
  #endif
    };
@@ -941,11 +941,6 @@ index d5dc8c4131..6f4f3ad318 100644
 +  }
 +
 +  int sysctl_result = sysctl(mib, std::size(mib), info, &info_size, NULL, 0);
-+#elif BUILDFLAG(IS_NETBSD)
-+  if (sysctl(mib, std::size(mib), NULL, &info_size, NULL, 0) < 0)
-+    return -1;
-+
-+  mib[5] = (info_size / sizeof(struct kinfo_proc2));
  #endif
  
 +#if !BUILDFLAG(IS_OPENBSD)
@@ -1337,6 +1332,56 @@ index 0000000000..7b89027ea5
 +}
 +
 +}  // namespace base
+diff --git a/base/files/file_path_watcher_kqueue.cc b/base/files/file_path_watcher_kqueue.cc
+index 3e9eaa7d4a..e554c045af 100644
+--- a/base/files/file_path_watcher_kqueue.cc
++++ b/base/files/file_path_watcher_kqueue.cc
+@@ -239,9 +239,14 @@ bool FilePathWatcherKQueue::UpdateWatches(bool* target_file_affected) {
+ 
+     EventVector updates(valid);
+     ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
++#if BUILDFLAG(IS_NETBSD)
++    int count = HANDLE_EINTR(
++        kevent(kqueue_, &events_[0], valid, &updates[0], valid, NULL));
++#else
+     const int valid_int = checked_cast<int>(valid);
+     int count = HANDLE_EINTR(
+         kevent(kqueue_, &events_[0], valid_int, &updates[0], valid_int, NULL));
++#endif
+     if (!AreKeventValuesValid(&updates[0], count)) {
+       return false;
+     }
+@@ -294,9 +299,14 @@ bool FilePathWatcherKQueue::Watch(const FilePath& path,
+   EventVector responses(last_entry);
+ 
+   ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
++#if BUILDFLAG(IS_NETBSD)
++  int count = HANDLE_EINTR(kevent(kqueue_, &events_[0], last_entry,
++                                  &responses[0], last_entry, NULL));
++#else
+   const int last_entry_int = checked_cast<int>(last_entry);
+   int count = HANDLE_EINTR(kevent(kqueue_, &events_[0], last_entry_int,
+-                                  &responses[0], last_entry_int, NULL));
++                                  &responses[0], last_entry_int, NULL))
++#endif;
+   if (!AreKeventValuesValid(&responses[0], count)) {
+     // Calling Cancel() here to close any file descriptors that were opened.
+     // This would happen in the destructor anyways, but FilePathWatchers tend to
+@@ -345,9 +355,13 @@ void FilePathWatcherKQueue::OnKQueueReadable() {
+   // occurred.
+   EventVector updates(events_.size());
+   struct timespec timeout = {0, 0};
++#if BUILDFLAG(IS_NETBSD)
++  int count = HANDLE_EINTR(kevent(kqueue_, NULL, 0, &updates[0],
++                                  updates.size()), &timeout));
++#else
+   int count = HANDLE_EINTR(kevent(kqueue_, NULL, 0, &updates[0],
+                                   checked_cast<int>(updates.size()), &timeout));
+-
++#endif
+   // Error values are stored within updates, so check to make sure that no
+   // errors occurred.
+   if (!AreKeventValuesValid(&updates[0], count)) {
 diff --git a/base/files/file_path_watcher_kqueue.h b/base/files/file_path_watcher_kqueue.h
 index 0bd21afade..bcc770918b 100644
 --- a/base/files/file_path_watcher_kqueue.h
@@ -39286,6 +39331,33 @@ index 1615039f08..9191ee5b2e 100644
  
  /* Define to 1 if you have the <sys/mman.h> header file. */
  #define HAVE_SYS_MMAN_H 1
+diff --git a/third_party/nasm/output/outieee.c b/third_party/nasm/output/outieee.c
+index 9e26cec905..e702f7e381 100644
+--- a/third_party/nasm/output/outieee.c
++++ b/third_party/nasm/output/outieee.c
+@@ -1246,7 +1246,8 @@ static void ieee_unqualified_name(char *dest, char *source)
+ {
+     if (ieee_uppercase) {
+         while (*source)
+-            *dest++ = toupper(*source++);
++            unsigned char ch = *source++;
++            *dest++ = toupper(ch);
+         *dest = 0;
+     } else
+         strcpy(dest, source);
+diff --git a/third_party/nasm/output/outobj.c b/third_party/nasm/output/outobj.c
+index 685c5933ef..4eb8d602d0 100644
+--- a/third_party/nasm/output/outobj.c
++++ b/third_party/nasm/output/outobj.c
+@@ -407,7 +407,7 @@ static ObjRecord *obj_name(ObjRecord * orp, const char *name)
+     orp->used += len + 1;
+     if (obj_uppercase)
+         while (--len >= 0) {
+-            *ptr++ = toupper(*name);
++            *ptr++ = toupper((unsigned char)*name);
+             name++;
+     } else
+         memcpy(ptr, name, len);
 diff --git a/third_party/node/check_version.py b/third_party/node/check_version.py
 index ba73feadae..1662282ca6 100755
 --- a/third_party/node/check_version.py
@@ -39406,6 +39478,19 @@ index 3b3f1d9b5d..47cbef671d 100644
  
    # Build PDFium to use AGG (fully supported).
    pdf_use_agg = true
+diff --git a/third_party/pdfium/third_party/lcms/src/cmscgats.c b/third_party/pdfium/third_party/lcms/src/cmscgats.c
+index 8b5aa768ce..ddd1370cf2 100644
+--- a/third_party/pdfium/third_party/lcms/src/cmscgats.c
++++ b/third_party/pdfium/third_party/lcms/src/cmscgats.c
+@@ -752,7 +752,7 @@ cmsFloat64Number ParseFloatNumber(const char *Buffer)
+     }
+ 
+     // Exponent, example 34.00E+20
+-    if (*Buffer && toupper(*Buffer) == 'E') {
++    if (*Buffer && toupper((unsigned char)*Buffer) == 'E') {
+ 
+         int e;
+         int sgn;
 diff --git a/third_party/pdfium/xfa/fxfa/parser/cxfa_timezoneprovider.cpp b/third_party/pdfium/xfa/fxfa/parser/cxfa_timezoneprovider.cpp
 index 44ed2ab858..fcbc409e0e 100644
 --- a/third_party/pdfium/xfa/fxfa/parser/cxfa_timezoneprovider.cpp

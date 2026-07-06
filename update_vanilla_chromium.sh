@@ -76,6 +76,8 @@ if [ ! -f "$tools_workdir/chromium-${c_ver}-extract_done" ]; then
     sed -i'' 's/swiftshader/swiftshaderXXX/g' "chromium-${c_ver}/third_party/.gitignore"
     sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "chromium-${c_ver}/third_party/vulkan-deps/.gitignore"
     sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "chromium-${c_ver}/third_party/.gitignore"
+    sed -i'' 's/vulkan-loader/vulkan-loadersXXX/g' "chromium-${c_ver}/third_party/.gitignore"
+    sed -i'' 's/vulkan-loader/vulkan-loadersXXX/g' "chromium-${c_ver}/third_party/vulkan-deps/.gitignore"
     sed -i'' 's/dawn_commit_hash/dawn_commit_hashXXX/g' "chromium-${c_ver}/gpu/webgpu/.gitignore"
 
     # Extra sources
