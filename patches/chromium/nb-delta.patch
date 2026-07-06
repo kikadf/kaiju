@@ -3367,6 +3367,66 @@ index 47b5b51412..9173cf465c 100644
    auto cache = fontconfig_caches + "/" + kCacheKey + "-le64.cache-" + FC_CACHE_VERSION;
    bool cache_exists = access(cache.c_str(), F_OK) == 0;
    return !cache_exists;
+diff --git a/third_party/vulkan-loader/src/BUILD.gn b/third_party/vulkan-loader/src/BUILD.gn
+index 2fe7178ce7..2fe7e16d32 100644
+--- a/third_party/vulkan-loader/src/BUILD.gn
++++ b/third_party/vulkan-loader/src/BUILD.gn
+@@ -53,11 +53,11 @@ config("vulkan_internal_config") {
+       "EXTRASYSCONFDIR=\"/pkg/data\"",
+     ]
+   }
+-  if (is_linux || is_chromeos || is_mac) {
++  if (is_linux || is_chromeos || is_mac || is_bsd) {
+     defines += [
+-      "SYSCONFDIR=\"/etc\"",
+-      "FALLBACK_CONFIG_DIRS=\"/etc/xdg\"",
+-      "FALLBACK_DATA_DIRS=\"/usr/X11R6/share:/usr/local/share:/usr/share\"",
++      "SYSCONFDIR=\"@PKG_SYSCONFBASE@\"",
++      "FALLBACK_CONFIG_DIRS=\"@PKG_SYSCONFBASE@/xdg\"",
++      "FALLBACK_DATA_DIRS=\"@X11BASE@/share:@PREFIX@/share:/usr/share\"",
+     ]
+   }
+   if (is_apple && !vulkan_loader_shared) {
+diff --git a/third_party/vulkan-loader/src/loader/loader_environment.c b/third_party/vulkan-loader/src/loader/loader_environment.c
+index 610eadf458..bcd3260286 100644
+--- a/third_party/vulkan-loader/src/loader/loader_environment.c
++++ b/third_party/vulkan-loader/src/loader/loader_environment.c
+@@ -264,7 +264,7 @@ VkResult parse_generic_filter_environment_var(const struct loader_instance *inst
+     }
+ 
+     for (uint32_t iii = 0; iii < env_var_len; ++iii) {
+-        parsing_string[iii] = (char)tolower(env_var_value[iii]);
++        parsing_string[iii] = (char)tolower((unsigned char)env_var_value[iii]);
+     }
+     parsing_string[env_var_len] = '\0';
+ 
+@@ -324,7 +324,7 @@ VkResult parse_layers_disable_filter_environment_var(const struct loader_instanc
+     }
+ 
+     for (uint32_t iii = 0; iii < env_var_len; ++iii) {
+-        parsing_string[iii] = (char)tolower(env_var_value[iii]);
++        parsing_string[iii] = (char)tolower((unsigned char)env_var_value[iii]);
+     }
+     parsing_string[env_var_len] = '\0';
+ 
+@@ -396,7 +396,7 @@ bool check_name_matches_filter_environment_var(const char *name, const struct lo
+     const size_t name_len = strlen(name);
+     char lower_name[VK_MAX_EXTENSION_NAME_SIZE];
+     for (uint32_t iii = 0; iii < name_len; ++iii) {
+-        lower_name[iii] = (char)tolower(name[iii]);
++        lower_name[iii] = (char)tolower((unsigned char)name[iii]);
+     }
+     lower_name[name_len] = '\0';
+     for (uint32_t filt = 0; filt < filter_struct->count; ++filt) {
+@@ -578,7 +578,7 @@ void parse_id_filter_environment_var(const struct loader_instance *inst, const c
+     // Allocate a separate string since scan_for_next_comma modifies the original string
+     parsing_string = loader_stack_alloc(env_var_len + 1);
+     for (uint32_t iii = 0; iii < env_var_len; ++iii) {
+-        parsing_string[iii] = (char)tolower(env_var_value[iii]);
++        parsing_string[iii] = (char)tolower((unsigned char)env_var_value[iii]);
+     }
+     parsing_string[env_var_len] = '\0';
+ 
 diff --git a/third_party/vulkan-validation-layers/src/layers/external/vma/vk_mem_alloc.h b/third_party/vulkan-validation-layers/src/layers/external/vma/vk_mem_alloc.h
 index eb86c3c3ed..f444ad6e7e 100644
 --- a/third_party/vulkan-validation-layers/src/layers/external/vma/vk_mem_alloc.h
@@ -3394,6 +3454,20 @@ index ae7cf93935..bb33c5f993 100644
  
  #include <dlfcn.h>
  
+diff --git a/third_party/vulkan_memory_allocator/include/vk_mem_alloc.h b/third_party/vulkan_memory_allocator/include/vk_mem_alloc.h
+index 13ecec25c3..2f2b7a9ea6 100644
+--- a/third_party/vulkan_memory_allocator/include/vk_mem_alloc.h
++++ b/third_party/vulkan_memory_allocator/include/vk_mem_alloc.h
+@@ -2760,7 +2760,8 @@ void* vma_aligned_alloc(size_t alignment, size_t size)
+ 
+     return memalign(alignment, size);
+ }
+-#elif defined(__APPLE__) || defined(__ANDROID__) || (defined(__linux__) && defined(__GLIBCXX__) && !defined(_GLIBCXX_HAVE_ALIGNED_ALLOC)) || defined(__OpenBSD__) || defined(__FreeBSD__)
++#elif defined(__APPLE__) || defined(__ANDROID__) || (defined(__linux__) && defined(__GLIBCXX__) && !defined(_GLIBCXX_HAVE_ALIGNED_ALLOC)) || \
++      defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__NetBSD__)
+ #include <cstdlib>
+ 
+ #if defined(__APPLE__)
 diff --git a/third_party/wayland/BUILD.gn b/third_party/wayland/BUILD.gn
 index f1914d9545..c2ffa2820c 100644
 --- a/third_party/wayland/BUILD.gn
