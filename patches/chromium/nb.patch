@@ -1333,7 +1333,7 @@ index 0000000000..7b89027ea5
 +
 +}  // namespace base
 diff --git a/base/files/file_path_watcher_kqueue.cc b/base/files/file_path_watcher_kqueue.cc
-index 3e9eaa7d4a..e554c045af 100644
+index 3e9eaa7d4a..21ea790d09 100644
 --- a/base/files/file_path_watcher_kqueue.cc
 +++ b/base/files/file_path_watcher_kqueue.cc
 @@ -239,9 +239,14 @@ bool FilePathWatcherKQueue::UpdateWatches(bool* target_file_affected) {
@@ -1361,9 +1361,8 @@ index 3e9eaa7d4a..e554c045af 100644
 +#else
    const int last_entry_int = checked_cast<int>(last_entry);
    int count = HANDLE_EINTR(kevent(kqueue_, &events_[0], last_entry_int,
--                                  &responses[0], last_entry_int, NULL));
-+                                  &responses[0], last_entry_int, NULL))
-+#endif;
+                                   &responses[0], last_entry_int, NULL));
++#endif
    if (!AreKeventValuesValid(&responses[0], count)) {
      // Calling Cancel() here to close any file descriptors that were opened.
      // This would happen in the destructor anyways, but FilePathWatchers tend to
@@ -1373,7 +1372,7 @@ index 3e9eaa7d4a..e554c045af 100644
    struct timespec timeout = {0, 0};
 +#if BUILDFLAG(IS_NETBSD)
 +  int count = HANDLE_EINTR(kevent(kqueue_, NULL, 0, &updates[0],
-+                                  updates.size()), &timeout));
++                                  updates.size(), &timeout));
 +#else
    int count = HANDLE_EINTR(kevent(kqueue_, NULL, 0, &updates[0],
                                    checked_cast<int>(updates.size()), &timeout));
