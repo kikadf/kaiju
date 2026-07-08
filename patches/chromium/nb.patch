@@ -39332,16 +39332,19 @@ index 1615039f08..9191ee5b2e 100644
  /* Define to 1 if you have the <sys/mman.h> header file. */
  #define HAVE_SYS_MMAN_H 1
 diff --git a/third_party/nasm/output/outieee.c b/third_party/nasm/output/outieee.c
-index 9e26cec905..e702f7e381 100644
+index 9e26cec905..b7716c4c7c 100644
 --- a/third_party/nasm/output/outieee.c
 +++ b/third_party/nasm/output/outieee.c
-@@ -1246,7 +1246,8 @@ static void ieee_unqualified_name(char *dest, char *source)
+@@ -1245,8 +1245,10 @@ static int32_t ieee_putlr(struct ieeeFixupp *p)
+ static void ieee_unqualified_name(char *dest, char *source)
  {
      if (ieee_uppercase) {
-         while (*source)
+-        while (*source)
 -            *dest++ = toupper(*source++);
++        while (*source) {
 +            unsigned char ch = *source++;
 +            *dest++ = toupper(ch);
++        }
          *dest = 0;
      } else
          strcpy(dest, source);

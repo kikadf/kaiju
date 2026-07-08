@@ -2856,16 +2856,19 @@ index a4873a0fa0..258259a94d 100644
  		    uint32_t src_x, uint32_t src_y,
  		    uint32_t src_w, uint32_t src_h)
 diff --git a/third_party/nasm/output/outieee.c b/third_party/nasm/output/outieee.c
-index 9e26cec905..e702f7e381 100644
+index 9e26cec905..b7716c4c7c 100644
 --- a/third_party/nasm/output/outieee.c
 +++ b/third_party/nasm/output/outieee.c
-@@ -1246,7 +1246,8 @@ static void ieee_unqualified_name(char *dest, char *source)
+@@ -1245,8 +1245,10 @@ static int32_t ieee_putlr(struct ieeeFixupp *p)
+ static void ieee_unqualified_name(char *dest, char *source)
  {
      if (ieee_uppercase) {
-         while (*source)
+-        while (*source)
 -            *dest++ = toupper(*source++);
++        while (*source) {
 +            unsigned char ch = *source++;
 +            *dest++ = toupper(ch);
++        }
          *dest = 0;
      } else
          strcpy(dest, source);
