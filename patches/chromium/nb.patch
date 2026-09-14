@@ -39186,6 +39186,20 @@ index 962a10163a..23e3fe47f7 100644
  	openharmony: {
  		arm64: { base: 'openharmony-arm64' }
  	},
+diff --git a/third_party/devtools-frontend/src/third_party/typescript/typescript.py b/third_party/devtools-frontend/src/third_party/typescript/typescript.py
+index b4bade9715..9d0ea8563a 100644
+--- a/third_party/devtools-frontend/src/third_party/typescript/typescript.py
++++ b/third_party/devtools-frontend/src/third_party/typescript/typescript.py
+@@ -10,6 +10,9 @@ import os
+ 
+ 
+ def GetBinaryPath():
++    if platform.system() in ['OpenBSD', 'FreeBSD', 'NetBSD']:
++        return "tsc"
++
+     if platform.machine() == 'arm64':
+         darwin_path = 'mac-arm64'
+     else:
 diff --git a/third_party/federated_compute/src/fcp/client/opstats/pds_backed_opstats_db.cc b/third_party/federated_compute/src/fcp/client/opstats/pds_backed_opstats_db.cc
 index c0a48548de..f4ce2a0095 100644
 --- a/third_party/federated_compute/src/fcp/client/opstats/pds_backed_opstats_db.cc

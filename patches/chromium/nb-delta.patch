@@ -2766,6 +2766,19 @@ index 0146733149..23e3fe47f7 100644
  	linux: {
  		arm: { base: 'linux-arm-gnueabihf', musl: 'linux-arm-musleabihf' },
  		arm64: { base: 'linux-arm64-gnu', musl: 'linux-arm64-musl' },
+diff --git a/third_party/devtools-frontend/src/third_party/typescript/typescript.py b/third_party/devtools-frontend/src/third_party/typescript/typescript.py
+index 8897d810aa..9d0ea8563a 100644
+--- a/third_party/devtools-frontend/src/third_party/typescript/typescript.py
++++ b/third_party/devtools-frontend/src/third_party/typescript/typescript.py
+@@ -10,7 +10,7 @@ import os
+ 
+ 
+ def GetBinaryPath():
+-    if platform.system() in ['OpenBSD', 'FreeBSD']:
++    if platform.system() in ['OpenBSD', 'FreeBSD', 'NetBSD']:
+         return "tsc"
+ 
+     if platform.machine() == 'arm64':
 diff --git a/third_party/federated_compute/third_party/protodatastore-cpp/src/protostore/file-storage.cc b/third_party/federated_compute/third_party/protodatastore-cpp/src/protostore/file-storage.cc
 index 3293800bf9..0521dc6ba1 100644
 --- a/third_party/federated_compute/third_party/protodatastore-cpp/src/protostore/file-storage.cc
