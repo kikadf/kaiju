@@ -6,9 +6,6 @@
 _startdir=$(pwd)
 . "$_startdir/kaiju.conf"
 
-c_tarball_url="https://commondatastorage.googleapis.com/chromium-browser-official"
-#c_tarball_url="https://nerd.hu/distfiles"
-
 _rollup_ver="4.60.4"
 #_esbuild_ver="0.25.9"
 
@@ -31,11 +28,16 @@ die () {
 
 if [ "$1" != "" ]; then
 	c_ver="$1"
+        c_ver_nosuffix=${c_ver%%-*}
 else
 	echo "Error: not set chromium version"
 	echo "Usage: ./update_vanilla_chromium.sh <chromium version>"
 	exit 1
 fi
+
+#c_tarball_url="https://commondatastorage.googleapis.com/chromium-browser-official"
+c_tarball_url="https://github.com/chromium-linux-tarballs/chromium-tarballs/releases/download/${c_ver_nosuffix}"
+#c_tarball_url="https://nerd.hu/distfiles"
 
 # create workdir
 mkdir -p "$tools_workdir" || die
@@ -44,7 +46,7 @@ mkdir -p "$tools_workdir" || die
 if [ ! -f "$tools_workdir/chromium-${c_ver}-download_done" ]; then
     cd "$tools_workdir" || die
     if [ ! -f "$distfiles/chromium-${c_ver}.tar.xz" ]; then
-        curl "${c_tarball_url}/chromium-${c_ver}.tar.xz" -o "$distfiles/chromium-${c_ver}.tar.xz" || die "curl chromium"
+        curl -L "${c_tarball_url}/chromium-${c_ver}.tar.xz" -o "$distfiles/chromium-${c_ver}.tar.xz" || die "curl chromium"
     fi
     #curl "${c_tarball_url}/chrome-gn-${c_ver}-src.tar.xz" -o "chrome-gn-${c_ver}-src.tar.xz" || die "curl chrome-gn"
     curl "${c_tarball_url}/chromium-${c_ver}.tar.xz.hashes" -o "chromium-${c_ver}.tar.xz.hashes" || die "curl hashes"

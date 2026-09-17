@@ -2383,7 +2383,7 @@ index 703e54a7b8..b24d91923d 100755
  
  
 diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
-index b6b80bcc5a..8ed57242cd 100644
+index 4725fba409..105292e9e5 100644
 --- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
 +++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
 @@ -454,7 +454,7 @@
@@ -2440,6 +2440,15 @@ index b6b80bcc5a..8ed57242cd 100644
        status: "experimental",
        public: true,
      },
+@@ -2229,7 +2229,7 @@
+       name: "DesktopPWAsAdditionalWindowingControls",
+       status: "experimental",
+       origin_trial_feature_name: "DesktopPWAsAdditionalWindowingControls",
+-      origin_trial_os: ["win", "mac", "linux", "chromeos", "openbsd", "freebsd"],
++      origin_trial_os: ["win", "mac", "linux", "chromeos", "openbsd", "freebsd", "netbsd"],
+       origin_trial_allows_third_party: true,
+       base_feature_status: "enabled",
+       copied_from_base_feature_if: "overridden",
 @@ -2418,7 +2418,7 @@
        name: "DocumentIsolationPolicy",
        status: "experimental",
@@ -2451,6 +2460,15 @@ index b6b80bcc5a..8ed57242cd 100644
      {
 @@ -2627,7 +2627,7 @@
        public: true,
+       origin_trial_feature_name: "EmailVerificationProtocol",
+       origin_trial_allows_third_party: true,
+-      origin_trial_os: ["win", "mac", "linux", "chromeos", "openbsd", "freebsd"],
++      origin_trial_os: ["win", "mac", "linux", "chromeos", "openbsd", "freebsd", "netbsd"],
+       status: {
+         "Win": "experimental",
+         "Mac": "experimental",
+@@ -2644,7 +2644,7 @@
+       depends_on: ["EmailVerificationProtocol"],
        origin_trial_feature_name: "EmailVerificationProtocol",
        origin_trial_allows_third_party: true,
 -      origin_trial_os: ["win", "mac", "linux", "chromeos", "openbsd", "freebsd"],
@@ -2476,7 +2494,7 @@ index b6b80bcc5a..8ed57242cd 100644
        public: true,
        base_feature_status: "enabled",
        copied_from_base_feature_if: "overridden",
-@@ -6537,7 +6537,7 @@
+@@ -6541,7 +6541,7 @@
        name: "UnrestrictedSharedArrayBuffer",
        base_feature: "none",
        origin_trial_feature_name: "UnrestrictedSharedArrayBuffer",
@@ -2485,7 +2503,7 @@ index b6b80bcc5a..8ed57242cd 100644
      },
      // Enables using policy-controlled feature "usb-unrestricted" to allow
      // isolated context to access protected USB interface classes and to
-@@ -6747,7 +6747,7 @@
+@@ -6751,7 +6751,7 @@
        name: "WebAppInstallation",
        status: {"Android": "", "default": "test"},
        origin_trial_feature_name: "WebAppInstallation",
@@ -2494,7 +2512,7 @@ index b6b80bcc5a..8ed57242cd 100644
        public: true,
        base_feature_status: "enabled",
        copied_from_base_feature_if: "overridden",
-@@ -6761,7 +6761,7 @@
+@@ -6765,7 +6765,7 @@
      {
        name: "WebAppScopeExtensions",
        origin_trial_feature_name: "WebAppScopeExtensions",

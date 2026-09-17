@@ -10316,7 +10316,7 @@ index 724ec4c34f..2c8820b760 100644
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
  
 diff --git a/chrome/browser/prefs/browser_prefs.cc b/chrome/browser/prefs/browser_prefs.cc
-index b0923f5e9c..5b220b2f12 100644
+index 6ccdf1e52f..ee5e597da3 100644
 --- a/chrome/browser/prefs/browser_prefs.cc
 +++ b/chrome/browser/prefs/browser_prefs.cc
 @@ -344,7 +344,7 @@
@@ -10400,8 +10400,8 @@ index b0923f5e9c..5b220b2f12 100644
    registry->RegisterIntegerPref(prefs::kVoiceTypingSettings, 0);
    registry->RegisterBooleanPref(prefs::kPrefDictationOnboardingCompleted,
                                  false);
--#if BUILDFLAG(IS_LINUX)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_WIN)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_WIN) || BUILDFLAG(IS_BSD)
    registry->RegisterStringPref(prefs::kVoiceTypingHotkey, "Ctrl+Space");
  #else
    registry->RegisterStringPref(prefs::kVoiceTypingHotkey, "Alt+Space");
@@ -12107,7 +12107,7 @@ index 8121f9b9bc..db3622834c 100644
        scoped_observation_{this};
  #endif  // BUILDFLAG(IS_LINUX)
 diff --git a/chrome/browser/ui/browser_actions.cc b/chrome/browser/ui/browser_actions.cc
-index 09509ddd6a..9d7a10045c 100644
+index a899f322a7..cf0567b58b 100644
 --- a/chrome/browser/ui/browser_actions.cc
 +++ b/chrome/browser/ui/browser_actions.cc
 @@ -237,7 +237,7 @@
@@ -12119,7 +12119,7 @@ index 09509ddd6a..9d7a10045c 100644
  #include "chrome/common/pref_names.h"
  #include "components/prefs/pref_service.h"
  #endif
-@@ -2541,7 +2541,7 @@ void BrowserActions::InitializeToolbarAndMiscActions() {
+@@ -2545,7 +2545,7 @@ void BrowserActions::InitializeToolbarAndMiscActions() {
            .Build());
  #endif  // BUILDFLAG(IS_CHROMEOS)
  
@@ -12128,7 +12128,7 @@ index 09509ddd6a..9d7a10045c 100644
    root_action_item_->AddChild(
        actions::ActionItem::Builder(
            base::BindRepeating(
-@@ -2673,7 +2673,7 @@ void BrowserActions::InitializeToolbarAndMiscActions() {
+@@ -2677,7 +2677,7 @@ void BrowserActions::InitializeToolbarAndMiscActions() {
            .SetActionId(kActionExit)
            .Build());
  
@@ -12137,7 +12137,7 @@ index 09509ddd6a..9d7a10045c 100644
    root_action_item_->AddChild(
        actions::ActionItem::Builder(
            base::BindRepeating(
-@@ -3585,7 +3585,7 @@ void BrowserActions::InitializeToolbarAndMiscActions() {
+@@ -3589,7 +3589,7 @@ void BrowserActions::InitializeToolbarAndMiscActions() {
                [](BrowserWindowInterface* bwi, actions::ActionItem* item,
                   actions::ActionInvocationContext context) {
                  base::RecordAction(base::UserMetricsAction("CreateShortcut"));
@@ -12146,7 +12146,7 @@ index 09509ddd6a..9d7a10045c 100644
                  chrome::CreateDesktopShortcutForActiveWebContents(
                      bwi->GetBrowserForMigrationOnly());
  #else
-@@ -4381,7 +4381,7 @@ void BrowserActions::InitializeToolbarAndMiscActions() {
+@@ -4385,7 +4385,7 @@ void BrowserActions::InitializeToolbarAndMiscActions() {
  #endif
  
  #if BUILDFLAG(GOOGLE_CHROME_BRANDING) && \
@@ -12248,10 +12248,10 @@ index 3f62ffd338..4f13dcd80d 100644
        IDC_CREATE_SHORTCUT,
        shortcuts::CanCreateDesktopShortcut(current_web_contents));
 diff --git a/chrome/browser/ui/browser_commands.cc b/chrome/browser/ui/browser_commands.cc
-index b1cbee4f63..2ff0f6566f 100644
+index ec6ecb7da8..7f83b9c8d2 100644
 --- a/chrome/browser/ui/browser_commands.cc
 +++ b/chrome/browser/ui/browser_commands.cc
-@@ -1376,7 +1376,7 @@ void NewTabToRight(BrowserWindowInterface* browser) {
+@@ -1377,7 +1377,7 @@ void NewTabToRight(BrowserWindowInterface* browser) {
  }
  
  void NewTabFromClipboardURL(BrowserWindowInterface* browser) {
@@ -12260,7 +12260,7 @@ index b1cbee4f63..2ff0f6566f 100644
    if (ui::Clipboard::IsSupportedClipboardBuffer(
            ui::ClipboardBuffer::kSelection)) {
      ui::Clipboard* clipboard = ui::Clipboard::GetForCurrentThread();
-@@ -2745,7 +2745,7 @@ void OpenUpdateChromeDialog(BrowserWindowInterface* browser) {
+@@ -2746,7 +2746,7 @@ void OpenUpdateChromeDialog(BrowserWindowInterface* browser) {
      ShowOutdatedUpgradeBubble(browser, browser,
                                /*auto_update_enabled=*/false);
    } else {
@@ -18113,7 +18113,7 @@ index 9c9faf89f3..28d8d87770 100644
    if (kIPHAutofillCreditCardBenefitFeature.name == feature->name) {
      // The credit card benefit IPH appears up to three times over 10 years and
 diff --git a/components/feature_engagement/public/feature_constants.cc b/components/feature_engagement/public/feature_constants.cc
-index 1634cac475..b3f32b9185 100644
+index 4da2653571..45d6f72a12 100644
 --- a/components/feature_engagement/public/feature_constants.cc
 +++ b/components/feature_engagement/public/feature_constants.cc
 @@ -32,7 +32,7 @@ bool IsOnDeviceStorageEnabled() {
@@ -18153,7 +18153,7 @@ index 1634cac475..b3f32b9185 100644
               "IPH_SignInBenefits",
               base::FEATURE_DISABLED_BY_DEFAULT);
 diff --git a/components/feature_engagement/public/feature_constants.h b/components/feature_engagement/public/feature_constants.h
-index 3a04ef9d87..963f0cdeb6 100644
+index a3b440091b..b97800bc53 100644
 --- a/components/feature_engagement/public/feature_constants.h
 +++ b/components/feature_engagement/public/feature_constants.h
 @@ -32,7 +32,7 @@ FEATURE_CONSTANTS_DECLARE_FEATURE(kIPHDemoMode);
@@ -22293,7 +22293,7 @@ index f8b5575189..6f9d2e05d2 100644
    if (command_line->HasSwitch(switches::kSystemFontFamily)) {
      prefs->system_font_family_name =
 diff --git a/content/browser/renderer_host/render_widget_host_view_aura.cc b/content/browser/renderer_host/render_widget_host_view_aura.cc
-index 18f19186a6..4f972c7457 100644
+index ff8bfd445e..e902d59801 100644
 --- a/content/browser/renderer_host/render_widget_host_view_aura.cc
 +++ b/content/browser/renderer_host/render_widget_host_view_aura.cc
 @@ -134,7 +134,7 @@
@@ -22672,10 +22672,10 @@ index ff82883826..1bfe2ff262 100644
  #elif BUILDFLAG(IS_ANDROID)
    ui::InputDeviceObserverAndroid::GetInstance()->RemoveObserver(this);
 diff --git a/content/browser/web_contents/web_contents_impl.cc b/content/browser/web_contents/web_contents_impl.cc
-index c6d05b8b67..68da9a63d2 100644
+index 4ec63da927..e6cffeeaf6 100644
 --- a/content/browser/web_contents/web_contents_impl.cc
 +++ b/content/browser/web_contents/web_contents_impl.cc
-@@ -1373,7 +1373,7 @@ WebContentsImpl::WebContentsImpl(BrowserContext* browser_context)
+@@ -1380,7 +1380,7 @@ WebContentsImpl::WebContentsImpl(BrowserContext* browser_context)
        SlowWebPreferenceCache::GetInstance());
    renderer_preferences_.caret_blink_interval =
        native_theme->caret_blink_interval();
@@ -22684,7 +22684,7 @@ index c6d05b8b67..68da9a63d2 100644
    renderer_preferences_.use_overlay_scrollbar =
        native_theme->use_overlay_scrollbar();
  #endif
-@@ -12632,7 +12632,7 @@ void WebContentsImpl::OnNativeThemeUpdated(ui::NativeTheme* observed_theme) {
+@@ -12639,7 +12639,7 @@ void WebContentsImpl::OnNativeThemeUpdated(ui::NativeTheme* observed_theme) {
    HandleColorRelatedStateChanges();
  
    const auto caret_blink_interval = observed_theme->caret_blink_interval();
@@ -22693,7 +22693,7 @@ index c6d05b8b67..68da9a63d2 100644
    const auto use_overlay_scrollbar = observed_theme->use_overlay_scrollbar();
  #endif
    bool renderer_preference_changed = false;
-@@ -12640,7 +12640,7 @@ void WebContentsImpl::OnNativeThemeUpdated(ui::NativeTheme* observed_theme) {
+@@ -12647,7 +12647,7 @@ void WebContentsImpl::OnNativeThemeUpdated(ui::NativeTheme* observed_theme) {
      renderer_preferences_.caret_blink_interval = caret_blink_interval;
      renderer_preference_changed = true;
    }
@@ -22703,7 +22703,7 @@ index c6d05b8b67..68da9a63d2 100644
      renderer_preferences_.use_overlay_scrollbar = use_overlay_scrollbar;
      renderer_preference_changed = true;
 diff --git a/content/browser/web_contents/web_contents_view_aura.cc b/content/browser/web_contents/web_contents_view_aura.cc
-index 8e9457fe57..44f906f58f 100644
+index 4728f254c4..dfbb28c923 100644
 --- a/content/browser/web_contents/web_contents_view_aura.cc
 +++ b/content/browser/web_contents/web_contents_view_aura.cc
 @@ -189,7 +189,7 @@ class WebDragSourceAura : public content::WebContentsObserver,
@@ -22724,7 +22724,7 @@ index 8e9457fe57..44f906f58f 100644
    // We set the file contents before the URL because the URL also sets file
    // contents (to a .URL shortcut).  We want to prefer file content data over
    // a shortcut so we add it first.
-@@ -1473,7 +1473,7 @@ void WebContentsViewAura::OnMouseEvent(ui::MouseEvent* event) {
+@@ -1479,7 +1479,7 @@ void WebContentsViewAura::OnMouseEvent(ui::MouseEvent* event) {
      // Linux window managers like to handle raise-on-click themselves.  If we
      // raise-on-click manually, this may override user settings that prevent
      // focus-stealing.
@@ -24803,10 +24803,10 @@ index aefb8c1592..459041eb83 100644
  namespace raster {
  
 diff --git a/gpu/command_buffer/service/shared_context_state.cc b/gpu/command_buffer/service/shared_context_state.cc
-index ea954f64c2..34792f47d4 100644
+index 89eb25cc6b..abd8ed9b27 100644
 --- a/gpu/command_buffer/service/shared_context_state.cc
 +++ b/gpu/command_buffer/service/shared_context_state.cc
-@@ -66,7 +66,7 @@
+@@ -67,7 +67,7 @@
  #include "gpu/vulkan/vulkan_implementation.h"
  #include "gpu/vulkan/vulkan_util.h"
  
@@ -24815,7 +24815,7 @@ index ea954f64c2..34792f47d4 100644
  #include "gpu/command_buffer/service/external_semaphore_pool.h"
  #endif
  
-@@ -303,7 +303,7 @@ SharedContextState::SharedContextState(
+@@ -304,7 +304,7 @@ SharedContextState::SharedContextState(
    ) {
      if (vk_context_provider_) {
  #if BUILDFLAG(ENABLE_VULKAN) && \
@@ -24824,7 +24824,7 @@ index ea954f64c2..34792f47d4 100644
        external_semaphore_pool_ = std::make_unique<ExternalSemaphorePool>(this);
  #endif
      }
-@@ -344,7 +344,7 @@ SharedContextState::~SharedContextState() {
+@@ -345,7 +345,7 @@ SharedContextState::~SharedContextState() {
    }
  
  #if BUILDFLAG(ENABLE_VULKAN) && \
@@ -37467,7 +37467,7 @@ index cccfafe8f9..c415553ff1 100644
  #elif BUILDFLAG(IS_IOS)
    return "iPhone";
 diff --git a/third_party/blink/renderer/core/exported/web_view_impl.cc b/third_party/blink/renderer/core/exported/web_view_impl.cc
-index 0426141ab1..e0a22b5470 100644
+index 0707d2f2c6..6dae669c38 100644
 --- a/third_party/blink/renderer/core/exported/web_view_impl.cc
 +++ b/third_party/blink/renderer/core/exported/web_view_impl.cc
 @@ -196,7 +196,7 @@
@@ -37497,7 +37497,7 @@ index 0426141ab1..e0a22b5470 100644
  void UpdateUseOverlayScrollbar(bool use_overlay_scrollbar) {
    ui::NativeTheme::GetInstanceForWeb()->set_use_overlay_scrollbar(
        use_overlay_scrollbar);
-@@ -3676,7 +3676,7 @@ void WebViewImpl::UpdateFontRenderingFromRendererPrefs() {
+@@ -3677,7 +3677,7 @@ void WebViewImpl::UpdateFontRenderingFromRendererPrefs() {
        gfx::FontRenderParams::SUBPIXEL_RENDERING_NONE);
    WebFontRenderStyle::SetSubpixelPositioning(
        renderer_preferences_.use_subpixel_positioning);
@@ -37506,7 +37506,7 @@ index 0426141ab1..e0a22b5470 100644
    if (!renderer_preferences_.system_font_family_name.empty()) {
      WebFontRenderStyle::SetSystemFontFamily(blink::WebString::FromUtf8(
          renderer_preferences_.system_font_family_name));
-@@ -3820,7 +3820,7 @@ void WebViewImpl::UpdateRendererPreferences(
+@@ -3821,7 +3821,7 @@ void WebViewImpl::UpdateRendererPreferences(
        renderer_preferences_.selection_clipboard_buffer_available);
  #endif  // BUILDFLAG(IS_OZONE)
  
@@ -37515,7 +37515,7 @@ index 0426141ab1..e0a22b5470 100644
    GetSettings()->SetMiddleClickPasteAllowed(
        renderer_preferences_.middle_click_paste_allowed);
  #endif  // BUILDFLAG(IS_LINUX)
-@@ -3828,7 +3828,7 @@ void WebViewImpl::UpdateRendererPreferences(
+@@ -3829,7 +3829,7 @@ void WebViewImpl::UpdateRendererPreferences(
    SetExplicitlyAllowedPorts(
        renderer_preferences_.explicitly_allowed_network_ports);
  
@@ -38341,7 +38341,7 @@ index 63011d9d02..e1b4ccd352 100644
  #else
    return false;
 diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
-index 22bb1b8232..8ed57242cd 100644
+index 847eddc84d..105292e9e5 100644
 --- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
 +++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
 @@ -454,7 +454,7 @@
@@ -38398,6 +38398,15 @@ index 22bb1b8232..8ed57242cd 100644
        status: "experimental",
        public: true,
      },
+@@ -2229,7 +2229,7 @@
+       name: "DesktopPWAsAdditionalWindowingControls",
+       status: "experimental",
+       origin_trial_feature_name: "DesktopPWAsAdditionalWindowingControls",
+-      origin_trial_os: ["win", "mac", "linux", "chromeos"],
++      origin_trial_os: ["win", "mac", "linux", "chromeos", "openbsd", "freebsd", "netbsd"],
+       origin_trial_allows_third_party: true,
+       base_feature_status: "enabled",
+       copied_from_base_feature_if: "overridden",
 @@ -2418,7 +2418,7 @@
        name: "DocumentIsolationPolicy",
        status: "experimental",
@@ -38409,6 +38418,15 @@ index 22bb1b8232..8ed57242cd 100644
      {
 @@ -2627,7 +2627,7 @@
        public: true,
+       origin_trial_feature_name: "EmailVerificationProtocol",
+       origin_trial_allows_third_party: true,
+-      origin_trial_os: ["win", "mac", "linux", "chromeos"],
++      origin_trial_os: ["win", "mac", "linux", "chromeos", "openbsd", "freebsd", "netbsd"],
+       status: {
+         "Win": "experimental",
+         "Mac": "experimental",
+@@ -2644,7 +2644,7 @@
+       depends_on: ["EmailVerificationProtocol"],
        origin_trial_feature_name: "EmailVerificationProtocol",
        origin_trial_allows_third_party: true,
 -      origin_trial_os: ["win", "mac", "linux", "chromeos"],
@@ -38434,7 +38452,7 @@ index 22bb1b8232..8ed57242cd 100644
        public: true,
        base_feature_status: "enabled",
        copied_from_base_feature_if: "overridden",
-@@ -6537,7 +6537,7 @@
+@@ -6541,7 +6541,7 @@
        name: "UnrestrictedSharedArrayBuffer",
        base_feature: "none",
        origin_trial_feature_name: "UnrestrictedSharedArrayBuffer",
@@ -38443,7 +38461,7 @@ index 22bb1b8232..8ed57242cd 100644
      },
      // Enables using policy-controlled feature "usb-unrestricted" to allow
      // isolated context to access protected USB interface classes and to
-@@ -6747,7 +6747,7 @@
+@@ -6751,7 +6751,7 @@
        name: "WebAppInstallation",
        status: {"Android": "", "default": "test"},
        origin_trial_feature_name: "WebAppInstallation",
@@ -38452,7 +38470,7 @@ index 22bb1b8232..8ed57242cd 100644
        public: true,
        base_feature_status: "enabled",
        copied_from_base_feature_if: "overridden",
-@@ -6761,7 +6761,7 @@
+@@ -6765,7 +6765,7 @@
      {
        name: "WebAppScopeExtensions",
        origin_trial_feature_name: "WebAppScopeExtensions",
@@ -46406,7 +46424,7 @@ index 838b1fb377..69e7f9f205 100644
        display_scale_factor_observer_{this};
  #endif
 diff --git a/ui/ozone/platform/x11/x11_window.cc b/ui/ozone/platform/x11/x11_window.cc
-index 3605885b57..af21ac2f98 100644
+index 728fe154d8..871d653b16 100644
 --- a/ui/ozone/platform/x11/x11_window.cc
 +++ b/ui/ozone/platform/x11/x11_window.cc
 @@ -1546,7 +1546,7 @@ void X11Window::OnXWindowStateChanged() {
