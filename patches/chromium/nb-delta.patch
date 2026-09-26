@@ -1,8 +1,8 @@
 diff --git a/base/BUILD.gn b/base/BUILD.gn
-index 70f3b72306..bac1f70c24 100644
+index bd02f7995b..ac81468184 100644
 --- a/base/BUILD.gn
 +++ b/base/BUILD.gn
-@@ -1048,7 +1048,7 @@ component("base") {
+@@ -1053,7 +1053,7 @@ component("base") {
      #"system/sys_info_openbsd.cc",
    ]
  
@@ -11,7 +11,7 @@ index 70f3b72306..bac1f70c24 100644
      sources += [
        "posix/sysctl.cc",
        "posix/sysctl.h",
-@@ -2288,6 +2288,13 @@ component("base") {
+@@ -2296,6 +2296,13 @@ component("base") {
        "process/process_metrics_freebsd.cc",
        "system/sys_info_freebsd.cc",
      ]
@@ -50,10 +50,10 @@ index 70adc6f36e..ed7a4ca9ae 100644
  // Need TLS support.
  #define PA_CONFIG_THREAD_CACHE_SUPPORTED() \
 diff --git a/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc b/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc
-index f9e5cfb4eb..2d9d299a5f 100644
+index 84ff139791..34a50b728b 100644
 --- a/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc
 +++ b/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc
-@@ -20,7 +20,7 @@
+@@ -21,7 +21,7 @@
  #endif
  
  #if PA_CONFIG(HAS_LINUX_KERNEL)
@@ -62,7 +62,7 @@ index f9e5cfb4eb..2d9d299a5f 100644
  #include <sys/time.h>
  #include <sys/futex.h>
  #elif defined(OS_FREEBSD)
-@@ -165,6 +165,9 @@ PA_ALWAYS_INLINE long FutexSyscall(volatile void* ftx, int op, int value) {
+@@ -166,6 +166,9 @@ PA_ALWAYS_INLINE long FutexSyscall(volatile void* ftx, int op, int value) {
  #elif defined(OS_OPENBSD)
    long retval = futex(reinterpret_cast<volatile unsigned int *>(&state_), FUTEX_WAIT | FUTEX_PRIVATE_FLAG,
                      kLockedContended, nullptr, nullptr);
@@ -195,7 +195,7 @@ index cf7e25f6da..115cb764b6 100644
  #define HAVE_BACKTRACE
  #include <execinfo.h>
 diff --git a/base/features.cc b/base/features.cc
-index eebc7a5cff..41fe0c0db3 100644
+index 46585436fb..c039d59ebe 100644
 --- a/base/features.cc
 +++ b/base/features.cc
 @@ -17,7 +17,7 @@
@@ -207,7 +207,7 @@ index eebc7a5cff..41fe0c0db3 100644
  #include "base/message_loop/message_pump_epoll.h"
  #endif
  
-@@ -261,7 +261,7 @@ void Init() {
+@@ -259,7 +259,7 @@ void Init() {
    debug::StackTrace::InitializeFeatures();
    FilePath::InitializeFeatures();
  
@@ -337,7 +337,7 @@ index d0b07c2acc..29365bbe1b 100644
      return std::nullopt;
    }
 diff --git a/base/posix/unix_domain_socket.cc b/base/posix/unix_domain_socket.cc
-index da47323643..48b073c0e1 100644
+index d22b67fb2d..b4f90d4ac9 100644
 --- a/base/posix/unix_domain_socket.cc
 +++ b/base/posix/unix_domain_socket.cc
 @@ -196,6 +196,15 @@ ssize_t UnixDomainSocket::RecvMsgWithFlags(int fd,
@@ -523,7 +523,7 @@ index 1f54eef6f4..614b7684f7 100644
    return "Solaris";
  #elif BUILDFLAG(IS_FUCHSIA)
 diff --git a/build/config/BUILDCONFIG.gn b/build/config/BUILDCONFIG.gn
-index 6d7460527b..03bce352f3 100644
+index 2f98f1a04a..c9f50df23c 100644
 --- a/build/config/BUILDCONFIG.gn
 +++ b/build/config/BUILDCONFIG.gn
 @@ -137,7 +137,7 @@ declare_args() {
@@ -535,7 +535,7 @@ index 6d7460527b..03bce352f3 100644
               (current_cpu != "mips" && current_cpu != "mips64")
  
    # Allows the path to a custom target toolchain to be injected as a single
-@@ -255,6 +255,8 @@ if (host_toolchain == "") {
+@@ -256,6 +256,8 @@ if (host_toolchain == "") {
      host_toolchain = "//build/toolchain/openbsd:clang_$host_cpu"
    } else if (host_os == "freebsd") {
      host_toolchain = "//build/toolchain/freebsd:clang_$host_cpu"
@@ -544,7 +544,7 @@ index 6d7460527b..03bce352f3 100644
    } else {
      assert(false, "Unsupported host_os: $host_os")
    }
-@@ -305,7 +307,7 @@ if (target_os == "android") {
+@@ -306,7 +308,7 @@ if (target_os == "android") {
    assert(
        false,
        "emscripten is not a supported target_os. It is available only as secondary toolchain.")
@@ -553,7 +553,7 @@ index 6d7460527b..03bce352f3 100644
    _default_toolchain = host_toolchain
  } else {
    assert(false, "Unsupported target_os: $target_os")
-@@ -342,10 +344,11 @@ is_chromeos = current_os == "chromeos"
+@@ -343,10 +345,11 @@ is_chromeos = current_os == "chromeos"
  is_fuchsia = current_os == "fuchsia"
  is_ios = current_os == "ios"
  is_linux = current_os == "linux" || current_os == "openbsd" ||
@@ -568,10 +568,10 @@ index 6d7460527b..03bce352f3 100644
  is_wasm = current_os == "emscripten"
  is_watchos = current_os == "watchos"
 diff --git a/build/config/compiler/BUILD.gn b/build/config/compiler/BUILD.gn
-index 1e7539aa31..322d29ea30 100644
+index cf46ebea39..f8d095a179 100644
 --- a/build/config/compiler/BUILD.gn
 +++ b/build/config/compiler/BUILD.gn
-@@ -2347,7 +2347,7 @@ config("export_dynamic") {
+@@ -2353,7 +2353,7 @@ config("export_dynamic") {
  #    .o files, instead of just references to .o files in the build directoy
  config("thin_archive") {
    if ((is_apple && use_lld) || (is_linux && !is_clang) || current_os == "aix" ||
@@ -693,7 +693,7 @@ index 13342a232e..181d1597d6 100644
      (current_cpu == "ppc64" || current_cpu == "s390x")) {
    _libclang_path = rust_sysroot_absolute + "/lib64"
 diff --git a/build/rust/rust_bindgen_generator.gni b/build/rust/rust_bindgen_generator.gni
-index 63a6695b82..4cc731bc00 100644
+index 9209439a1d..d41739e715 100644
 --- a/build/rust/rust_bindgen_generator.gni
 +++ b/build/rust/rust_bindgen_generator.gni
 @@ -11,12 +11,12 @@ if (is_win) {
@@ -721,10 +721,10 @@ index 63a6695b82..4cc731bc00 100644
      (host_cpu == "ppc64" || host_cpu == "s390x")) {
    _libclang_path = rust_sysroot_absolute + "/lib64"
 diff --git a/build/toolchain/gcc_toolchain.gni b/build/toolchain/gcc_toolchain.gni
-index 0a9c9291ca..e8e22f8e01 100644
+index dd15e2d546..e87368259b 100644
 --- a/build/toolchain/gcc_toolchain.gni
 +++ b/build/toolchain/gcc_toolchain.gni
-@@ -673,6 +673,11 @@ template("single_gcc_toolchain") {
+@@ -688,6 +688,11 @@ template("single_gcc_toolchain") {
        # to link if not properly ordered or grouped.
        link_command += "$start_group_flag @\"$rspfile\" $end_group_flag {{solibs}} {{libs}} $start_group_flag {{rlibs}} $end_group_flag"
  
@@ -822,10 +822,10 @@ index d294d237a3..729a3ea3e6 100644
    }
  
 diff --git a/chrome/browser/about_flags.cc b/chrome/browser/about_flags.cc
-index 3161ff551c..0aca402a24 100644
+index 5f4038a119..efcce2d9f7 100644
 --- a/chrome/browser/about_flags.cc
 +++ b/chrome/browser/about_flags.cc
-@@ -965,6 +965,8 @@ const FeatureEntry::FeatureParam kAudioBackendPulseAudio[] = {
+@@ -978,6 +978,8 @@ const FeatureEntry::FeatureParam kAudioBackendPulseAudio[] = {
          { "audio-backend", "pulseaudio" }};
  const FeatureEntry::FeatureParam kAudioBackendSndio[] = {
          { "audio-backend", "sndio" }};
@@ -834,7 +834,7 @@ index 3161ff551c..0aca402a24 100644
  const FeatureEntry::FeatureParam kAudioBackendAlsa[] = {
          { "audio-backend", "alsa" }};
  const FeatureEntry::FeatureVariation
-@@ -973,6 +975,8 @@ const FeatureEntry::FeatureVariation
+@@ -986,6 +988,8 @@ const FeatureEntry::FeatureVariation
           kAudioBackendPulseAudio, nullptr},
          {"using sndio by default if available",
           kAudioBackendSndio, nullptr},
@@ -844,7 +844,7 @@ index 3161ff551c..0aca402a24 100644
           kAudioBackendAlsa, nullptr}};
  #endif
 diff --git a/chrome/browser/extensions/api/runtime/chrome_runtime_api_delegate.cc b/chrome/browser/extensions/api/runtime/chrome_runtime_api_delegate.cc
-index 4132ebad88..06ee087f19 100644
+index 53eace44f2..a584eef373 100644
 --- a/chrome/browser/extensions/api/runtime/chrome_runtime_api_delegate.cc
 +++ b/chrome/browser/extensions/api/runtime/chrome_runtime_api_delegate.cc
 @@ -380,6 +380,8 @@ bool ChromeRuntimeAPIDelegate::GetPlatformInfo(PlatformInfo* info) {
@@ -857,10 +857,10 @@ index 4132ebad88..06ee087f19 100644
      info->os = extensions::api::runtime::PlatformOs::kAndroid;
    } else {
 diff --git a/chrome/browser/flag_descriptions.h b/chrome/browser/flag_descriptions.h
-index 93b3e2b02c..62a5da1f75 100644
+index cc43b0fd99..c319a87e1f 100644
 --- a/chrome/browser/flag_descriptions.h
 +++ b/chrome/browser/flag_descriptions.h
-@@ -8847,6 +8847,8 @@ inline constexpr char kAudioBackendName[] =
+@@ -9018,6 +9018,8 @@ inline constexpr char kAudioBackendName[] =
  inline constexpr char kAudioBackendDescription[] =
  #if BUILDFLAG(IS_OPENBSD)
      "Select the desired audio backend to use. The default is sndio.";
@@ -1098,10 +1098,10 @@ index e35f2db520..275b2b9fb4 100644
  #error "unknown os"
  #endif
 diff --git a/content/test/BUILD.gn b/content/test/BUILD.gn
-index d35f941754..4102dbe2e2 100644
+index 4897045f04..c5c519657b 100644
 --- a/content/test/BUILD.gn
 +++ b/content/test/BUILD.gn
-@@ -1837,7 +1837,7 @@ test("content_browsertests") {
+@@ -1830,7 +1830,7 @@ test("content_browsertests") {
      "--disable-crashpad-for-testing",
    ]
  
@@ -1243,10 +1243,10 @@ index 72b0c4d019..e596bee081 100644
    "system.display": {
      "channel": "stable",
 diff --git a/extensions/common/api/runtime.json b/extensions/common/api/runtime.json
-index a37a74a5c6..a36f2f1b21 100644
+index b8246074ce..1f30c47254 100644
 --- a/extensions/common/api/runtime.json
 +++ b/extensions/common/api/runtime.json
-@@ -86,7 +86,8 @@
+@@ -105,7 +105,8 @@
              {"name": "cros", "description": "Specifies the Chrome operating system."},
              {"name": "linux", "description": "Specifies the Linux operating system."},
              {"name": "openbsd", "description": "Specifies the OpenBSD operating system."},
@@ -1257,10 +1257,10 @@ index a37a74a5c6..a36f2f1b21 100644
        },
        {
 diff --git a/media/BUILD.gn b/media/BUILD.gn
-index f1bbeef529..d9830736e0 100644
+index 69ceeb520d..0d63d3bad3 100644
 --- a/media/BUILD.gn
 +++ b/media/BUILD.gn
-@@ -108,6 +108,9 @@ config("media_config") {
+@@ -110,6 +110,9 @@ config("media_config") {
    if (use_sndio) {
      defines += [ "USE_SNDIO" ]
    }
@@ -1323,7 +1323,7 @@ index ad545ee2ae..d43ed6bb60 100644
        CodecWorkerImpl<VPxWorkerInterface, VPxWorkerImpl, VPxWorker,
                        VPxWorkerStatus, VPX_WORKER_STATUS_NOT_OK,
 diff --git a/media/base/media_switches.cc b/media/base/media_switches.cc
-index 0a778f2398..7fa269d4c1 100644
+index 522f0c160c..7c2dd2af12 100644
 --- a/media/base/media_switches.cc
 +++ b/media/base/media_switches.cc
 @@ -292,7 +292,7 @@ const char kMinVideoDecoderOutputBufferSize[] =
@@ -1335,7 +1335,7 @@ index 0a778f2398..7fa269d4c1 100644
  // The Alsa device to use when opening an audio input stream.
  const char kAlsaInputDevice[] = "alsa-input-device";
  // The Alsa device to use when opening an audio stream.
-@@ -1510,6 +1510,7 @@ constexpr base::FeatureParam<AudioBackend>::Option
+@@ -1519,6 +1519,7 @@ constexpr base::FeatureParam<AudioBackend>::Option
      kAudioBackendOptions[] = {
          {AudioBackend::kAuto,
           "auto"},
@@ -1343,7 +1343,7 @@ index 0a778f2398..7fa269d4c1 100644
          {AudioBackend::kPulseAudio, "pulseaudio"},
          {AudioBackend::kSndio, "sndio"},
          {AudioBackend::kAlsa, "alsa"}};
-@@ -1519,6 +1520,8 @@ const base::FeatureParam<AudioBackend>
+@@ -1528,6 +1529,8 @@ const base::FeatureParam<AudioBackend>
          &kAudioBackend, "audio-backend",
  #if BUILDFLAG(IS_OPENBSD)
          AudioBackend::kSndio,
@@ -1353,7 +1353,7 @@ index 0a778f2398..7fa269d4c1 100644
          AudioBackend::kAuto,
  #endif
 diff --git a/media/base/media_switches.h b/media/base/media_switches.h
-index df71295d88..a60c6b4e6f 100644
+index bfba040f37..9d51156f48 100644
 --- a/media/base/media_switches.h
 +++ b/media/base/media_switches.h
 @@ -92,7 +92,7 @@ MEDIA_EXPORT extern const char kMinVideoDecoderOutputBufferSize[];
@@ -1365,7 +1365,7 @@ index df71295d88..a60c6b4e6f 100644
  MEDIA_EXPORT extern const char kAlsaInputDevice[];
  MEDIA_EXPORT extern const char kAlsaOutputDevice[];
  #endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) ||
-@@ -464,6 +464,7 @@ enum class AudioBackend {
+@@ -473,6 +473,7 @@ enum class AudioBackend {
    kAuto,
    kPulseAudio,
    kSndio,
@@ -1387,7 +1387,7 @@ index 2a5d1d2364..435d2e24bc 100644
  typedef __uint32_t __u32;
  #else
 diff --git a/media/capture/video/linux/v4l2_capture_delegate.cc b/media/capture/video/linux/v4l2_capture_delegate.cc
-index e8d2859fd5..d03c965a42 100644
+index 3c4632f81a..60c6740a40 100644
 --- a/media/capture/video/linux/v4l2_capture_delegate.cc
 +++ b/media/capture/video/linux/v4l2_capture_delegate.cc
 @@ -1068,6 +1068,12 @@ void V4L2CaptureDelegate::DoCapture() {
@@ -1412,7 +1412,7 @@ index e8d2859fd5..d03c965a42 100644
        SetErrorState(
            VideoCaptureError::kV4L2MultipleContinuousTimeoutsWhileReadPolling,
 diff --git a/media/capture/video/linux/v4l2_capture_delegate.h b/media/capture/video/linux/v4l2_capture_delegate.h
-index f1e25e5f60..6202adaea8 100644
+index 6f2a956ca7..7a8d36781d 100644
 --- a/media/capture/video/linux/v4l2_capture_delegate.h
 +++ b/media/capture/video/linux/v4l2_capture_delegate.h
 @@ -22,7 +22,7 @@
@@ -1477,7 +1477,7 @@ index d945cbb184..8965ec8e6d 100644
      } else if (frame_interval.type == V4L2_FRMIVAL_TYPE_CONTINUOUS ||
                 frame_interval.type == V4L2_FRMIVAL_TYPE_STEPWISE) {
 diff --git a/media/capture/video/linux/video_capture_device_linux.cc b/media/capture/video/linux/video_capture_device_linux.cc
-index e3c13fe0f2..a9059ea1bd 100644
+index ec49c07bc7..3d5dbe00ed 100644
 --- a/media/capture/video/linux/video_capture_device_linux.cc
 +++ b/media/capture/video/linux/video_capture_device_linux.cc
 @@ -15,7 +15,7 @@
@@ -1490,7 +1490,7 @@ index e3c13fe0f2..a9059ea1bd 100644
  #else
  #include <linux/videodev2.h>
 diff --git a/media/ffmpeg/scripts/build_ffmpeg.py b/media/ffmpeg/scripts/build_ffmpeg.py
-index d2a02829d0..20f865df06 100755
+index 25d1954c3e..9705508653 100755
 --- a/media/ffmpeg/scripts/build_ffmpeg.py
 +++ b/media/ffmpeg/scripts/build_ffmpeg.py
 @@ -45,6 +45,7 @@ ARCH_MAP = {
@@ -1537,7 +1537,7 @@ index d2a02829d0..20f865df06 100755
          if target_arch == 'x64':
              if target_os == 'android':
                  configure_flags['Common'].extend([
-@@ -930,7 +931,7 @@ def ConfigureAndBuild(target_arch, target_os, host_os, host_arch,
+@@ -927,7 +928,7 @@ def ConfigureAndBuild(target_arch, target_os, host_os, host_arch,
          # typically be the system one, so explicitly configure use of Clang's
          # ld.lld, to ensure that things like cross-compilation and LTO work.
          # This does not work for ia32 and is always used on mac.
@@ -1569,10 +1569,10 @@ index e009f714e9..0ea2c3f01f 100644
              raise ValueError(f"Unsupported platform: {platform.system()}")
  
 diff --git a/media/media_options.gni b/media/media_options.gni
-index 09733e34ce..4f60c390ac 100644
+index d1281340df..39f8b8a767 100644
 --- a/media/media_options.gni
 +++ b/media/media_options.gni
-@@ -217,6 +217,9 @@ declare_args() {
+@@ -225,6 +225,9 @@ declare_args() {
    # Enable runtime selection of sndio(7)
    use_sndio = false
  
@@ -1583,10 +1583,10 @@ index 09733e34ce..4f60c390ac 100644
    # exception of CastOS desktop builds.
    #
 diff --git a/mojo/core/channel_posix.cc b/mojo/core/channel_posix.cc
-index c9970c7754..8bb6d9fe89 100644
+index b1a6f65881..596f555cd0 100644
 --- a/mojo/core/channel_posix.cc
 +++ b/mojo/core/channel_posix.cc
-@@ -428,10 +428,11 @@ bool ChannelPosix::WriteNoLock(MessageView message_view) {
+@@ -444,10 +444,11 @@ bool ChannelPosix::WriteNoLock(MessageView message_view) {
      if (result < 0) {
        if (errno != EAGAIN &&
            errno != EWOULDBLOCK
@@ -1601,10 +1601,10 @@ index c9970c7754..8bb6d9fe89 100644
            // EMSGSIZE presents a problem since the system APIs can only call
            // us when there's room in the socket buffer and not when there is
 diff --git a/mojo/public/cpp/platform/platform_channel.cc b/mojo/public/cpp/platform/platform_channel.cc
-index 9d8f0cb8f0..6e5f106843 100644
+index ab387a2b34..f9a289f6bd 100644
 --- a/mojo/public/cpp/platform/platform_channel.cc
 +++ b/mojo/public/cpp/platform/platform_channel.cc
-@@ -144,6 +144,38 @@ void CreateChannel(PlatformHandle* local_endpoint,
+@@ -148,6 +148,38 @@ void CreateChannel(PlatformHandle* local_endpoint,
    *remote_endpoint = PlatformHandle(std::move(receive));
  }
  #elif BUILDFLAG(IS_POSIX)
@@ -1643,7 +1643,7 @@ index 9d8f0cb8f0..6e5f106843 100644
  void CreateChannel(PlatformHandle* local_endpoint,
                     PlatformHandle* remote_endpoint) {
    int fds[2];
-@@ -153,6 +185,11 @@ void CreateChannel(PlatformHandle* local_endpoint,
+@@ -157,6 +189,11 @@ void CreateChannel(PlatformHandle* local_endpoint,
    PCHECK(fcntl(fds[0], F_SETFL, O_NONBLOCK) == 0);
    PCHECK(fcntl(fds[1], F_SETFL, O_NONBLOCK) == 0);
  
@@ -1656,7 +1656,7 @@ index 9d8f0cb8f0..6e5f106843 100644
    *remote_endpoint = PlatformHandle(base::ScopedFD(fds[1]));
    DCHECK(local_endpoint->is_valid());
 diff --git a/mojo/public/cpp/platform/socket_utils_posix.cc b/mojo/public/cpp/platform/socket_utils_posix.cc
-index 8cebec59fd..94d3adf662 100644
+index 7c1da01379..7c28079eac 100644
 --- a/mojo/public/cpp/platform/socket_utils_posix.cc
 +++ b/mojo/public/cpp/platform/socket_utils_posix.cc
 @@ -26,7 +26,7 @@ bool IsRecoverableError() {
@@ -1684,24 +1684,11 @@ index 36ec6d4897..094527c50c 100644
      if (is_freebsd) {
        enabled_features += [ "is_freebsd" ]
        enabled_features += [ "is_bsd" ]
-diff --git a/net/base/features.cc b/net/base/features.cc
-index 13d101478b..24f67a4408 100644
---- a/net/base/features.cc
-+++ b/net/base/features.cc
-@@ -384,7 +384,7 @@ inline constexpr auto kMigrateSessionsOnNetworkChangeV2Default =
- BASE_FEATURE(kMigrateSessionsOnNetworkChangeV2,
-              kMigrateSessionsOnNetworkChangeV2Default);
- 
--#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
-+#if BUILDFLAG(IS_LINUX)
- BASE_FEATURE(kAddressTrackerLinuxIsProxied, base::FEATURE_ENABLED_BY_DEFAULT);
- #endif  // BUILDFLAG(IS_LINUX)
- 
 diff --git a/net/base/network_change_notifier.cc b/net/base/network_change_notifier.cc
-index 82e31640d8..61225be963 100644
+index a7e23f5f0d..6b0f511507 100644
 --- a/net/base/network_change_notifier.cc
 +++ b/net/base/network_change_notifier.cc
-@@ -314,7 +314,7 @@ std::unique_ptr<NetworkChangeNotifier> NetworkChangeNotifier::CreateIfNeeded(
+@@ -302,7 +302,7 @@ std::unique_ptr<NetworkChangeNotifier> NetworkChangeNotifier::CreateIfNeeded(
    // running network service in a separate process.
    return std::make_unique<NetworkChangeNotifierPassive>(initial_type,
                                                          initial_subtype);
@@ -1769,10 +1756,10 @@ index d07385e531..1250b157fb 100644
      int resolver_generation;
    };
 diff --git a/net/dns/public/resolv_reader.cc b/net/dns/public/resolv_reader.cc
-index 6c5e2bd7f9..2963b7c7cf 100644
+index b2ecdafb4e..89da1371c0 100644
 --- a/net/dns/public/resolv_reader.cc
 +++ b/net/dns/public/resolv_reader.cc
-@@ -60,7 +60,7 @@ std::optional<std::vector<IPEndPoint>> GetNameservers(
+@@ -61,7 +61,7 @@ std::optional<std::vector<IPEndPoint>> GetNameservers(
    if (!(res.options & RES_INIT))
      return std::nullopt;
  
@@ -1780,7 +1767,7 @@ index 6c5e2bd7f9..2963b7c7cf 100644
 +#if BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_FREEBSD) || BUILDFLAG(IS_NETBSD)
    union res_sockaddr_union addresses[MAXNS];
    int nscount = res_getservers(const_cast<res_state>(&res), addresses, MAXNS);
-   DCHECK_GE(nscount, 0);
+   // res_getservers() is not documented to return a negative value or more
 diff --git a/net/dns/public/scoped_res_state.cc b/net/dns/public/scoped_res_state.cc
 index 0a56a243cd..7bac72bf81 100644
 --- a/net/dns/public/scoped_res_state.cc
@@ -1795,7 +1782,7 @@ index 0a56a243cd..7bac72bf81 100644
  #else
    res_nclose(&res_);
 diff --git a/net/socket/tcp_socket_posix.cc b/net/socket/tcp_socket_posix.cc
-index e10c1c8f34..5ea902baa3 100644
+index 682b0c999d..feca4dad32 100644
 --- a/net/socket/tcp_socket_posix.cc
 +++ b/net/socket/tcp_socket_posix.cc
 @@ -6,6 +6,9 @@
@@ -1808,7 +1795,7 @@ index e10c1c8f34..5ea902baa3 100644
  #include <sys/socket.h>
  
  #include <algorithm>
-@@ -103,7 +106,7 @@ bool SetTCPKeepAlive(int fd, bool enable, int delay) {
+@@ -104,7 +107,7 @@ bool SetTCPKeepAlive(int fd, bool enable, int delay) {
        PLOG(ERROR) << "Failed to set TCP_KEEPALIVE on fd: " << fd;
        return false;
      }
@@ -1818,7 +1805,7 @@ index e10c1c8f34..5ea902baa3 100644
    if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &delay, sizeof(delay))) {
      PLOG(ERROR) << "Failed to set TCP_KEEPIDLE on fd: " << fd;
 diff --git a/net/socket/udp_socket_posix.cc b/net/socket/udp_socket_posix.cc
-index 8f23e918b7..63a7326701 100644
+index eada3e8ccb..6db84639d3 100644
 --- a/net/socket/udp_socket_posix.cc
 +++ b/net/socket/udp_socket_posix.cc
 @@ -81,7 +81,11 @@
@@ -1867,7 +1854,7 @@ index 8f23e918b7..63a7326701 100644
  int GetSocketFDHash(int fd) {
    return fd ^ 1595649551;
  }
-@@ -1514,9 +1544,17 @@ int UDPSocketPosix::SetMulticastOptions() {
+@@ -1530,9 +1560,17 @@ int UDPSocketPosix::SetMulticastOptions() {
    if (multicast_interface_ != 0) {
      switch (addr_family_) {
        case AF_INET: {
@@ -1885,7 +1872,7 @@ index 8f23e918b7..63a7326701 100644
          int rv = setsockopt(socket_, IPPROTO_IP, IP_MULTICAST_IF,
                              reinterpret_cast<const char*>(&mreq), sizeof(mreq));
          if (rv)
-@@ -1580,9 +1618,17 @@ int UDPSocketPosix::JoinGroup(const IPAddress& group_address) const {
+@@ -1596,9 +1634,17 @@ int UDPSocketPosix::JoinGroup(const IPAddress& group_address) const {
      case IPAddress::kIPv4AddressSize: {
        if (addr_family_ != AF_INET)
          return ERR_ADDRESS_INVALID;
@@ -1903,7 +1890,7 @@ index 8f23e918b7..63a7326701 100644
        mreq.imr_multiaddr = ToInAddr(group_address);
        int rv = setsockopt(socket_, IPPROTO_IP, IP_ADD_MEMBERSHIP,
                            &mreq, sizeof(mreq));
-@@ -1617,9 +1663,17 @@ int UDPSocketPosix::LeaveGroup(const IPAddress& group_address) const {
+@@ -1633,9 +1679,17 @@ int UDPSocketPosix::LeaveGroup(const IPAddress& group_address) const {
      case IPAddress::kIPv4AddressSize: {
        if (addr_family_ != AF_INET)
          return ERR_ADDRESS_INVALID;
@@ -1969,10 +1956,10 @@ index 1895d1fbd0..3b5183b1e1 100644
  ))]
  #[global_allocator]
 diff --git a/sandbox/policy/BUILD.gn b/sandbox/policy/BUILD.gn
-index 2ef7fa71ab..92ed5237f1 100644
+index 7fe0bf9d8d..8b01f12dc3 100644
 --- a/sandbox/policy/BUILD.gn
 +++ b/sandbox/policy/BUILD.gn
-@@ -125,6 +125,17 @@ component("policy") {
+@@ -123,6 +123,17 @@ component("policy") {
      ]
      libs = [ "util" ]
    }
@@ -2067,10 +2054,10 @@ index 44f331a70f..4a27162638 100644
  #include "sandbox/policy/freebsd/sandbox_freebsd.h"
  #endif
 diff --git a/services/device/hid/BUILD.gn b/services/device/hid/BUILD.gn
-index 71b17a8703..fb600d7b2a 100644
+index 935cff1115..7e6556cde6 100644
 --- a/services/device/hid/BUILD.gn
 +++ b/services/device/hid/BUILD.gn
-@@ -51,6 +51,15 @@ source_set("hid") {
+@@ -66,6 +66,15 @@ source_set("hid") {
      ]
    }
  
@@ -2087,27 +2074,27 @@ index 71b17a8703..fb600d7b2a 100644
      sources += [
        "hid_connection_linux.cc",
 diff --git a/services/device/hid/hid_service.cc b/services/device/hid/hid_service.cc
-index edff473b12..efb42fe36f 100644
+index 432eb7f57d..d75cb9304c 100644
 --- a/services/device/hid/hid_service.cc
 +++ b/services/device/hid/hid_service.cc
-@@ -30,6 +30,8 @@
- #include "services/device/hid/hid_service_win.h"
- #elif BUILDFLAG(IS_FUCHSIA)
- #include "services/device/hid/hid_service_fuchsia.h"
+@@ -26,6 +26,8 @@
+ #include "services/device/hid/hid_service_fido.h"
+ #elif BUILDFLAG(IS_FREEBSD)
+ #include "services/device/hid/hid_service_freebsd.h"
 +#elif BUILDFLAG(IS_NETBSD)
 +#include "services/device/hid/hid_service_netbsd.h"
- #endif
- 
- namespace device {
-@@ -82,6 +84,8 @@ std::unique_ptr<HidService> HidService::Create() {
-   return std::make_unique<HidServiceWin>();
- #elif BUILDFLAG(IS_FUCHSIA)
-   return std::make_unique<HidServiceFuchsia>();
+ #elif BUILDFLAG(IS_MAC)
+ #include "services/device/hid/hid_service_mac.h"
+ #elif BUILDFLAG(IS_WIN)
+@@ -80,6 +82,8 @@ std::unique_ptr<HidService> HidService::Create() {
+   return std::make_unique<HidServiceFido>();
+ #elif BUILDFLAG(IS_FREEBSD)
+   return std::make_unique<HidServiceFreeBSD>();
 +#elif BUILDFLAG(IS_NETBSD)
 +  return std::make_unique<HidServiceNetBSD>();
- #else
-   return nullptr;
- #endif
+ #elif BUILDFLAG(IS_MAC)
+   return std::make_unique<HidServiceMac>();
+ #elif BUILDFLAG(IS_WIN)
 diff --git a/services/device/hid/hid_service_freebsd.cc b/services/device/hid/hid_service_freebsd.cc
 index 28ca23f4ce..6fa0728c68 100644
 --- a/services/device/hid/hid_service_freebsd.cc
@@ -2174,10 +2161,10 @@ index 9d39bb72c6..20ff2dfaea 100644
  #else
  #include "sandbox/policy/linux/sandbox_linux.h"
 diff --git a/services/network/public/cpp/BUILD.gn b/services/network/public/cpp/BUILD.gn
-index 1e50d1246f..8e50e2a3e7 100644
+index 8f604dd428..be8734b08f 100644
 --- a/services/network/public/cpp/BUILD.gn
 +++ b/services/network/public/cpp/BUILD.gn
-@@ -873,7 +873,7 @@ source_set("tests") {
+@@ -870,7 +870,7 @@ source_set("tests") {
      "x_frame_options_parser_unittest.cc",
    ]
  
@@ -2222,10 +2209,10 @@ index 85dcc45c8e..4534b7343b 100644
  
    if (sysctl(mib, std::size(mib), &info, &length, NULL, 0) < 0)
 diff --git a/third_party/abseil-cpp/absl/base/config.h b/third_party/abseil-cpp/absl/base/config.h
-index 1df970deef..5b510f25bb 100644
+index 39f4942b8e..d2f707d1e5 100644
 --- a/third_party/abseil-cpp/absl/base/config.h
 +++ b/third_party/abseil-cpp/absl/base/config.h
-@@ -412,7 +412,8 @@ static_assert(ABSL_INTERNAL_INLINE_NAMESPACE_STR[0] != 'h' ||
+@@ -377,7 +377,8 @@ static_assert(ABSL_INTERNAL_INLINE_NAMESPACE_STR[0] != 'h' ||
  #ifdef ABSL_HAVE_SCHED_YIELD
  #error ABSL_HAVE_SCHED_YIELD cannot be directly set
  #elif defined(__linux__) || defined(__ros__) || defined(__native_client__) || \
@@ -2235,7 +2222,7 @@ index 1df970deef..5b510f25bb 100644
  #define ABSL_HAVE_SCHED_YIELD 1
  #endif
  
-@@ -428,7 +429,7 @@ static_assert(ABSL_INTERNAL_INLINE_NAMESPACE_STR[0] != 'h' ||
+@@ -393,7 +394,7 @@ static_assert(ABSL_INTERNAL_INLINE_NAMESPACE_STR[0] != 'h' ||
  #ifdef ABSL_HAVE_SEMAPHORE_H
  #error ABSL_HAVE_SEMAPHORE_H cannot be directly set
  #elif defined(__linux__) || defined(__ros__) || defined(__VXWORKS__) || \
@@ -2245,7 +2232,7 @@ index 1df970deef..5b510f25bb 100644
  #endif
  
 diff --git a/third_party/abseil-cpp/absl/base/internal/raw_logging.cc b/third_party/abseil-cpp/absl/base/internal/raw_logging.cc
-index 8537f3ec52..c47fdb4545 100644
+index 7c39f6d3ce..5f8d4f0a81 100644
 --- a/third_party/abseil-cpp/absl/base/internal/raw_logging.cc
 +++ b/third_party/abseil-cpp/absl/base/internal/raw_logging.cc
 @@ -43,7 +43,7 @@
@@ -2258,10 +2245,10 @@ index 8537f3ec52..c47fdb4545 100644
  #include <unistd.h>
  
 diff --git a/third_party/abseil-cpp/absl/base/internal/sysinfo.cc b/third_party/abseil-cpp/absl/base/internal/sysinfo.cc
-index 4e48618d24..04e076744c 100644
+index 0b7dd6cd42..78d5c98f3b 100644
 --- a/third_party/abseil-cpp/absl/base/internal/sysinfo.cc
 +++ b/third_party/abseil-cpp/absl/base/internal/sysinfo.cc
-@@ -198,7 +198,7 @@ static double GetNominalCPUFrequency() {
+@@ -197,7 +197,7 @@ static double GetNominalCPUFrequency() {
  
  #else
  
@@ -2270,7 +2257,7 @@ index 4e48618d24..04e076744c 100644
  // Helper function for reading a long from a file. Returns true if successful
  // and the memory location pointed to by value is set to the value read.
  static bool ReadLongFromFile(const char *file, long *value) {
-@@ -330,7 +330,7 @@ static double GetNominalCPUFrequency() {
+@@ -329,7 +329,7 @@ static double GetNominalCPUFrequency() {
    // a new mode (turbo mode). Essentially, those frequencies cannot
    // always be relied upon. The same reasons apply to /proc/cpuinfo as
    // well.
@@ -2279,7 +2266,7 @@ index 4e48618d24..04e076744c 100644
    if (ReadLongFromFile("/sys/devices/system/cpu/cpu0/tsc_freq_khz", &freq)) {
      return freq * 1e3;  // Value is kHz.
    }
-@@ -353,7 +353,7 @@ static double GetNominalCPUFrequency() {
+@@ -352,7 +352,7 @@ static double GetNominalCPUFrequency() {
    // If CPU scaling is in effect, we want to use the *maximum*
    // frequency, not whatever CPU speed some random processor happens
    // to be using now.
@@ -2289,10 +2276,10 @@ index 4e48618d24..04e076744c 100644
                         &freq)) {
      return freq * 1e3;  // Value is kHz.
 diff --git a/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.h b/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.h
-index becef794d2..e0c7784491 100644
+index 91ab1db67c..7e5854549c 100644
 --- a/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.h
 +++ b/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.h
-@@ -35,7 +35,7 @@
+@@ -36,7 +36,7 @@
  #if defined(__ELF__) && !defined(__OpenBSD__) && !defined(__QNX__) &&    \
      !defined(__asmjs__) && !defined(__wasm__) && !defined(__HAIKU__) &&  \
      !defined(__sun) && !defined(__VXWORKS__) && !defined(__hexagon__) && \
@@ -2474,7 +2461,7 @@ index 703e54a7b8..b24d91923d 100755
  
  
 diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
-index 4725fba409..105292e9e5 100644
+index 5485b0be41..0effc1abe6 100644
 --- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
 +++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
 @@ -454,7 +454,7 @@
@@ -2513,7 +2500,7 @@ index 4725fba409..105292e9e5 100644
        origin_trial_allows_third_party: true,
        base_feature_status: "enabled",
        copied_from_base_feature_if: "overridden",
-@@ -680,7 +680,7 @@
+@@ -685,7 +685,7 @@
        name: "AppTitle",
        status: "experimental",
        origin_trial_feature_name: "AppTitle",
@@ -2522,7 +2509,7 @@ index 4725fba409..105292e9e5 100644
        base_feature: "WebAppEnableAppTitle",
      },
      {
-@@ -1450,7 +1450,7 @@
+@@ -1449,7 +1449,7 @@
        name: "CSPHashesV1",
        base_feature: "none",
        origin_trial_feature_name: "CSPExtendedScriptSrcHashes",
@@ -2531,16 +2518,7 @@ index 4725fba409..105292e9e5 100644
        status: "experimental",
        public: true,
      },
-@@ -2229,7 +2229,7 @@
-       name: "DesktopPWAsAdditionalWindowingControls",
-       status: "experimental",
-       origin_trial_feature_name: "DesktopPWAsAdditionalWindowingControls",
--      origin_trial_os: ["win", "mac", "linux", "chromeos", "openbsd", "freebsd"],
-+      origin_trial_os: ["win", "mac", "linux", "chromeos", "openbsd", "freebsd", "netbsd"],
-       origin_trial_allows_third_party: true,
-       base_feature_status: "enabled",
-       copied_from_base_feature_if: "overridden",
-@@ -2418,7 +2418,7 @@
+@@ -2394,7 +2394,7 @@
        name: "DocumentIsolationPolicy",
        status: "experimental",
        origin_trial_feature_name: "DocumentIsolationPolicy",
@@ -2549,25 +2527,25 @@ index 4725fba409..105292e9e5 100644
        base_feature: "none",
      },
      {
-@@ -2627,7 +2627,7 @@
+@@ -2598,7 +2598,7 @@
        public: true,
        origin_trial_feature_name: "EmailVerificationProtocol",
        origin_trial_allows_third_party: true,
--      origin_trial_os: ["win", "mac", "linux", "chromeos", "openbsd", "freebsd"],
-+      origin_trial_os: ["win", "mac", "linux", "chromeos", "openbsd", "freebsd", "netbsd"],
-       status: {
-         "Win": "experimental",
-         "Mac": "experimental",
-@@ -2644,7 +2644,7 @@
+-      origin_trial_os: ["win", "mac", "linux", "chromeos", "android", "openbsd", "freebsd"],
++      origin_trial_os: ["win", "mac", "linux", "chromeos", "android", "openbsd", "freebsd", "netbsd"],
+       status: "experimental",
+       base_feature: "none",
+       browser_process_read_access: true,
+@@ -2609,7 +2609,7 @@
        depends_on: ["EmailVerificationProtocol"],
        origin_trial_feature_name: "EmailVerificationProtocol",
        origin_trial_allows_third_party: true,
--      origin_trial_os: ["win", "mac", "linux", "chromeos", "openbsd", "freebsd"],
-+      origin_trial_os: ["win", "mac", "linux", "chromeos", "openbsd", "freebsd", "netbsd"],
-       status: {
-         "Win": "experimental",
-         "Mac": "experimental",
-@@ -2829,7 +2829,7 @@
+-      origin_trial_os: ["win", "mac", "linux", "chromeos", "android", "openbsd", "freebsd"],
++      origin_trial_os: ["win", "mac", "linux", "chromeos", "android", "openbsd", "freebsd", "netbsd"],
+       base_feature: "none",
+     },
+     {
+@@ -2801,7 +2801,7 @@
        base_feature: "none",
        public: true,
        origin_trial_feature_name: "FedCmMultipleIdentityProviders",
@@ -2576,7 +2554,7 @@ index 4725fba409..105292e9e5 100644
        origin_trial_allows_third_party: true,
      },
      {
-@@ -3709,7 +3709,7 @@
+@@ -3705,7 +3705,7 @@
        name: "InstallElement",
        status: {"Android": "", "default": "test"},
        origin_trial_feature_name: "InstallElement",
@@ -2585,7 +2563,7 @@ index 4725fba409..105292e9e5 100644
        public: true,
        base_feature_status: "enabled",
        copied_from_base_feature_if: "overridden",
-@@ -6541,7 +6541,7 @@
+@@ -6536,7 +6536,7 @@
        name: "UnrestrictedSharedArrayBuffer",
        base_feature: "none",
        origin_trial_feature_name: "UnrestrictedSharedArrayBuffer",
@@ -2594,7 +2572,7 @@ index 4725fba409..105292e9e5 100644
      },
      // Enables using policy-controlled feature "usb-unrestricted" to allow
      // isolated context to access protected USB interface classes and to
-@@ -6751,7 +6751,7 @@
+@@ -6726,7 +6726,7 @@
        name: "WebAppInstallation",
        status: {"Android": "", "default": "test"},
        origin_trial_feature_name: "WebAppInstallation",
@@ -2603,7 +2581,7 @@ index 4725fba409..105292e9e5 100644
        public: true,
        base_feature_status: "enabled",
        copied_from_base_feature_if: "overridden",
-@@ -6765,7 +6765,7 @@
+@@ -6740,7 +6740,7 @@
      {
        name: "WebAppScopeExtensions",
        origin_trial_feature_name: "WebAppScopeExtensions",
@@ -2613,7 +2591,7 @@ index 4725fba409..105292e9e5 100644
        base_feature: "none",
      },
 diff --git a/third_party/blink/renderer/platform/wtf/stack_util.cc b/third_party/blink/renderer/platform/wtf/stack_util.cc
-index 01e42d52b5..bb3c4dde74 100644
+index a91e322380..d4d7955c41 100644
 --- a/third_party/blink/renderer/platform/wtf/stack_util.cc
 +++ b/third_party/blink/renderer/platform/wtf/stack_util.cc
 @@ -24,8 +24,12 @@ extern "C" void* __libc_stack_end;  // NOLINT
@@ -2793,6 +2771,19 @@ index de67992bd3..d7e49f800d 100644
  
  // Common properties of external images represented by FDs. On successful import the file
  // descriptor's ownership is transferred to the Dawn implementation and they shouldn't be
+diff --git a/third_party/dawn/src/dawn/common/DRMUtils.cpp b/third_party/dawn/src/dawn/common/DRMUtils.cpp
+index 833f44c0ca..d916f273f3 100644
+--- a/third_party/dawn/src/dawn/common/DRMUtils.cpp
++++ b/third_party/dawn/src/dawn/common/DRMUtils.cpp
+@@ -30,7 +30,7 @@
+ #include <dirent.h>
+ #include <fcntl.h>
+ #include <sys/stat.h>
+-#if !defined(__OpenBSD__) && !defined(__FreeBSD__)
++#if !defined(__OpenBSD__) && !defined(__FreeBSD__) && !defined(__NetBSD__)
+ #include <sys/sysmacros.h>
+ #endif
+ 
 diff --git a/third_party/dawn/src/utils/platform.h b/third_party/dawn/src/utils/platform.h
 index f0d358a374..d03606cb10 100644
 --- a/third_party/dawn/src/utils/platform.h
@@ -2839,7 +2830,7 @@ index d74fc04371..03525b3c2a 100644
          go_binary += '.exe'
  
 diff --git a/third_party/dawn/tools/python/cipd_deps.py b/third_party/dawn/tools/python/cipd_deps.py
-index 81ca5f3441..fe6a1a18ca 100644
+index f4b889603c..19dee02a1f 100644
 --- a/third_party/dawn/tools/python/cipd_deps.py
 +++ b/third_party/dawn/tools/python/cipd_deps.py
 @@ -49,7 +49,7 @@ def get_cipd_compatible_current_os() -> str:
@@ -2875,8 +2866,21 @@ index 0146733149..23e3fe47f7 100644
  	linux: {
  		arm: { base: 'linux-arm-gnueabihf', musl: 'linux-arm-musleabihf' },
  		arm64: { base: 'linux-arm64-gnu', musl: 'linux-arm64-musl' },
+diff --git a/third_party/devtools-frontend/src/scripts/build/typescript/typescript_vars.gni b/third_party/devtools-frontend/src/scripts/build/typescript/typescript_vars.gni
+index 96d6207e67..6e7f88483f 100644
+--- a/third_party/devtools-frontend/src/scripts/build/typescript/typescript_vars.gni
++++ b/third_party/devtools-frontend/src/scripts/build/typescript/typescript_vars.gni
+@@ -5,7 +5,7 @@
+ import("//build/toolchain/rbe.gni")
+ import("../ninja/vars.gni")
+ 
+-if (host_os == "linux" || host_os == "openbsd" || host_os == "freebsd") {
++if (host_os == "linux" || host_os == "openbsd" || host_os == "freebsd" || host_os == "netbsd") {
+   tsc_binary = "//third_party/typescript/linux-amd64/src/lib/tsc"
+ } else if (host_os == "win") {
+   tsc_binary = "//third_party/typescript/windows-amd64/src/lib/tsc.exe"
 diff --git a/third_party/devtools-frontend/src/third_party/typescript/typescript.py b/third_party/devtools-frontend/src/third_party/typescript/typescript.py
-index 8897d810aa..9d0ea8563a 100644
+index f2b0cd7416..5550640877 100644
 --- a/third_party/devtools-frontend/src/third_party/typescript/typescript.py
 +++ b/third_party/devtools-frontend/src/third_party/typescript/typescript.py
 @@ -10,7 +10,7 @@ import os
@@ -2902,10 +2906,10 @@ index 3293800bf9..0521dc6ba1 100644
  #endif
        return absl::UnavailableError(message);
 diff --git a/third_party/ffmpeg/configure b/third_party/ffmpeg/configure
-index b41b13436e..4943f7d2c1 100755
+index 3b561ce927..b928d6314f 100755
 --- a/third_party/ffmpeg/configure
 +++ b/third_party/ffmpeg/configure
-@@ -7251,8 +7251,8 @@ if ! disabled pthreads && ! enabled w32threads && ! enabled os2threads; then
+@@ -7267,8 +7267,8 @@ if ! disabled pthreads && ! enabled w32threads && ! enabled os2threads; then
          if enabled pthread_np_h; then
              hdrs="$hdrs pthread_np.h"
          fi
@@ -2932,7 +2936,7 @@ index dbe55d59f7..7553f29e79 100644
  #include <unistd.h>
  #endif
 diff --git a/third_party/fontconfig/include/meson-config.h b/third_party/fontconfig/include/meson-config.h
-index 4d57d11409..6387ec4fbf 100644
+index 6ad5e80775..b4ae098bf3 100644
 --- a/third_party/fontconfig/include/meson-config.h
 +++ b/third_party/fontconfig/include/meson-config.h
 @@ -17,7 +17,7 @@
@@ -3255,7 +3259,7 @@ index d8fe70f8c8..235e1a93f7 100644
      !PERFETTO_BUILDFLAG(PERFETTO_OS_QNX)
    struct {
 diff --git a/third_party/perfetto/src/base/file_utils.cc b/third_party/perfetto/src/base/file_utils.cc
-index faa73e98b2..287958610e 100644
+index 1337a41005..d3e7b15187 100644
 --- a/third_party/perfetto/src/base/file_utils.cc
 +++ b/third_party/perfetto/src/base/file_utils.cc
 @@ -64,6 +64,7 @@
@@ -3702,10 +3706,10 @@ index 2fe7178ce7..2fe7e16d32 100644
    }
    if (is_apple && !vulkan_loader_shared) {
 diff --git a/third_party/vulkan-loader/src/loader/loader_environment.c b/third_party/vulkan-loader/src/loader/loader_environment.c
-index 50e2914c76..0bcff07b61 100644
+index bdda1a0cc2..672096d0df 100644
 --- a/third_party/vulkan-loader/src/loader/loader_environment.c
 +++ b/third_party/vulkan-loader/src/loader/loader_environment.c
-@@ -49,7 +49,7 @@ char *loader_getenv(const char *name, const struct loader_instance *inst) {
+@@ -50,7 +50,7 @@ char *loader_getenv(const char *name, const struct loader_instance *inst) {
  }
  
  char *loader_secure_getenv(const char *name, const struct loader_instance *inst) {
@@ -3904,10 +3908,10 @@ index 59e9ffccb2..df81f356b3 100644
      (target_os == "win" &&
       (target_cpu == "x86" || target_cpu == "x64" || target_cpu == "arm64"))
 diff --git a/third_party/zlib/BUILD.gn b/third_party/zlib/BUILD.gn
-index a8c79ac547..c2862f58ad 100644
+index 6c427d662f..2cd3a4b6f4 100644
 --- a/third_party/zlib/BUILD.gn
 +++ b/third_party/zlib/BUILD.gn
-@@ -137,6 +137,8 @@ if (use_arm_neon_optimizations) {
+@@ -133,6 +133,8 @@ if (use_arm_neon_optimizations) {
        defines += [ "ARMV8_OS_OPENBSD" ]
      } else if (is_freebsd) {
        defines += [ "ARMV8_OS_FREEBSD" ]
@@ -3917,7 +3921,7 @@ index a8c79ac547..c2862f58ad 100644
        assert(false, "Unsupported ARM OS")
      }
 diff --git a/third_party/zlib/cpu_features.c b/third_party/zlib/cpu_features.c
-index f1fc2314f7..236e2f00f3 100644
+index 4308d8fc8b..ae8faf0b15 100644
 --- a/third_party/zlib/cpu_features.c
 +++ b/third_party/zlib/cpu_features.c
 @@ -40,7 +40,8 @@ int ZLIB_INTERNAL riscv_cpu_enable_vclmul = 0;
@@ -4028,23 +4032,23 @@ index 88eef351c9..efda6834fa 100644
    deps = [
      "//gin",
 diff --git a/tools/gn/src/gn/args.cc b/tools/gn/src/gn/args.cc
-index a623f86108..13aa93e804 100644
+index d78d862423..1706ce7a0f 100644
 --- a/tools/gn/src/gn/args.cc
 +++ b/tools/gn/src/gn/args.cc
-@@ -387,7 +387,7 @@ void Args::SetSystemVarsLocked(Scope* dest) const {
-     arch = kX86;
-   else if (os_arch == "x86_64")
-     arch = kX64;
--  else if (os_arch == "aarch64" || os_arch == "arm64")
-+  else if (os_arch == "aarch64" || os_arch == "arm64" || os_arch == "evbarm")
-     arch = kArm64;
-   else if (os_arch.substr(0, 3) == "arm")
-     arch = kArm;
+@@ -389,7 +389,7 @@ const char* Args::GetHostCpu() {
+     return kX86;
+   if (os_arch == "x86_64")
+     return kX64;
+-  if (os_arch == "aarch64" || os_arch == "arm64")
++  if (os_arch == "aarch64" || os_arch == "arm64" || os_arch == "evbarm")
+     return kArm64;
+   if (os_arch.substr(0, 3) == "arm")
+     return kArm;
 diff --git a/tools/json_schema_compiler/feature_compiler.py b/tools/json_schema_compiler/feature_compiler.py
-index b060205fa2..3bec05ae66 100644
+index 970a9bb411..2afaac3c93 100644
 --- a/tools/json_schema_compiler/feature_compiler.py
 +++ b/tools/json_schema_compiler/feature_compiler.py
-@@ -241,6 +241,7 @@ FEATURE_GRAMMAR = {
+@@ -252,6 +252,7 @@ FEATURE_GRAMMAR = {
          'win': 'Feature::WIN_PLATFORM',
          'openbsd': 'Feature::LINUX_PLATFORM',
          'freebsd': 'Feature::LINUX_PLATFORM',
@@ -4186,10 +4190,10 @@ index 22646ac3c6..b550f32e22 100644
    declare_args() {
      # Enable WebUI Contextual Tasks Composebox.
 diff --git a/v8/BUILD.gn b/v8/BUILD.gn
-index de295e316e..e2461443d8 100644
+index b12547b04b..0a343f8ebe 100644
 --- a/v8/BUILD.gn
 +++ b/v8/BUILD.gn
-@@ -1089,6 +1089,7 @@ external_v8_defines = [
+@@ -1090,6 +1090,7 @@ external_v8_defines = [
    "V8_TARGET_OS_CHROMEOS",
    "V8_TARGET_OS_OPENBSD",
    "V8_TARGET_OS_FREEBSD",
@@ -4197,7 +4201,7 @@ index de295e316e..e2461443d8 100644
    "V8_TARGET_ARCH_ARM64",
    "V8_TARGET_ARCH_PPC64",
    "V8_TARGET_ARCH_MIPS64",
-@@ -1186,6 +1187,9 @@ if (target_os == "android") {
+@@ -1187,6 +1188,9 @@ if (target_os == "android") {
  } else if (target_os == "freebsd") {
    enabled_external_v8_defines += [ "V8_HAVE_TARGET_OS" ]
    enabled_external_v8_defines += [ "V8_TARGET_OS_FREEBSD" ]
@@ -4207,7 +4211,7 @@ index de295e316e..e2461443d8 100644
  }
  
  # Some V8_TARGET_ARCH_ defines that affect Api constants (see usages of
-@@ -2764,6 +2768,23 @@ action("generate_bytecode_builtins_list") {
+@@ -2771,6 +2775,23 @@ action("generate_bytecode_builtins_list") {
    ]
  }
  
@@ -4231,7 +4235,7 @@ index de295e316e..e2461443d8 100644
  # Template to generate different V8 snapshots based on different runtime flags.
  # Can be invoked with run_mksnapshot(<name>). The target will resolve to
  # run_mksnapshot_<name>. If <name> is "default", no file suffixes will be used.
-@@ -2782,7 +2803,11 @@ template("run_mksnapshot") {
+@@ -2789,7 +2810,11 @@ template("run_mksnapshot") {
      suffix = "_$name"
    }
    action("run_mksnapshot_" + name) {
@@ -4244,7 +4248,7 @@ index de295e316e..e2461443d8 100644
      if (v8_verify_deterministic_mksnapshot) {
        # We archive the snapshot executable when verifying snapshot
        # determinism to ease debugging.
-@@ -5172,7 +5197,7 @@ v8_header_set("v8_internal_headers") {
+@@ -5180,7 +5205,7 @@ v8_header_set("v8_internal_headers") {
        # iOS Xcode simulator builds run on an x64 target. iOS and macOS are both
        # based on Darwin and thus POSIX-compliant to a similar degree.
        if (is_linux || is_chromeos || is_mac || is_ios ||
@@ -4253,7 +4257,7 @@ index de295e316e..e2461443d8 100644
          sources += [ "src/trap-handler/handler-inside-posix.h" ]
        } else if (is_win) {
          sources += [ "src/trap-handler/handler-inside-win.h" ]
-@@ -6676,7 +6701,7 @@ v8_cluster_source_set("v8_base_without_compiler") {
+@@ -6686,7 +6711,7 @@ v8_cluster_source_set("v8_base_without_compiler") {
        # iOS Xcode simulator builds run on an x64 target. iOS and macOS are both
        # based on Darwin and thus POSIX-compliant to a similar degree.
        if (is_linux || is_chromeos || is_mac || is_ios ||
@@ -4262,7 +4266,7 @@ index de295e316e..e2461443d8 100644
          sources += [
            "src/trap-handler/handler-inside-posix.cc",
            "src/trap-handler/handler-outside-posix.cc",
-@@ -7419,6 +7444,15 @@ v8_component("v8_libbase") {
+@@ -7429,6 +7454,15 @@ v8_component("v8_libbase") {
        "src/base/platform/platform-openbsd.cc",
      ]
      libs = [ "execinfo" ]
@@ -4279,10 +4283,10 @@ index de295e316e..e2461443d8 100644
      sources += [
        "src/base/debug/stack_trace_posix.cc",
 diff --git a/v8/gni/v8.gni b/v8/gni/v8.gni
-index cf76876527..3310769b15 100644
+index f6cb586762..ed56af9276 100644
 --- a/v8/gni/v8.gni
 +++ b/v8/gni/v8.gni
-@@ -353,7 +353,7 @@ is_drumbrake_supported =
+@@ -354,7 +354,7 @@ is_drumbrake_supported =
      (v8_current_cpu == "x64" || v8_current_cpu == "arm64" ||
       v8_current_cpu == "riscv64") &&
      (target_os == "win" || target_os == "linux" || target_os == "mac" ||
@@ -4333,7 +4337,7 @@ index bad6074733..acfba36aa6 100644
       && __clang_major__ >= 17                          /* clang >= 17 */
  # define V8_HAS_ATTRIBUTE_PRESERVE_MOST (__has_attribute(preserve_most))
 diff --git a/v8/src/api/api.cc b/v8/src/api/api.cc
-index e24cf3c760..e9a4cb84d9 100644
+index 9e5c00beb3..f9df3f40fd 100644
 --- a/v8/src/api/api.cc
 +++ b/v8/src/api/api.cc
 @@ -175,7 +175,7 @@
@@ -4345,7 +4349,7 @@ index e24cf3c760..e9a4cb84d9 100644
  #include <signal.h>
  #include <unistd.h>
  
-@@ -6513,7 +6513,7 @@ bool v8::V8::Initialize(const int build_config) {
+@@ -6495,7 +6495,7 @@ bool v8::V8::Initialize(const int build_config) {
    return true;
  }
  
@@ -4400,7 +4404,7 @@ index 69c506c40a..ecf245ea12 100644
  
  std::optional<OS::MemoryRange> OS::GetFirstFreeMemoryRangeWithin(
 diff --git a/v8/src/base/platform/platform-posix.cc b/v8/src/base/platform/platform-posix.cc
-index 82cee9a515..0f31ec942d 100644
+index 54d2a32599..f7c0c2177c 100644
 --- a/v8/src/base/platform/platform-posix.cc
 +++ b/v8/src/base/platform/platform-posix.cc
 @@ -79,8 +79,10 @@
