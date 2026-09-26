@@ -929,6 +929,24 @@ index 0e88fa8da9..1dd8195f01 100644
  }
  
  named_mojo_ipc_server::EndpointOptions CreateServerEndpointOptions(
+diff --git a/chromeos/ash/components/mojo_proxy/mojo_core/core/channel_posix.cc b/chromeos/ash/components/mojo_proxy/mojo_core/core/channel_posix.cc
+index 2688de3fde..4c496e53b7 100644
+--- a/chromeos/ash/components/mojo_proxy/mojo_core/core/channel_posix.cc
++++ b/chromeos/ash/components/mojo_proxy/mojo_core/core/channel_posix.cc
+@@ -395,10 +395,11 @@ bool ChannelPosix::WriteNoLock(MessageView message_view) {
+     if (result < 0) {
+       if (errno != EAGAIN &&
+           errno != EWOULDBLOCK
+-#if BUILDFLAG(IS_IOS)
++#if BUILDFLAG(IS_IOS) || BUILDFLAG(IS_NETBSD)
+           // On iOS if sendmsg() is trying to send fds between processes and
+           // there isn't enough room in the output buffer to send the fd
+-          // structure over atomically then EMSGSIZE is returned.
++          // structure over atomically then EMSGSIZE is returned. The same
++          // applies to NetBSD as well.
+           //
+           // EMSGSIZE presents a problem since the system APIs can only call
+           // us when there's room in the socket buffer and not when there is
 diff --git a/components/crash/core/app/chrome_crashpad_handler.cc b/components/crash/core/app/chrome_crashpad_handler.cc
 index 9aa752e77f..5c3ba36cc3 100644
 --- a/components/crash/core/app/chrome_crashpad_handler.cc
@@ -1564,6 +1582,79 @@ index 09733e34ce..4f60c390ac 100644
    # Alsa should be used on all non-Android, non-Mac POSIX systems - with the
    # exception of CastOS desktop builds.
    #
+diff --git a/mojo/core/channel_posix.cc b/mojo/core/channel_posix.cc
+index c9970c7754..8bb6d9fe89 100644
+--- a/mojo/core/channel_posix.cc
++++ b/mojo/core/channel_posix.cc
+@@ -428,10 +428,11 @@ bool ChannelPosix::WriteNoLock(MessageView message_view) {
+     if (result < 0) {
+       if (errno != EAGAIN &&
+           errno != EWOULDBLOCK
+-#if BUILDFLAG(IS_IOS)
++#if BUILDFLAG(IS_IOS) || BUILDFLAG(IS_NETBSD)
+           // On iOS if sendmsg() is trying to send fds between processes and
+           // there isn't enough room in the output buffer to send the fd
+-          // structure over atomically then EMSGSIZE is returned.
++          // structure over atomically then EMSGSIZE is returned. The same
++          // applies to NetBSD as well.
+           //
+           // EMSGSIZE presents a problem since the system APIs can only call
+           // us when there's room in the socket buffer and not when there is
+diff --git a/mojo/public/cpp/platform/platform_channel.cc b/mojo/public/cpp/platform/platform_channel.cc
+index 9d8f0cb8f0..6e5f106843 100644
+--- a/mojo/public/cpp/platform/platform_channel.cc
++++ b/mojo/public/cpp/platform/platform_channel.cc
+@@ -144,6 +144,38 @@ void CreateChannel(PlatformHandle* local_endpoint,
+   *remote_endpoint = PlatformHandle(std::move(receive));
+ }
+ #elif BUILDFLAG(IS_POSIX)
++#if BUILDFLAG(IS_NETBSD)
++// NetBSD's unp_send() silently drops both the data and the descriptors of a
++// sendmsg() whose SCM_RIGHTS control message does not fit in the receiver's
++// buffer, yet reports success: sosend() checks the space with the userland
++// control size (4 bytes per fd), then internalization grows it to 8 bytes per
++// fd. The stream then desyncs and the passed fds are lost. A sender can queue
++// at most its own SO_SNDBUF, so a receive buffer well above the peer's send
++// buffer keeps the internalized control message in range.
++void GrowReceiveBufferAbovePeerSendBuffer(int fd, int peer_fd) {
++  int sndbuf = 0;
++  socklen_t len = sizeof(sndbuf);
++  if (getsockopt(peer_fd, SOL_SOCKET, SO_SNDBUF, &sndbuf, &len) != 0 ||
++      sndbuf <= 0) {
++    PLOG(ERROR) << "getsockopt(SO_SNDBUF)";
++    return;
++  }
++  int rcvbuf = 0;
++  len = sizeof(rcvbuf);
++  if (getsockopt(fd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, &len) != 0) {
++    PLOG(ERROR) << "getsockopt(SO_RCVBUF)";
++    return;
++  }
++  const int wanted = base::ClampMul(sndbuf, 2);
++  if (rcvbuf >= wanted) {
++    return;
++  }
++  if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &wanted, sizeof(wanted)) != 0) {
++    PLOG(ERROR) << "setsockopt(SO_RCVBUF, " << wanted << ")";
++  }
++}
++#endif  // BUILDFLAG(IS_NETBSD)
++
+ void CreateChannel(PlatformHandle* local_endpoint,
+                    PlatformHandle* remote_endpoint) {
+   int fds[2];
+@@ -153,6 +185,11 @@ void CreateChannel(PlatformHandle* local_endpoint,
+   PCHECK(fcntl(fds[0], F_SETFL, O_NONBLOCK) == 0);
+   PCHECK(fcntl(fds[1], F_SETFL, O_NONBLOCK) == 0);
+ 
++#if BUILDFLAG(IS_NETBSD)
++  GrowReceiveBufferAbovePeerSendBuffer(fds[0], fds[1]);
++  GrowReceiveBufferAbovePeerSendBuffer(fds[1], fds[0]);
++#endif
++
+   *local_endpoint = PlatformHandle(base::ScopedFD(fds[0]));
+   *remote_endpoint = PlatformHandle(base::ScopedFD(fds[1]));
+   DCHECK(local_endpoint->is_valid());
 diff --git a/mojo/public/cpp/platform/socket_utils_posix.cc b/mojo/public/cpp/platform/socket_utils_posix.cc
 index 8cebec59fd..94d3adf662 100644
 --- a/mojo/public/cpp/platform/socket_utils_posix.cc
