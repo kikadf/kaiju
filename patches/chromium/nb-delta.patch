@@ -1922,7 +1922,7 @@ index eac61993c4..28a6e43a22 100644
  #endif
    base::AtExitManager exit_manager;
 diff --git a/rollup/rust/bindings_napi/Cargo.toml b/rollup/rust/bindings_napi/Cargo.toml
-index f9acaffb5a..192f976f85 100644
+index f9acaffb5a..cde5a46726 100644
 --- a/rollup/rust/bindings_napi/Cargo.toml
 +++ b/rollup/rust/bindings_napi/Cargo.toml
 @@ -15,7 +15,7 @@ napi-derive = "3.5.5"
@@ -1939,19 +1939,19 @@ index f9acaffb5a..192f976f85 100644
  # 	)
  # )
 -[target.'cfg(any(all(target_os = "linux", not(target_arch = "loongarch64"), not(all(target_arch = "riscv64", target_env = "musl")), not(target_env = "ohos")), all(target_os = "openbsd", not(target_arch = "aarch64")), all(target_os = "freebsd", not(target_arch = "aarch64"))))'.dependencies]
-+[target.'cfg(any(all(target_os = "linux", not(target_arch = "loongarch64"), not(all(target_arch = "riscv64", target_env = "musl")), not(target_env = "ohos")), all(target_os = "openbsd", not(target_arch = "aarch64")), all(target_os = "freebsd", not(target_arch = "aarch64")), all(target_os = "netbsd", not(target_arch = "evbarm"))))'.dependencies]
++[target.'cfg(any(all(target_os = "linux", not(target_arch = "loongarch64"), not(all(target_arch = "riscv64", target_env = "musl")), not(target_env = "ohos")), all(target_os = "openbsd", not(target_arch = "aarch64")), all(target_os = "freebsd", not(target_arch = "aarch64")), all(target_os = "netbsd", not(target_arch = "aarch64"))))'.dependencies]
  mimalloc-safe = { version = "0.1.58", features = ["local_dynamic_tls"] }
  
  # Disable architecture specific optimizations on aarch64 platforms
 diff --git a/rollup/rust/bindings_napi/src/lib.rs b/rollup/rust/bindings_napi/src/lib.rs
-index 1895d1fbd0..3b5183b1e1 100644
+index 1895d1fbd0..7c00c1f638 100644
 --- a/rollup/rust/bindings_napi/src/lib.rs
 +++ b/rollup/rust/bindings_napi/src/lib.rs
 @@ -9,6 +9,7 @@ use std::mem;
    not(all(target_os = "linux", target_env = "ohos")),
    not(all(target_os = "freebsd", target_arch = "aarch64")),
    not(all(target_os = "openbsd", target_arch = "aarch64")),
-+  not(all(target_os = "netbsd", target_arch = "evbarm")),
++  not(all(target_os = "netbsd", target_arch = "aarch64")),
    not(debug_assertions)
  ))]
  #[global_allocator]
@@ -3673,18 +3673,20 @@ index 50356e8ba4..31ab93c10c 100644
    _binary_name = "tsc"
  } else if (host_os == "mac") {
 diff --git a/third_party/typescript/typescript.py b/third_party/typescript/typescript.py
-index c488ceba7c..d8c7d78318 100755
+index c488ceba7c..aefec7463e 100755
 --- a/third_party/typescript/typescript.py
 +++ b/third_party/typescript/typescript.py
-@@ -11,7 +11,7 @@ import os
+@@ -11,8 +11,8 @@ import os
  
  
  def GetBinaryPath():
 -  if platform.system() in ['OpenBSD', 'FreeBSD']:
+-    return "tsc"
 +  if platform.system() in ['OpenBSD', 'FreeBSD', 'NetBSD']:
-     return "tsc"
++    return os_path.normpath(os_path.join(os_path.dirname(__file__), 'linux-amd64', 'src', 'lib', 'tsc'))
  
    if platform.machine() == 'arm64':
+     darwin_path = 'mac-arm64'
 diff --git a/third_party/vulkan-loader/src/BUILD.gn b/third_party/vulkan-loader/src/BUILD.gn
 index 2fe7178ce7..2fe7e16d32 100644
 --- a/third_party/vulkan-loader/src/BUILD.gn
