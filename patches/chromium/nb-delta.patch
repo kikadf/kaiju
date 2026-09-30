@@ -2880,18 +2880,29 @@ index 96d6207e67..6e7f88483f 100644
  } else if (host_os == "win") {
    tsc_binary = "//third_party/typescript/windows-amd64/src/lib/tsc.exe"
 diff --git a/third_party/devtools-frontend/src/third_party/typescript/typescript.py b/third_party/devtools-frontend/src/third_party/typescript/typescript.py
-index f2b0cd7416..5550640877 100644
+index f2b0cd7416..64f52b051b 100644
 --- a/third_party/devtools-frontend/src/third_party/typescript/typescript.py
 +++ b/third_party/devtools-frontend/src/third_party/typescript/typescript.py
-@@ -10,7 +10,7 @@ import os
+@@ -10,9 +10,6 @@ import os
  
  
  def GetBinaryPath():
 -    if platform.system() in ['OpenBSD', 'FreeBSD']:
-+    if platform.system() in ['OpenBSD', 'FreeBSD', 'NetBSD']:
-         return "tsc"
- 
+-        return "tsc"
+-
      if platform.machine() == 'arm64':
+         darwin_path = 'mac-arm64'
+     else:
+@@ -21,6 +18,9 @@ def GetBinaryPath():
+     relative = {
+         'Darwin': (darwin_path, 'src', 'lib', 'tsc'),
+         'Linux': ('linux-amd64', 'src', 'lib', 'tsc'),
++        'OpenBSD': ('linux-amd64', 'src', 'lib', 'tsc'),
++        'FreeBSD': ('linux-amd64', 'src', 'lib', 'tsc'),
++        'NetBSD': ('linux-amd64', 'src', 'lib', 'tsc'),
+         'Windows': ('windows-amd64', 'src', 'lib', 'tsc.exe'),
+     }[platform.system()]
+ 
 diff --git a/third_party/federated_compute/third_party/protodatastore-cpp/src/protostore/file-storage.cc b/third_party/federated_compute/third_party/protodatastore-cpp/src/protostore/file-storage.cc
 index 3293800bf9..0521dc6ba1 100644
 --- a/third_party/federated_compute/third_party/protodatastore-cpp/src/protostore/file-storage.cc
@@ -3673,20 +3684,29 @@ index 50356e8ba4..31ab93c10c 100644
    _binary_name = "tsc"
  } else if (host_os == "mac") {
 diff --git a/third_party/typescript/typescript.py b/third_party/typescript/typescript.py
-index c488ceba7c..aefec7463e 100755
+index c488ceba7c..d350fbc5a0 100755
 --- a/third_party/typescript/typescript.py
 +++ b/third_party/typescript/typescript.py
-@@ -11,8 +11,8 @@ import os
+@@ -11,9 +11,6 @@ import os
  
  
  def GetBinaryPath():
 -  if platform.system() in ['OpenBSD', 'FreeBSD']:
 -    return "tsc"
-+  if platform.system() in ['OpenBSD', 'FreeBSD', 'NetBSD']:
-+    return os_path.normpath(os_path.join(os_path.dirname(__file__), 'linux-amd64', 'src', 'lib', 'tsc'))
- 
+-
    if platform.machine() == 'arm64':
      darwin_path = 'mac-arm64'
+   else:
+@@ -22,6 +19,9 @@ def GetBinaryPath():
+   return os_path.normpath(os_path.join(os_path.dirname(__file__), *{
+     'Darwin': (darwin_path, 'src', 'lib', 'tsc'),
+     'Linux': ('linux-amd64', 'src', 'lib', 'tsc'),
++    'OpenBSD': ('linux-amd64', 'src', 'lib', 'tsc'),
++    'FreeBSD': ('linux-amd64', 'src', 'lib', 'tsc'),
++    'NetBSD': ('linux-amd64', 'src', 'lib', 'tsc'),
+     'Windows': ('windows-amd64', 'src', 'lib', 'tsc.exe'),
+   }[platform.system()]))
+ 
 diff --git a/third_party/vulkan-loader/src/BUILD.gn b/third_party/vulkan-loader/src/BUILD.gn
 index 2fe7178ce7..2fe7e16d32 100644
 --- a/third_party/vulkan-loader/src/BUILD.gn

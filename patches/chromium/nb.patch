@@ -41034,19 +41034,19 @@ index b234b98227..6e7f88483f 100644
  } else if (host_os == "win") {
    tsc_binary = "//third_party/typescript/windows-amd64/src/lib/tsc.exe"
 diff --git a/third_party/devtools-frontend/src/third_party/typescript/typescript.py b/third_party/devtools-frontend/src/third_party/typescript/typescript.py
-index a01a471e47..5550640877 100644
+index a01a471e47..64f52b051b 100644
 --- a/third_party/devtools-frontend/src/third_party/typescript/typescript.py
 +++ b/third_party/devtools-frontend/src/third_party/typescript/typescript.py
-@@ -10,6 +10,9 @@ import os
+@@ -18,6 +18,9 @@ def GetBinaryPath():
+     relative = {
+         'Darwin': (darwin_path, 'src', 'lib', 'tsc'),
+         'Linux': ('linux-amd64', 'src', 'lib', 'tsc'),
++        'OpenBSD': ('linux-amd64', 'src', 'lib', 'tsc'),
++        'FreeBSD': ('linux-amd64', 'src', 'lib', 'tsc'),
++        'NetBSD': ('linux-amd64', 'src', 'lib', 'tsc'),
+         'Windows': ('windows-amd64', 'src', 'lib', 'tsc.exe'),
+     }[platform.system()]
  
- 
- def GetBinaryPath():
-+    if platform.system() in ['OpenBSD', 'FreeBSD', 'NetBSD']:
-+        return "tsc"
-+
-     if platform.machine() == 'arm64':
-         darwin_path = 'mac-arm64'
-     else:
 diff --git a/third_party/federated_compute/src/fcp/client/opstats/pds_backed_opstats_db.cc b/third_party/federated_compute/src/fcp/client/opstats/pds_backed_opstats_db.cc
 index c0a48548de..f4ce2a0095 100644
 --- a/third_party/federated_compute/src/fcp/client/opstats/pds_backed_opstats_db.cc
@@ -44292,19 +44292,19 @@ index 900db8e63c..31ab93c10c 100644
    _binary_name = "tsc"
  } else if (host_os == "mac") {
 diff --git a/third_party/typescript/typescript.py b/third_party/typescript/typescript.py
-index 7c2db710d1..aefec7463e 100755
+index 7c2db710d1..d350fbc5a0 100755
 --- a/third_party/typescript/typescript.py
 +++ b/third_party/typescript/typescript.py
-@@ -11,6 +11,9 @@ import os
+@@ -19,6 +19,9 @@ def GetBinaryPath():
+   return os_path.normpath(os_path.join(os_path.dirname(__file__), *{
+     'Darwin': (darwin_path, 'src', 'lib', 'tsc'),
+     'Linux': ('linux-amd64', 'src', 'lib', 'tsc'),
++    'OpenBSD': ('linux-amd64', 'src', 'lib', 'tsc'),
++    'FreeBSD': ('linux-amd64', 'src', 'lib', 'tsc'),
++    'NetBSD': ('linux-amd64', 'src', 'lib', 'tsc'),
+     'Windows': ('windows-amd64', 'src', 'lib', 'tsc.exe'),
+   }[platform.system()]))
  
- 
- def GetBinaryPath():
-+  if platform.system() in ['OpenBSD', 'FreeBSD', 'NetBSD']:
-+    return os_path.normpath(os_path.join(os_path.dirname(__file__), 'linux-amd64', 'src', 'lib', 'tsc'))
-+
-   if platform.machine() == 'arm64':
-     darwin_path = 'mac-arm64'
-   else:
 diff --git a/third_party/unrar/src/crypt.cpp b/third_party/unrar/src/crypt.cpp
 index dbc1fb0c3c..af449ce5b6 100644
 --- a/third_party/unrar/src/crypt.cpp
