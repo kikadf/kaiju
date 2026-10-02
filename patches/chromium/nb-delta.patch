@@ -3129,6 +3129,19 @@ index 91225e71ac..9e63c0c0e8 100755
      'Windows': ('win', 'node.exe'),
    }[platform.system()])
  
+diff --git a/third_party/ots/src/src/name.cc b/third_party/ots/src/src/name.cc
+index fc5074b058..d9feb76424 100644
+--- a/third_party/ots/src/src/name.cc
++++ b/third_party/ots/src/src/name.cc
+@@ -16,7 +16,7 @@ namespace {
+ // We disallow characters outside the URI spec "unreserved characters"
+ // set; any chars outside this set will be replaced by underscore.
+ bool AllowedInPsName(char c) {
+-  return isalnum(c) || std::strchr("-._~", c);
++  return isalnum(static_cast<unsigned char>(c)) || std::strchr("-._~", c);
+ }
+ 
+ bool SanitizePsNameAscii(std::string& name) {
 diff --git a/third_party/pdfium/core/fxge/linux/fx_linux_impl.cpp b/third_party/pdfium/core/fxge/linux/fx_linux_impl.cpp
 index 3ff4236173..7f0c411cab 100644
 --- a/third_party/pdfium/core/fxge/linux/fx_linux_impl.cpp
