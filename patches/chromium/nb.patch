@@ -30255,21 +30255,15 @@ index 71973779e2..9e91fb10fc 100644
  BASE_DECLARE_FEATURE(kMojoUseEventFd);
  
 diff --git a/mojo/public/cpp/platform/platform_channel.cc b/mojo/public/cpp/platform/platform_channel.cc
-index ab387a2b34..f9a289f6bd 100644
+index ab387a2b34..c0c728f60d 100644
 --- a/mojo/public/cpp/platform/platform_channel.cc
 +++ b/mojo/public/cpp/platform/platform_channel.cc
-@@ -148,6 +148,38 @@ void CreateChannel(PlatformHandle* local_endpoint,
+@@ -148,6 +148,32 @@ void CreateChannel(PlatformHandle* local_endpoint,
    *remote_endpoint = PlatformHandle(std::move(receive));
  }
  #elif BUILDFLAG(IS_POSIX)
 +#if BUILDFLAG(IS_NETBSD)
-+// NetBSD's unp_send() silently drops both the data and the descriptors of a
-+// sendmsg() whose SCM_RIGHTS control message does not fit in the receiver's
-+// buffer, yet reports success: sosend() checks the space with the userland
-+// control size (4 bytes per fd), then internalization grows it to 8 bytes per
-+// fd. The stream then desyncs and the passed fds are lost. A sender can queue
-+// at most its own SO_SNDBUF, so a receive buffer well above the peer's send
-+// buffer keeps the internalized control message in range.
++// PR60832 https://gnats.netbsd.org/60832
 +void GrowReceiveBufferAbovePeerSendBuffer(int fd, int peer_fd) {
 +  int sndbuf = 0;
 +  socklen_t len = sizeof(sndbuf);
@@ -30297,7 +30291,7 @@ index ab387a2b34..f9a289f6bd 100644
  void CreateChannel(PlatformHandle* local_endpoint,
                     PlatformHandle* remote_endpoint) {
    int fds[2];
-@@ -157,6 +189,11 @@ void CreateChannel(PlatformHandle* local_endpoint,
+@@ -157,6 +183,11 @@ void CreateChannel(PlatformHandle* local_endpoint,
    PCHECK(fcntl(fds[0], F_SETFL, O_NONBLOCK) == 0);
    PCHECK(fcntl(fds[1], F_SETFL, O_NONBLOCK) == 0);
  
@@ -44243,28 +44237,6 @@ index 289f566b40..ed4c230f6c 100644
  }
  
  void SetUpFontconfig() {
-diff --git a/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc b/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc
-index 8360e87c8f..9173cf465c 100644
---- a/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc
-+++ b/third_party/test_fonts/fontconfig/generate_fontconfig_caches.cc
-@@ -28,6 +28,7 @@ int main() {
-   // fontconfig cache.
-   //     $ echo -n /test_fonts | md5sum
-   //     fb5c91b2895aa445d23aebf7f9e2189c  -
-+  //static const char kCacheKey[] = "cd4b5bc7-6cfc-41dc-8982-f2db624179ba";
-   static const char kCacheKey[] = "fb5c91b2895aa445d23aebf7f9e2189c";
- 
-   // fontconfig writes the mtime of the test_fonts directory into the cache. It
-@@ -56,7 +57,8 @@ int main() {
-   FcFini();
- 
-   // Check existence of intended fontconfig cache file.
--  auto cache = fontconfig_caches + "/" + kCacheKey + "-le64.cache-11";
-+  //auto cache = fontconfig_caches + "/" + kCacheKey + "-x86_64.cache-" + FC_CACHE_VERSION;
-+  auto cache = fontconfig_caches + "/" + kCacheKey + "-le64.cache-" + FC_CACHE_VERSION;
-   bool cache_exists = access(cache.c_str(), F_OK) == 0;
-   return !cache_exists;
- }
 diff --git a/third_party/tflite/features.gni b/third_party/tflite/features.gni
 index 36202850d1..6e0d79ba31 100644
 --- a/third_party/tflite/features.gni
