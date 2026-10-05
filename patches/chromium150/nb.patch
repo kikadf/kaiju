@@ -1,8 +1,8 @@
 diff --git a/BUILD.gn b/BUILD.gn
-index 6fb9996541..842e70b8a6 100644
+index df09eb1d9b..f5a9effc38 100644
 --- a/BUILD.gn
 +++ b/BUILD.gn
-@@ -68,7 +68,7 @@ declare_args() {
+@@ -69,7 +69,7 @@ declare_args() {
    root_extra_deps = []
  }
  
@@ -11,7 +11,7 @@ index 6fb9996541..842e70b8a6 100644
    # An official (maximally optimized!) component (optimized for build times)
    # build doesn't make sense and usually doesn't work.
    assert(!is_component_build)
-@@ -101,7 +101,6 @@ group("gn_all") {
+@@ -102,7 +102,6 @@ group("gn_all") {
        "//codelabs",
        "//components:components_unittests",
        "//components/gwp_asan:gwp_asan_unittests",
@@ -19,7 +19,7 @@ index 6fb9996541..842e70b8a6 100644
        "//net:net_unittests",
        "//sandbox:sandbox_unittests",
        "//services:services_unittests",
-@@ -429,7 +428,7 @@ group("gn_all") {
+@@ -434,7 +433,7 @@ group("gn_all") {
        }
      }
  
@@ -28,7 +28,7 @@ index 6fb9996541..842e70b8a6 100644
        deps += [
          "//third_party/breakpad:breakpad_unittests",
          "//third_party/breakpad:core-2-minidump",
-@@ -592,6 +591,15 @@ group("gn_all") {
+@@ -597,6 +596,15 @@ group("gn_all") {
        }
      }
  
@@ -44,7 +44,7 @@ index 6fb9996541..842e70b8a6 100644
      if (is_mac) {
        deps += [
          "//third_party/breakpad:dump_syms($host_system_allocator_toolchain)",
-@@ -640,7 +648,7 @@ group("gn_all") {
+@@ -645,7 +653,7 @@ group("gn_all") {
        }
      }
  
@@ -53,7 +53,7 @@ index 6fb9996541..842e70b8a6 100644
        # The official builders use this binary from the default toolchain's
        # output directory after building in order to upload the symbols of that
        # binary. They build the binary like `ninja symupload` which requires the
-@@ -675,7 +683,7 @@ group("gn_all") {
+@@ -680,7 +688,7 @@ group("gn_all") {
        ]
      }
  
@@ -62,7 +62,7 @@ index 6fb9996541..842e70b8a6 100644
        deps += [
          "//third_party/crashpad/crashpad:crashpad_tests",
          "//third_party/crashpad/crashpad/handler:crashpad_handler",
-@@ -1080,7 +1088,7 @@ if (use_blink && !is_cronet_build) {
+@@ -1085,7 +1093,7 @@ if (use_blink && !is_cronet_build) {
        "//third_party/blink/public:all_blink",
      ]
  
@@ -71,7 +71,7 @@ index 6fb9996541..842e70b8a6 100644
        deps += [
          ":chrome_wpt_tests",
          ":headless_shell_wpt",
-@@ -1232,7 +1240,7 @@ if (use_blink && !is_cronet_build) {
+@@ -1237,7 +1245,7 @@ if (use_blink && !is_cronet_build) {
        data_deps += [ "//content/web_test:web_test_common_mojom_js_data_deps" ]
      }
  
@@ -80,7 +80,7 @@ index 6fb9996541..842e70b8a6 100644
        # Using the default toolchain for this tool, as it's run during tests not
        # during the build. This places a symlink in the root_build_dir for scrips
        # to use.
-@@ -1246,7 +1254,7 @@ if (use_blink && !is_cronet_build) {
+@@ -1251,7 +1259,7 @@ if (use_blink && !is_cronet_build) {
        data_deps += [ "//third_party/breakpad:dump_syms" ]
      }
  
@@ -89,7 +89,7 @@ index 6fb9996541..842e70b8a6 100644
        # Using the default toolchain for this tool, as it's run during tests not
        # during the build. This places a symlink in the root_build_dir for scrips
        # to use.
-@@ -1526,7 +1534,7 @@ group("chromium_builder_perf") {
+@@ -1531,7 +1539,7 @@ group("chromium_builder_perf") {
        data_deps += [ "//chrome/test:performance_browser_tests" ]
      }
  
@@ -5445,7 +5445,7 @@ index df8f9455d2..be208e5baf 100644
          *base::CommandLine::ForCurrentProcess());
  #endif
 diff --git a/chrome/browser/about_flags.cc b/chrome/browser/about_flags.cc
-index 65692f66ab..47733b0fd5 100644
+index b329463946..f33dd97ed6 100644
 --- a/chrome/browser/about_flags.cc
 +++ b/chrome/browser/about_flags.cc
 @@ -345,13 +345,13 @@
@@ -5573,7 +5573,7 @@ index 65692f66ab..47733b0fd5 100644
  const FeatureEntry::FeatureParam kProjectsPanelWithoutThreadsVariation[] = {
      {"include_threads_in_projects_panel", "false"}};
  const FeatureEntry::FeatureParam kProjectsPanelWithThreadsVariation[] = {
-@@ -5476,7 +5497,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -5486,7 +5507,7 @@ const FeatureEntry kFeatureEntries[] = {
       flag_descriptions::kEnableProcessIsolationUiDescription, kOsWin,
       FEATURE_VALUE_TYPE(features::kProcessIsolationSettings)},
  #endif  // BUILDFLAG(IS_WIN)
@@ -5582,7 +5582,7 @@ index 65692f66ab..47733b0fd5 100644
      {"enable-iwa-key-distribution-component",
       flag_descriptions::kEnableIwaKeyDistributionComponentName,
       flag_descriptions::kEnableIwaKeyDistributionComponentDescription,
-@@ -5682,7 +5703,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -5692,7 +5713,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(media::kUseSCContentSharingPicker)},
  #endif  // BUILDFLAG(IS_MAC)
  
@@ -5591,7 +5591,7 @@ index 65692f66ab..47733b0fd5 100644
      {"pulseaudio-loopback-for-cast",
       flag_descriptions::kPulseaudioLoopbackForCastName,
       flag_descriptions::kPulseaudioLoopbackForCastDescription, kOsLinux,
-@@ -5697,6 +5718,16 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -5707,6 +5728,16 @@ const FeatureEntry kFeatureEntries[] = {
       flag_descriptions::kWaylandSessionManagementName,
       flag_descriptions::kWaylandSessionManagementDescription, kOsLinux,
       FEATURE_VALUE_TYPE(features::kWaylandSessionManagement)},
@@ -5608,7 +5608,7 @@ index 65692f66ab..47733b0fd5 100644
  #endif  // BUILDFLAG(IS_LINUX)
  
  #if BUILDFLAG(ENABLE_VR)
-@@ -6133,7 +6164,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -6143,7 +6174,7 @@ const FeatureEntry kFeatureEntries[] = {
       flag_descriptions::kFillOnAccountSelectDescription, kOsAll,
       FEATURE_VALUE_TYPE(password_manager::features::kFillOnAccountSelect)},
  
@@ -5617,7 +5617,7 @@ index 65692f66ab..47733b0fd5 100644
      {"first-run-desktop-choice-screen-refresh",
       flag_descriptions::kFirstRunDesktopChoiceScreenRefreshName,
       flag_descriptions::kFirstRunDesktopChoiceScreenRefreshDescription,
-@@ -6443,7 +6474,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -6453,7 +6484,7 @@ const FeatureEntry kFeatureEntries[] = {
                                      "MlUrlScoring")},
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_MAC) || \
@@ -5626,7 +5626,7 @@ index 65692f66ab..47733b0fd5 100644
      {"contextual-search-box-uses-contextual-search-provider",
       flag_descriptions::kContextualSearchBoxUsesContextualSearchProviderName,
       flag_descriptions::
-@@ -6878,7 +6909,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -6888,7 +6919,7 @@ const FeatureEntry kFeatureEntries[] = {
           kVoiceSearchCoherenceComposeboxVariations,
           "VoiceSearchCoherenceComposeboxVariations")},
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_MAC) || \
@@ -5635,7 +5635,7 @@ index 65692f66ab..47733b0fd5 100644
      {"history-embeddings", flag_descriptions::kHistoryEmbeddingsName,
       flag_descriptions::kHistoryEmbeddingsDescription, kOsDesktop,
       FEATURE_VALUE_TYPE(history_embeddings::kHistoryEmbeddings)},
-@@ -7125,7 +7156,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -7135,7 +7166,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(omnibox::kContextMenuAnimationLimiting)},
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN) || \
@@ -5644,7 +5644,7 @@ index 65692f66ab..47733b0fd5 100644
      {"ntp-customize-chrome-auto-open",
       flag_descriptions::kNtpCustomizeChromeAutoOpenName,
       flag_descriptions::kNtpCustomizeChromeAutoOpenDescription, kOsDesktop,
-@@ -7366,7 +7397,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -7380,7 +7411,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif  // BUILDFLAG(IS_ANDROID)
  
  #if BUILDFLAG(ENABLE_PRINTING)
@@ -5653,7 +5653,7 @@ index 65692f66ab..47733b0fd5 100644
      {"cups-ipp-printing-backend",
       flag_descriptions::kCupsIppPrintingBackendName,
       flag_descriptions::kCupsIppPrintingBackendDescription, kOsDesktop,
-@@ -7578,7 +7609,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -7592,7 +7623,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(media::kHeadlessCaptionEarlyStart)},
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || \
@@ -5662,7 +5662,7 @@ index 65692f66ab..47733b0fd5 100644
      {"enable-input-protection", flag_descriptions::kEnableInputProtectionName,
       flag_descriptions::kEnableInputProtectionDescription, kOsDesktop,
       FEATURE_VALUE_TYPE(views::features::kEnableInputProtection)},
-@@ -8153,7 +8184,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -8167,7 +8198,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(ash::features::kGesturePropertiesDBusService)},
  #endif  // BUILDFLAG(IS_CHROMEOS)
  
@@ -5671,7 +5671,7 @@ index 65692f66ab..47733b0fd5 100644
      {"enable-network-service-sandbox",
       flag_descriptions::kEnableNetworkServiceSandboxName,
       flag_descriptions::kEnableNetworkServiceSandboxDescription,
-@@ -8599,7 +8630,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -8613,7 +8644,7 @@ const FeatureEntry kFeatureEntries[] = {
       flag_descriptions::kGlobalVaapiLockDescription, kOsCrOS | kOsLinux,
       FEATURE_VALUE_TYPE(media::kGlobalVaapiLock)},
  
@@ -5680,7 +5680,7 @@ index 65692f66ab..47733b0fd5 100644
      {
          "ui-debug-tools",
          flag_descriptions::kUIDebugToolsName,
-@@ -9046,7 +9077,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -9060,7 +9091,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || \
@@ -5689,7 +5689,7 @@ index 65692f66ab..47733b0fd5 100644
      {"auto-picture-in-picture-for-video-playback",
       flag_descriptions::kAutoPictureInPictureForVideoPlaybackName,
       flag_descriptions::kAutoPictureInPictureForVideoPlaybackDescription,
-@@ -9259,7 +9290,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -9273,7 +9304,7 @@ const FeatureEntry kFeatureEntries[] = {
           content_settings::features::kApproximateGeolocationPermission,
           kApproximateGeolocationPermissionVariations,
           "ApproximateGeolocationPermission")},
@@ -5698,7 +5698,7 @@ index 65692f66ab..47733b0fd5 100644
      {"approximate-geolocation-permission",
       flag_descriptions::kApproximateGeolocationPermissionName,
       flag_descriptions::kApproximateGeolocationPermissionDescription,
-@@ -9757,7 +9788,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -9773,7 +9804,7 @@ const FeatureEntry kFeatureEntries[] = {
       flag_descriptions::kRcapsDynamicProfileCountryDescription, kOsAll,
       FEATURE_VALUE_TYPE(switches::kDynamicProfileCountry)},
  
@@ -5707,7 +5707,7 @@ index 65692f66ab..47733b0fd5 100644
      {"enable-generic-oidc-auth-profile-management",
       flag_descriptions::kEnableGenericOidcAuthProfileManagementName,
       flag_descriptions::kEnableGenericOidcAuthProfileManagementDescription,
-@@ -9767,7 +9798,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -9783,7 +9814,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN) || \
@@ -5716,7 +5716,7 @@ index 65692f66ab..47733b0fd5 100644
      {"enable-user-navigation-capturing-pwa",
       flag_descriptions::kPwaNavigationCapturingName,
       flag_descriptions::kPwaNavigationCapturingDescription,
-@@ -10119,7 +10150,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -10141,7 +10172,7 @@ const FeatureEntry kFeatureEntries[] = {
       flag_descriptions::kResponsiveIframesDescription, kOsAll,
       FEATURE_VALUE_TYPE(blink::features::kResponsiveIframes)},
  
@@ -5725,7 +5725,7 @@ index 65692f66ab..47733b0fd5 100644
      {"replace-sync-promos-with-sign-in-promos-desktop",
       flag_descriptions::kReplaceSyncPromosWithSignInPromosName,
       flag_descriptions::kReplaceSyncPromosWithSignInPromosDescription,
-@@ -10503,7 +10534,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -10525,7 +10556,7 @@ const FeatureEntry kFeatureEntries[] = {
           segmentation_platform::features::kSegmentationSurveyPage)},
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -5734,7 +5734,7 @@ index 65692f66ab..47733b0fd5 100644
      {"autofill-enable-buy-now-pay-later",
       flag_descriptions::kAutofillEnableBuyNowPayLaterName,
       flag_descriptions::kAutofillEnableBuyNowPayLaterDescription,
-@@ -10962,7 +10993,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -10984,7 +11015,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(ui::kUseNewEtc1Encoder)},
  #endif  // !BUILDFLAG(IS_ANDROID)
  
@@ -5743,7 +5743,7 @@ index 65692f66ab..47733b0fd5 100644
      {"automatic-usb-detach", flag_descriptions::kAutomaticUsbDetachName,
       flag_descriptions::kAutomaticUsbDetachDescription, kOsAndroid | kOsLinux,
       FEATURE_VALUE_TYPE(features::kAutomaticUsbDetach)},
-@@ -10985,7 +11016,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -11007,7 +11038,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif  // !BUILDFLAG(IS_ANDROID)
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -5752,7 +5752,7 @@ index 65692f66ab..47733b0fd5 100644
      {"autofill-enable-amount-extraction",
       flag_descriptions::kAutofillEnableAmountExtractionName,
       flag_descriptions::kAutofillEnableAmountExtractionDescription,
-@@ -11101,7 +11132,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -11123,7 +11154,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(
           feature_engagement::kIPHAutofillCreditCardBenefitFeature)},
  
@@ -5761,7 +5761,7 @@ index 65692f66ab..47733b0fd5 100644
      {"chrome-web-store-navigation-throttle",
       flag_descriptions::kChromeWebStoreNavigationThrottleName,
       flag_descriptions::kChromeWebStoreNavigationThrottleDescription,
-@@ -11141,7 +11172,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -11163,7 +11194,7 @@ const FeatureEntry kFeatureEntries[] = {
           supervised_user::kSupervisedUserUseUrlFilteringService)},
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -5770,7 +5770,7 @@ index 65692f66ab..47733b0fd5 100644
      {"autofill-enable-amount-extraction-testing",
       flag_descriptions::kAutofillEnableAmountExtractionTestingName,
       flag_descriptions::kAutofillEnableAmountExtractionTestingDescription,
-@@ -11151,7 +11182,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -11173,7 +11204,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) ||
          // BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID)
  
@@ -5779,7 +5779,7 @@ index 65692f66ab..47733b0fd5 100644
      {"root-scrollbar-follows-browser-theme",
       flag_descriptions::kRootScrollbarFollowsTheme,
       flag_descriptions::kRootScrollbarFollowsThemeDescription,
-@@ -11339,7 +11370,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -11361,7 +11392,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif  // BUILDFLAG(IS_ANDROID)
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN) || \
@@ -5788,7 +5788,7 @@ index 65692f66ab..47733b0fd5 100644
      {"tab-group-home", tabs::flag_descriptions::kTabGroupHomeName,
       tabs::flag_descriptions::kTabGroupHomeDescription, kOsDesktop,
       FEATURE_VALUE_TYPE(tabs::kTabGroupHome)},
-@@ -11379,7 +11410,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -11401,7 +11432,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif  // BUILDFLAG(IS_ANDROID)
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN) || \
@@ -5797,7 +5797,7 @@ index 65692f66ab..47733b0fd5 100644
      {"enable-site-search-allow-user-override-policy",
       flag_descriptions::kEnableSiteSearchAllowUserOverridePolicyName,
       flag_descriptions::kEnableSiteSearchAllowUserOverridePolicyDescription,
-@@ -11463,7 +11494,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -11485,7 +11516,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif  // BUILDFLAG(IS_ANDROID)
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -5806,7 +5806,7 @@ index 65692f66ab..47733b0fd5 100644
      {"autofill-enable-buy-now-pay-later-for-klarna",
       flag_descriptions::kAutofillEnableBuyNowPayLaterForKlarnaName,
       flag_descriptions::kAutofillEnableBuyNowPayLaterForKlarnaDescription,
-@@ -11512,7 +11543,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -11534,7 +11565,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -5815,7 +5815,7 @@ index 65692f66ab..47733b0fd5 100644
      {"autofill-enable-buy-now-pay-later-for-externally-linked",
       flag_descriptions::kAutofillEnableBuyNowPayLaterForExternallyLinkedName,
       flag_descriptions::
-@@ -11886,7 +11917,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -11908,7 +11939,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_MAC) || \
@@ -5824,7 +5824,7 @@ index 65692f66ab..47733b0fd5 100644
      {"contextual-suggestion-ui-improvements",
       flag_descriptions::kContextualSuggestionsUiImprovementsName,
       flag_descriptions::kContextualSuggestionsUiImprovementsDescription,
-@@ -12017,7 +12048,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12039,7 +12070,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(features::kCryptographyComplianceCnsa)},
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -5833,7 +5833,7 @@ index 65692f66ab..47733b0fd5 100644
      {"lens-reinvocation-affordance",
       flag_descriptions::kLensSearchReinvocationAffordanceName,
       flag_descriptions::kLensSearchReinvocationAffordanceDescription,
-@@ -12061,7 +12092,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12083,7 +12114,7 @@ const FeatureEntry kFeatureEntries[] = {
       STRING_VALUE_TYPE(variations::switches::kVariationsSeedCorpus, "")},
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -5842,7 +5842,7 @@ index 65692f66ab..47733b0fd5 100644
      {"passkey-unlock-error-ui", flag_descriptions::kPasskeyUnlockErrorUiName,
       flag_descriptions::kPasskeyUnlockErrorUiDescription, kOsDesktop,
       FEATURE_VALUE_TYPE(device::kPasskeyUnlockErrorUi)},
-@@ -12095,7 +12126,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12117,7 +12148,7 @@ const FeatureEntry kFeatureEntries[] = {
       flag_descriptions::kHandleMdmErrorsForDasherAccountsDescription, kOsAll,
       FEATURE_VALUE_TYPE(switches::kHandleMdmErrorsForDasherAccounts)},
  
@@ -5851,7 +5851,7 @@ index 65692f66ab..47733b0fd5 100644
      {"disable-u18-feedback-desktop",
       flag_descriptions::kDisableU18FeedbackDesktopName,
       flag_descriptions::kDisableU18FeedbackDesktopDescription,
-@@ -12103,7 +12134,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12125,7 +12156,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(switches::kDisableU18FeedbackDesktop)},
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
  
@@ -5860,7 +5860,7 @@ index 65692f66ab..47733b0fd5 100644
      {"profile-creation-decline-signin-cta-experiment",
       flag_descriptions::kProfileCreationDeclineSigninCTAExperimentName,
       flag_descriptions::kProfileCreationDeclineSigninCTAExperimentDescription,
-@@ -12124,7 +12155,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12146,7 +12177,7 @@ const FeatureEntry kFeatureEntries[] = {
           enterprise_signals::features::kProfileSignalsReportingEnabled)},
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -5869,7 +5869,7 @@ index 65692f66ab..47733b0fd5 100644
      {"projects-panel", flag_descriptions::kProjectsPanelName,
       flag_descriptions::kProjectsPanelDescription, kOsDesktop,
       FEATURE_WITH_PARAMS_VALUE_TYPE(tab_groups::kProjectsPanel,
-@@ -12158,7 +12189,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12180,7 +12211,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -5878,7 +5878,7 @@ index 65692f66ab..47733b0fd5 100644
      {"lens-overlay-optimization-filter",
       flag_descriptions::kLensOverlayOptimizationFilterName,
       flag_descriptions::kLensOverlayOptimizationFilterDescription, kOsDesktop,
-@@ -12185,7 +12216,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12207,7 +12238,7 @@ const FeatureEntry kFeatureEntries[] = {
       MULTI_VALUE_TYPE(kConnectionAllowlistsChoices)},
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -5887,7 +5887,7 @@ index 65692f66ab..47733b0fd5 100644
      {"read-anything-with-readability-enabled",
       flag_descriptions::kReadAnythingWithReadabilityName,
       flag_descriptions::kReadAnythingWithReadabilityDescription, kOsDesktop,
-@@ -12193,7 +12224,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12215,7 +12246,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -5896,7 +5896,7 @@ index 65692f66ab..47733b0fd5 100644
      {"read-anything-omnibox-chip",
       flag_descriptions::kReadAnythingOmniboxChipName,
       flag_descriptions::kReadAnythingOmniboxChipDescription, kOsDesktop,
-@@ -12215,7 +12246,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12237,7 +12268,7 @@ const FeatureEntry kFeatureEntries[] = {
           autofill::features::kAutofillDisableBnplCountryCheckForTesting)},
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -5905,7 +5905,7 @@ index 65692f66ab..47733b0fd5 100644
      {"read-anything-immersive-reading-mode",
       flag_descriptions::kReadAnythingImmersiveReadingModeName,
       flag_descriptions::kReadAnythingImmersiveReadingModeDescription,
-@@ -12228,7 +12259,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12250,7 +12281,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -5914,7 +5914,7 @@ index 65692f66ab..47733b0fd5 100644
      {"lens-overlay-non-blocking-privacy-notice",
       flag_descriptions::kLensOverlayNonBlockingPrivacyNoticeName,
       flag_descriptions::kLensOverlayNonBlockingPrivacyNoticeDescription,
-@@ -12301,7 +12332,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12323,7 +12354,7 @@ const FeatureEntry kFeatureEntries[] = {
  #endif  // BUILDFLAG(IS_ANDROID)
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -5923,7 +5923,7 @@ index 65692f66ab..47733b0fd5 100644
      {"enable-your-saved-info-settings-page",
       flag_descriptions::kYourSavedInfoSettingsPageName,
       flag_descriptions::kYourSavedInfoSettingsPageDescription, kOsDesktop,
-@@ -12479,7 +12510,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12501,7 +12532,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(autofill::features::kAutofillAiWithDataSchema)},
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -5932,7 +5932,7 @@ index 65692f66ab..47733b0fd5 100644
      {"read-anything-line-focus", flag_descriptions::kReadAnythingLineFocusName,
       flag_descriptions::kReadAnythingLineFocusDescription, kOsDesktop,
       FEATURE_VALUE_TYPE(features::kReadAnythingLineFocus)},
-@@ -12503,7 +12534,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12525,7 +12556,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(payments::android::kDeduplicateNativePaymentApps)},
  #endif
  
@@ -5941,7 +5941,7 @@ index 65692f66ab..47733b0fd5 100644
      {"password-upload-ui-update",
       flag_descriptions::kPasswordUploadUiUpdateName,
       flag_descriptions::kPasswordUploadUiUpdateDescription,
-@@ -12552,7 +12583,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -12574,7 +12605,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(chrome::android::kAndroidXrImmersivePlayer)},
  #endif
  
@@ -5950,7 +5950,7 @@ index 65692f66ab..47733b0fd5 100644
      {"saas-usage-reporting", flag_descriptions::kSaasUsageReportingName,
       flag_descriptions::kSaasUsageReportingDescription,
       kOsLinux | kOsMac | kOsWin,
-@@ -12983,7 +13014,7 @@ const FeatureEntry kFeatureEntries[] = {
+@@ -13005,7 +13036,7 @@ const FeatureEntry kFeatureEntries[] = {
       FEATURE_VALUE_TYPE(blink::features::kUserMediaElement)},
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -7211,10 +7211,10 @@ index fa5a257dad..acd9a32c75 100644
   public:
    // The type of formatting done by this writer.
 diff --git a/chrome/browser/download/chrome_download_manager_delegate.cc b/chrome/browser/download/chrome_download_manager_delegate.cc
-index caa3d49934..62654448f0 100644
+index df1bc60215..804aebc2f8 100644
 --- a/chrome/browser/download/chrome_download_manager_delegate.cc
 +++ b/chrome/browser/download/chrome_download_manager_delegate.cc
-@@ -2095,7 +2095,7 @@ void ChromeDownloadManagerDelegate::OnDownloadTargetDetermined(
+@@ -2111,7 +2111,7 @@ void ChromeDownloadManagerDelegate::OnDownloadTargetDetermined(
  bool ChromeDownloadManagerDelegate::IsOpenInBrowserPreferredForFile(
      const base::FilePath& path) {
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || \
@@ -7223,7 +7223,7 @@ index caa3d49934..62654448f0 100644
    if (path.MatchesExtension(FILE_PATH_LITERAL(".pdf"))) {
      return !download_prefs_->ShouldOpenPdfInSystemReader();
    }
-@@ -2232,7 +2232,7 @@ void ChromeDownloadManagerDelegate::CheckDownloadAllowed(
+@@ -2248,7 +2248,7 @@ void ChromeDownloadManagerDelegate::CheckDownloadAllowed(
      content::CheckDownloadAllowedCallback check_download_allowed_cb) {
    DCHECK_CURRENTLY_ON(BrowserThread::UI);
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || \
@@ -7232,7 +7232,7 @@ index caa3d49934..62654448f0 100644
    // Don't download pdf if it is a file URL, as that might cause an infinite
    // download loop if Chrome is not the system pdf viewer.
    if (url.SchemeIsFile() && download_prefs_->ShouldOpenPdfInSystemReader()) {
-@@ -2310,7 +2310,7 @@ void ChromeDownloadManagerDelegate::CheckSavePackageAllowed(
+@@ -2326,7 +2326,7 @@ void ChromeDownloadManagerDelegate::CheckSavePackageAllowed(
    DCHECK(download_item->IsSavePackageDownload());
  
  #if (BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || \
@@ -8509,7 +8509,7 @@ index 2c27d9f5ba..df839385d5 100644
      provider_list->push_back(std::make_unique<ExternalProviderImpl>(
          service,
 diff --git a/chrome/browser/extensions/sync/extension_sync_service.cc b/chrome/browser/extensions/sync/extension_sync_service.cc
-index 2efc951d41..8a4162aa6b 100644
+index f7b480ae7b..94968ec20a 100644
 --- a/chrome/browser/extensions/sync/extension_sync_service.cc
 +++ b/chrome/browser/extensions/sync/extension_sync_service.cc
 @@ -637,7 +637,7 @@ void ExtensionSyncService::ApplySyncData(
@@ -8691,10 +8691,10 @@ index c53238661c..60c7b72ee1 100644
  // called, the decision to show the dialog or not will be made by Chrome based
  // on a number of factors (such as install type, whether it's a Chrome-branded
 diff --git a/chrome/browser/flag_descriptions.h b/chrome/browser/flag_descriptions.h
-index c8f53c118f..c41b36aec4 100644
+index 278c1b849a..dddbc2c292 100644
 --- a/chrome/browser/flag_descriptions.h
 +++ b/chrome/browser/flag_descriptions.h
-@@ -8514,6 +8514,20 @@ inline constexpr char kEnableDlpFileSystemApiDescription[] =
+@@ -8523,6 +8523,20 @@ inline constexpr char kEnableDlpFileSystemApiDescription[] =
      "Enable DLP upload scan support for FileSystem API-backed cloud storage on "
      "ChromeOS.";
  
@@ -8799,7 +8799,7 @@ index 0c0bb126fd..c85ec9a0f2 100644
  #else
               base::FEATURE_ENABLED_BY_DEFAULT
 diff --git a/chrome/browser/glic/service/glic_instance_impl.cc b/chrome/browser/glic/service/glic_instance_impl.cc
-index 51881ede14..8e68606c63 100644
+index 9422ed3e3d..a5f4869d78 100644
 --- a/chrome/browser/glic/service/glic_instance_impl.cc
 +++ b/chrome/browser/glic/service/glic_instance_impl.cc
 @@ -18,7 +18,7 @@
@@ -13010,10 +13010,10 @@ index aaa9903f66..0cc319c477 100644
      // Select an update text option randomly. Show this text in all browser
      // windows.
 diff --git a/chrome/browser/ui/ui_features.cc b/chrome/browser/ui/ui_features.cc
-index 3787f4e327..2686dca3f8 100644
+index 5de1dce2f4..98ae7e2525 100644
 --- a/chrome/browser/ui/ui_features.cc
 +++ b/chrome/browser/ui/ui_features.cc
-@@ -82,7 +82,7 @@ bool IsWebuiRefresh2026Enabled() {
+@@ -100,7 +100,7 @@ bool IsWebuiRefresh2026Enabled() {
           base::FeatureList::IsEnabled(kWebuiRefresh2026);
  }
  
@@ -13022,7 +13022,7 @@ index 3787f4e327..2686dca3f8 100644
  BASE_FEATURE(kDseIntegrity, base::FEATURE_ENABLED_BY_DEFAULT);
  // Enables the feature to remove the last confirmation dialog when relaunching
  // to update Chrome.
-@@ -283,7 +283,7 @@ BASE_FEATURE(kManagedProfileRequiredInterstitial,
+@@ -301,7 +301,7 @@ BASE_FEATURE(kManagedProfileRequiredInterstitial,
  BASE_FEATURE(kViewsJSAppModalDialog, base::FEATURE_DISABLED_BY_DEFAULT);
  #endif
  
@@ -13031,7 +13031,7 @@ index 3787f4e327..2686dca3f8 100644
  BASE_FEATURE(kUsePortalAccentColor, base::FEATURE_ENABLED_BY_DEFAULT);
  #endif
  
-@@ -399,7 +399,7 @@ bool IsBookmarkTabGroupConversionEnabled() {
+@@ -417,7 +417,7 @@ bool IsBookmarkTabGroupConversionEnabled() {
    return base::FeatureList::IsEnabled(kBookmarkTabGroupConversion);
  }
  
@@ -13041,7 +13041,7 @@ index 3787f4e327..2686dca3f8 100644
  
  BASE_FEATURE_PARAM(bool,
 diff --git a/chrome/browser/ui/ui_features.h b/chrome/browser/ui/ui_features.h
-index 1466c54bc0..6ea97d5c8d 100644
+index 8b86f44038..74c32ecf49 100644
 --- a/chrome/browser/ui/ui_features.h
 +++ b/chrome/browser/ui/ui_features.h
 @@ -28,7 +28,7 @@ BASE_DECLARE_FEATURE(kCreateNewTabGroupAppMenuTopLevel);
@@ -13053,7 +13053,7 @@ index 1466c54bc0..6ea97d5c8d 100644
  BASE_DECLARE_FEATURE(kDseIntegrity);
  BASE_DECLARE_FEATURE(kFewerUpdateConfirmations);
  #endif
-@@ -74,7 +74,7 @@ BASE_DECLARE_FEATURE_PARAM(int,
+@@ -78,7 +78,7 @@ BASE_DECLARE_FEATURE_PARAM(int,
  BASE_DECLARE_FEATURE_PARAM(int, kSeparateDefaultAndPinPromptMessageVersion);
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC)
  
@@ -13062,7 +13062,7 @@ index 1466c54bc0..6ea97d5c8d 100644
  // When enabled, user may see the session restore UI flow.
  BASE_DECLARE_FEATURE(kSessionRestoreInfobar);
  
-@@ -260,7 +260,7 @@ BASE_DECLARE_FEATURE(kManagedProfileRequiredInterstitial);
+@@ -264,7 +264,7 @@ BASE_DECLARE_FEATURE(kManagedProfileRequiredInterstitial);
  BASE_DECLARE_FEATURE(kViewsJSAppModalDialog);
  #endif
  
@@ -14021,7 +14021,7 @@ index 2f3284f847..8600aa9401 100644
    // window (plus shadow elevation outsets) rather than the screen. To handle
    // this, we adjust the display bounds by the difference between the drop arrow
 diff --git a/chrome/browser/ui/views/tabs/tab.cc b/chrome/browser/ui/views/tabs/tab.cc
-index d9287b9ed5..d9290d7207 100644
+index f80c98d3bd..cb242ed48b 100644
 --- a/chrome/browser/ui/views/tabs/tab.cc
 +++ b/chrome/browser/ui/views/tabs/tab.cc
 @@ -1281,7 +1281,7 @@ void Tab::MaybeUpdateHoverStatus(const ui::MouseEvent& event) {
@@ -14125,10 +14125,10 @@ index 1c04df7c2a..e9334821ba 100644
    void MaybeShowSignInBenefitsIPH() override;
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
 diff --git a/chrome/browser/ui/views/user_education/browser_user_education_service.cc b/chrome/browser/ui/views/user_education/browser_user_education_service.cc
-index 6ebba8bbef..74cff77d26 100644
+index 857c26ad03..d578acc9b4 100644
 --- a/chrome/browser/ui/views/user_education/browser_user_education_service.cc
 +++ b/chrome/browser/ui/views/user_education/browser_user_education_service.cc
-@@ -1449,7 +1449,7 @@ void MaybeRegisterChromeFeaturePromos(
+@@ -1466,7 +1466,7 @@ void MaybeRegisterChromeFeaturePromos(
                  "Triggered when a shared tab becomes the active tab.")));
    }
  
@@ -14137,7 +14137,7 @@ index 6ebba8bbef..74cff77d26 100644
    // kIPHSupervisedUserProfileSigninFeature:
    registry.RegisterFeature(std::move(
        FeaturePromoSpecification::CreateForCustomAction(
-@@ -1755,7 +1755,7 @@ void MaybeRegisterChromeFeaturePromos(
+@@ -1771,7 +1771,7 @@ void MaybeRegisterChromeFeaturePromos(
                         "Triggered to inform users of the availability of the "
                         "new translate screen feature on the Lens Overlay.")));
  
@@ -17856,7 +17856,7 @@ index 9f261d6877..b0c6cac6e6 100644
              IDS_ERRORPAGES_SUGGESTION_PROXY_DISABLE_PLATFORM,
              l10n_util::GetStringUTF16(IDS_SETTINGS_TITLE),
 diff --git a/components/eye_dropper/eye_dropper_view.cc b/components/eye_dropper/eye_dropper_view.cc
-index 1bff11db91..eafa84e18a 100644
+index d96981103d..1c936906f5 100644
 --- a/components/eye_dropper/eye_dropper_view.cc
 +++ b/components/eye_dropper/eye_dropper_view.cc
 @@ -350,7 +350,7 @@ EyeDropperView::EyeDropperView(gfx::NativeView parent,
@@ -17927,7 +17927,7 @@ index 3f91525b80..f6e0016d62 100644
    if (kIPHAutofillCreditCardBenefitFeature.name == feature->name) {
      // The credit card benefit IPH appears up to three times over 10 years and
 diff --git a/components/feature_engagement/public/feature_constants.cc b/components/feature_engagement/public/feature_constants.cc
-index b72349d640..0160aacfbe 100644
+index 1755d4c84a..07ef4c5c45 100644
 --- a/components/feature_engagement/public/feature_constants.cc
 +++ b/components/feature_engagement/public/feature_constants.cc
 @@ -32,7 +32,7 @@ bool IsOnDeviceStorageEnabled() {
@@ -17939,7 +17939,7 @@ index b72349d640..0160aacfbe 100644
  #if BUILDFLAG(GOOGLE_CHROME_BRANDING)
  BASE_FEATURE(kEsbDownloadRowPromoFeature,
               "EsbDownloadRowPromo",
-@@ -932,7 +932,7 @@ BASE_FEATURE(kIPHiOSActiveDaysTrackingFeature,
+@@ -935,7 +935,7 @@ BASE_FEATURE(kIPHiOSActiveDaysTrackingFeature,
  #endif  // BUILDFLAG(IS_IOS)
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_LINUX) || \
@@ -17948,7 +17948,7 @@ index b72349d640..0160aacfbe 100644
  BASE_FEATURE(kIPHAutofillAtMemoryFeature,
               "IPH_AutofillAtMemory",
               base::FEATURE_DISABLED_BY_DEFAULT);
-@@ -1005,7 +1005,7 @@ BASE_FEATURE(kIPHLauncherSearchHelpUiFeature,
+@@ -1008,7 +1008,7 @@ BASE_FEATURE(kIPHLauncherSearchHelpUiFeature,
               base::FEATURE_ENABLED_BY_DEFAULT);
  #endif
  
@@ -17958,7 +17958,7 @@ index b72349d640..0160aacfbe 100644
  // flag is needed for the IPH linked to this feature to work, and
  // use-cases to show the IPH are guarded by that flag.
 diff --git a/components/feature_engagement/public/feature_constants.h b/components/feature_engagement/public/feature_constants.h
-index dc2bd015a8..61d00f729f 100644
+index 5d7b92baa2..3ff9348cfe 100644
 --- a/components/feature_engagement/public/feature_constants.h
 +++ b/components/feature_engagement/public/feature_constants.h
 @@ -31,7 +31,7 @@ FEATURE_CONSTANTS_DECLARE_FEATURE(kIPHDemoMode);
@@ -17970,7 +17970,7 @@ index dc2bd015a8..61d00f729f 100644
  #if BUILDFLAG(GOOGLE_CHROME_BRANDING)
  FEATURE_CONSTANTS_DECLARE_FEATURE(kEsbDownloadRowPromoFeature);
  #endif
-@@ -406,7 +406,7 @@ FEATURE_CONSTANTS_DECLARE_FEATURE(kIPHiOSActiveDaysTrackingFeature);
+@@ -407,7 +407,7 @@ FEATURE_CONSTANTS_DECLARE_FEATURE(kIPHiOSActiveDaysTrackingFeature);
  
  #endif  // BUILDFLAG(IS_IOS)
  
@@ -17979,7 +17979,7 @@ index dc2bd015a8..61d00f729f 100644
      BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_FUCHSIA)
  FEATURE_CONSTANTS_DECLARE_FEATURE(kIPHAutofillAtMemoryFeature);
  FEATURE_CONSTANTS_DECLARE_FEATURE(kIPHAutofillBnplAffirmOrZipSuggestionFeature);
-@@ -441,7 +441,7 @@ FEATURE_CONSTANTS_DECLARE_FEATURE(kIPHGoogleOneOfferNotificationFeature);
+@@ -442,7 +442,7 @@ FEATURE_CONSTANTS_DECLARE_FEATURE(kIPHGoogleOneOfferNotificationFeature);
  FEATURE_CONSTANTS_DECLARE_FEATURE(kIPHLauncherSearchHelpUiFeature);
  #endif
  
@@ -17989,7 +17989,7 @@ index dc2bd015a8..61d00f729f 100644
  FEATURE_CONSTANTS_DECLARE_FEATURE(kIPHDesktopPWAsLinkCapturingLaunchAppInTab);
  FEATURE_CONSTANTS_DECLARE_FEATURE(kIPHSignInBenefitsFeature);
 diff --git a/components/feature_engagement/public/feature_list.cc b/components/feature_engagement/public/feature_list.cc
-index 1281f2ce8a..1b43b2019d 100644
+index 373664ed22..ba69b6b46a 100644
 --- a/components/feature_engagement/public/feature_list.cc
 +++ b/components/feature_engagement/public/feature_list.cc
 @@ -242,7 +242,7 @@ const base::Feature* const kAllFeatures[] = {
@@ -18001,7 +18001,7 @@ index 1281f2ce8a..1b43b2019d 100644
  #if BUILDFLAG(GOOGLE_CHROME_BRANDING)
      &kEsbDownloadRowPromoFeature,
  #endif
-@@ -328,7 +328,7 @@ const base::Feature* const kAllFeatures[] = {
+@@ -329,7 +329,7 @@ const base::Feature* const kAllFeatures[] = {
          // BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FUCHSIA)
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_LINUX) || \
@@ -18010,7 +18010,7 @@ index 1281f2ce8a..1b43b2019d 100644
      // keep-sorted start case=no
      &kIPHAutofillAccountNameEmailSuggestionFeature,
      &kIPHAutofillAiOptInFeature,
-@@ -361,7 +361,7 @@ const base::Feature* const kAllFeatures[] = {
+@@ -362,7 +362,7 @@ const base::Feature* const kAllFeatures[] = {
  
  #endif  // BUILDFLAG(IS_CHROMEOS)
  
@@ -18020,7 +18020,7 @@ index 1281f2ce8a..1b43b2019d 100644
      &kIPHDesktopPWAsLinkCapturingLaunch,
      &kIPHDesktopPWAsLinkCapturingLaunchAppInTab,
 diff --git a/components/feature_engagement/public/feature_list.h b/components/feature_engagement/public/feature_list.h
-index e74d4e87e2..b59490bf60 100644
+index e4827f7deb..17c92a84e4 100644
 --- a/components/feature_engagement/public/feature_list.h
 +++ b/components/feature_engagement/public/feature_list.h
 @@ -393,7 +393,7 @@ DEFINE_VARIATION_PARAM(kIPHiOSPinMostVisitedSiteFeature,
@@ -18032,7 +18032,7 @@ index e74d4e87e2..b59490bf60 100644
  #if BUILDFLAG(GOOGLE_CHROME_BRANDING)
  DEFINE_VARIATION_PARAM(kEsbDownloadRowPromoFeature, "EsbDownloadRowPromo");
  #endif
-@@ -532,7 +532,7 @@ DEFINE_VARIATION_PARAM(kIPHTabGroupsSharedTabFeedbackFeature,
+@@ -534,7 +534,7 @@ DEFINE_VARIATION_PARAM(kIPHTabGroupsSharedTabFeedbackFeature,
          // BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FUCHSIA)
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_LINUX) || \
@@ -18041,7 +18041,7 @@ index e74d4e87e2..b59490bf60 100644
  DEFINE_VARIATION_PARAM(kIPHAutofillAccountNameEmailSuggestionFeature,
                         "IPH_AutofillAccountNameEmailSuggestion");
  DEFINE_VARIATION_PARAM(kIPHAutofillAiOptInFeature, "IPH_AutofillAiOptIn");
-@@ -577,7 +577,7 @@ DEFINE_VARIATION_PARAM(kIPHLauncherSearchHelpUiFeature,
+@@ -579,7 +579,7 @@ DEFINE_VARIATION_PARAM(kIPHLauncherSearchHelpUiFeature,
                         "IPH_LauncherSearchHelpUi");
  #endif  // BUILDFLAG(IS_CHROMEOS)
  
@@ -18050,7 +18050,7 @@ index e74d4e87e2..b59490bf60 100644
  DEFINE_VARIATION_PARAM(kIPHDesktopPWAsLinkCapturingLaunch,
                         "IPH_DesktopPWAsLinkCapturingLaunch");
  DEFINE_VARIATION_PARAM(kIPHDesktopPWAsLinkCapturingLaunchAppInTab,
-@@ -814,7 +814,7 @@ inline constexpr flags_ui::FeatureEntry::FeatureVariation
+@@ -816,7 +816,7 @@ inline constexpr flags_ui::FeatureEntry::FeatureVariation
          VARIATION_ENTRY(kIPHWhatsNewUpdatedFeature),
  // keep-sorted end
  #elif BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -18059,7 +18059,7 @@ index e74d4e87e2..b59490bf60 100644
  #if BUILDFLAG(ENABLE_EXTENSIONS)
          VARIATION_ENTRY(kIPHExtensionsMenuFeature),
          VARIATION_ENTRY(kIPHExtensionsRequestAccessButtonFeature),
-@@ -884,7 +884,7 @@ inline constexpr flags_ui::FeatureEntry::FeatureVariation
+@@ -887,7 +887,7 @@ inline constexpr flags_ui::FeatureEntry::FeatureVariation
          // BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FUCHSIA)
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_LINUX) || \
@@ -18068,7 +18068,7 @@ index e74d4e87e2..b59490bf60 100644
  // keep-sorted start case=no
          VARIATION_ENTRY(kIPHAutofillAccountNameEmailSuggestionFeature),
          VARIATION_ENTRY(kIPHAutofillAiOptInFeature),
-@@ -913,7 +913,7 @@ inline constexpr flags_ui::FeatureEntry::FeatureVariation
+@@ -916,7 +916,7 @@ inline constexpr flags_ui::FeatureEntry::FeatureVariation
          VARIATION_ENTRY(kIPHLauncherSearchHelpUiFeature),
  #endif  // BUILDFLAG(IS_CHROMEOS)
  
@@ -18823,7 +18823,7 @@ index 1139859c4f..158702133e 100644
        chrome_version.patch() == current_chrome_version.components()[3]) {
      paint_preview_service_->GetFileMixin()->GetAXTreeUpdate(
 diff --git a/components/password_manager/core/browser/features/password_features.cc b/components/password_manager/core/browser/features/password_features.cc
-index 1a99effa66..22ea1feca1 100644
+index 61a85e459a..f6e645426a 100644
 --- a/components/password_manager/core/browser/features/password_features.cc
 +++ b/components/password_manager/core/browser/features/password_features.cc
 @@ -78,7 +78,7 @@ BASE_FEATURE(kClearUndecryptablePasswords,
@@ -18835,16 +18835,7 @@ index 1a99effa66..22ea1feca1 100644
               base::FEATURE_ENABLED_BY_DEFAULT
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
-@@ -115,7 +115,7 @@ BASE_FEATURE(kFetchChangePasswordUrlForPasswordChange,
- BASE_FEATURE(kFillOnAccountSelect,
-              "fill-on-account-select",
- // TODO(504600482): Disable the feature again upon fixing the bug.
--#if BUILDFLAG(IS_LINUX)
-+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
-              base::FEATURE_ENABLED_BY_DEFAULT
- #else
-              base::FEATURE_DISABLED_BY_DEFAULT
-@@ -181,7 +181,7 @@ BASE_FEATURE(kPasswordStorePropagatesActionableErrors,
+@@ -175,7 +175,7 @@ BASE_FEATURE(kPasswordStorePropagatesActionableErrors,
  
  BASE_FEATURE(kPasswordCheckupPrototype, base::FEATURE_DISABLED_BY_DEFAULT);
  
@@ -19733,7 +19724,7 @@ index 70f3f5038e..163499b5bb 100644
                     CAN_SUBMIT_FEEDBACK_IN_CHROME_CAPABILITY_NAME,
                     "accountcapabilities/gizdqmrnmnqxa")
 diff --git a/components/signin/public/base/signin_switches.cc b/components/signin/public/base/signin_switches.cc
-index d7061c95bc..653d941cee 100644
+index 9baa568f2a..42ccb565dc 100644
 --- a/components/signin/public/base/signin_switches.cc
 +++ b/components/signin/public/base/signin_switches.cc
 @@ -33,7 +33,7 @@ const char kForceFreFeatureShowcaseSteps[] = "force-fre-feature-showcase-steps";
@@ -19781,7 +19772,7 @@ index d7061c95bc..653d941cee 100644
  BASE_FEATURE(kDisableU18FeedbackDesktop, base::FEATURE_DISABLED_BY_DEFAULT);
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
  
-@@ -474,7 +474,7 @@ const base::FeatureParam<base::TimeDelta>
+@@ -481,7 +481,7 @@ const base::FeatureParam<base::TimeDelta>
          base::Hours(8)};
  #endif
  
@@ -19790,7 +19781,7 @@ index d7061c95bc..653d941cee 100644
  BASE_FEATURE(kFirstRunDesktopRefresh, base::FEATURE_DISABLED_BY_DEFAULT);
  BASE_FEATURE(kFirstRunDesktopChoiceScreenRefresh,
               base::FEATURE_DISABLED_BY_DEFAULT);
-@@ -502,11 +502,11 @@ constexpr base::FeatureParam<FirstRunDesktopSignInPromoVariation>
+@@ -509,11 +509,11 @@ constexpr base::FeatureParam<FirstRunDesktopSignInPromoVariation>
          &kFirstRunDesktopSignInPromoVariations};
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
  
@@ -19804,7 +19795,7 @@ index d7061c95bc..653d941cee 100644
  BASE_FEATURE(kFirstRunDesktopRevamp, base::FEATURE_DISABLED_BY_DEFAULT);
  bool IsFirstRunDesktopRevampEnabled(bool is_in_search_engine_choice_region) {
    return IsFirstRunDesktopRefreshEnabled(is_in_search_engine_choice_region) &&
-@@ -573,12 +573,12 @@ BASE_FEATURE(kNoAccountWebSignin, base::FEATURE_DISABLED_BY_DEFAULT);
+@@ -580,12 +580,12 @@ BASE_FEATURE(kNoAccountWebSignin, base::FEATURE_DISABLED_BY_DEFAULT);
  BASE_FEATURE(kNonDefaultGaiaOriginCheck, base::FEATURE_ENABLED_BY_DEFAULT);
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -19819,7 +19810,7 @@ index d7061c95bc..653d941cee 100644
  BASE_FEATURE(kProfileCreationDeclineSigninCTAExperiment,
               base::FEATURE_ENABLED_BY_DEFAULT);
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
-@@ -619,7 +619,7 @@ const base::FeatureParam<int> kContextualSigninPromoDismissedThreshold(
+@@ -626,7 +626,7 @@ const base::FeatureParam<int> kContextualSigninPromoDismissedThreshold(
      "contextual_signin_promo_dismissed_threshold",
      2);
  
@@ -19828,7 +19819,7 @@ index d7061c95bc..653d941cee 100644
  BASE_FEATURE(kSignInPromoMaterialNextUI, base::FEATURE_ENABLED_BY_DEFAULT);
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
  
-@@ -689,7 +689,7 @@ BASE_FEATURE(kStableDeviceId, base::FEATURE_DISABLED_BY_DEFAULT);
+@@ -696,7 +696,7 @@ BASE_FEATURE(kStableDeviceId, base::FEATURE_DISABLED_BY_DEFAULT);
  BASE_FEATURE(kSupportAddSessionEmailPrefill, base::FEATURE_ENABLED_BY_DEFAULT);
  #endif
  
@@ -19838,7 +19829,7 @@ index d7061c95bc..653d941cee 100644
  BASE_FEATURE(kSupportErrorsInProfilePicker, base::FEATURE_ENABLED_BY_DEFAULT);
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
 diff --git a/components/signin/public/base/signin_switches.h b/components/signin/public/base/signin_switches.h
-index f003f0f7b0..9469e5a8d4 100644
+index b795965b4b..7168a0e9a6 100644
 --- a/components/signin/public/base/signin_switches.h
 +++ b/components/signin/public/base/signin_switches.h
 @@ -58,7 +58,7 @@ bool IsAvatarSyncPromoFeatureEnabled();
@@ -19877,7 +19868,7 @@ index f003f0f7b0..9469e5a8d4 100644
  // If enabled, disables feedback for U18 users on desktop platforms.
  // The iOS version is kDisableFeedbackForIneligibleUsers flag.
  COMPONENT_EXPORT(SIGNIN_SWITCHES)
-@@ -377,7 +377,7 @@ extern const base::FeatureParam<base::TimeDelta>
+@@ -379,7 +379,7 @@ extern const base::FeatureParam<base::TimeDelta>
      kPolicyDisclaimerRegistrationRetryDelay;
  #endif
  
@@ -19886,7 +19877,7 @@ index f003f0f7b0..9469e5a8d4 100644
  // This feature controls running visually refreshed first run and profile
  // creation flows for users outside of the search engine choice regions. To
  // enable the refresh in search engine choice screen regions,
-@@ -431,7 +431,7 @@ extern const base::FeatureParam<FirstRunDesktopSignInPromoVariation>
+@@ -433,7 +433,7 @@ extern const base::FeatureParam<FirstRunDesktopSignInPromoVariation>
      kFirstRunDesktopSignInPromoVariation;
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
  
@@ -19895,7 +19886,7 @@ index f003f0f7b0..9469e5a8d4 100644
  // A HaTS survey flag for the survey to gather user feedback after the changes
  // introduced with `kFirstRunDesktopRefresh`.
  //
-@@ -441,7 +441,7 @@ COMPONENT_EXPORT(SIGNIN_SWITCHES)
+@@ -443,7 +443,7 @@ COMPONENT_EXPORT(SIGNIN_SWITCHES)
  BASE_DECLARE_FEATURE(kFirstRunDesktopRefreshSurvey);
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
  
@@ -19904,7 +19895,7 @@ index f003f0f7b0..9469e5a8d4 100644
  // It enables the first run revamp (introduce new UIs and additional effects).
  // This feature is no-op if `kFirstRunDesktopRefresh` is disabled.
  //
-@@ -529,7 +529,7 @@ COMPONENT_EXPORT(SIGNIN_SWITCHES)
+@@ -531,7 +531,7 @@ COMPONENT_EXPORT(SIGNIN_SWITCHES)
  BASE_DECLARE_FEATURE(kNonDefaultGaiaOriginCheck);
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -19913,7 +19904,7 @@ index f003f0f7b0..9469e5a8d4 100644
  // Add new entry points for uploading passwords to account storage and update
  // existing ones.
  COMPONENT_EXPORT(SIGNIN_SWITCHES)
-@@ -537,7 +537,7 @@ BASE_DECLARE_FEATURE(kPasswordUploadUiUpdate);
+@@ -539,7 +539,7 @@ BASE_DECLARE_FEATURE(kPasswordUploadUiUpdate);
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) ||
          // BUILDFLAG(IS_CHROMEOS)
  
@@ -19922,7 +19913,7 @@ index f003f0f7b0..9469e5a8d4 100644
  // Experimenting with changing the secondary CTA for FRE and new profile
  // creation.
  COMPONENT_EXPORT(SIGNIN_SWITCHES)
-@@ -598,7 +598,7 @@ extern const base::FeatureParam<int> kContextualSigninPromoShownThreshold;
+@@ -600,7 +600,7 @@ extern const base::FeatureParam<int> kContextualSigninPromoShownThreshold;
  COMPONENT_EXPORT(SIGNIN_SWITCHES)
  extern const base::FeatureParam<int> kContextualSigninPromoDismissedThreshold;
  
@@ -19931,7 +19922,7 @@ index f003f0f7b0..9469e5a8d4 100644
  // Uses the Material Next theme for the signin promo.
  COMPONENT_EXPORT(SIGNIN_SWITCHES)
  BASE_DECLARE_FEATURE(kSignInPromoMaterialNextUI);
-@@ -653,7 +653,7 @@ COMPONENT_EXPORT(SIGNIN_SWITCHES)
+@@ -655,7 +655,7 @@ COMPONENT_EXPORT(SIGNIN_SWITCHES)
  BASE_DECLARE_FEATURE(kSupportAddSessionEmailPrefill);
  #endif
  
@@ -20921,10 +20912,10 @@ index 338a198ece..74a67c2b6f 100644
      return RunBrowser(std::move(main_params), start_minimal_browser);
  
 diff --git a/content/browser/BUILD.gn b/content/browser/BUILD.gn
-index d5d3ddea66..2bd2ee0511 100644
+index d8b60778cd..cdfca57e34 100644
 --- a/content/browser/BUILD.gn
 +++ b/content/browser/BUILD.gn
-@@ -2674,6 +2674,14 @@ source_set("browser") {
+@@ -2676,6 +2676,14 @@ source_set("browser") {
      ]
    }
  
@@ -20939,7 +20930,7 @@ index d5d3ddea66..2bd2ee0511 100644
    if (is_linux || is_chromeos) {
      sources -=
          [ "file_system_access/file_path_watcher/file_path_watcher_stub.cc" ]
-@@ -2725,6 +2733,15 @@ source_set("browser") {
+@@ -2727,6 +2735,15 @@ source_set("browser") {
      deps += [ "//media/mojo/mojom" ]
    }
  
@@ -21074,10 +21065,10 @@ index 588449db40..ed655f11dd 100644
      if (auto font_data_receiver =
              receiver.As<font_data_service::mojom::FontDataService>()) {
 diff --git a/content/browser/browser_main_loop.cc b/content/browser/browser_main_loop.cc
-index bc9cb1cb07..a839b38e3e 100644
+index 90ee66b3e9..d82e1c1bac 100644
 --- a/content/browser/browser_main_loop.cc
 +++ b/content/browser/browser_main_loop.cc
-@@ -250,6 +250,12 @@
+@@ -252,6 +252,12 @@
  #include "mojo/public/cpp/bindings/lib/test_random_mojo_delays.h"
  #endif
  
@@ -21090,7 +21081,7 @@ index bc9cb1cb07..a839b38e3e 100644
  // One of the linux specific headers defines this as a macro.
  #ifdef DestroyAll
  #undef DestroyAll
-@@ -536,6 +542,12 @@ int BrowserMainLoop::EarlyInitialization() {
+@@ -538,6 +544,12 @@ int BrowserMainLoop::EarlyInitialization() {
    // by now since a thread to start the ServiceManager has been created
    // before the browser main loop starts.
    DCHECK(SandboxHostLinux::GetInstance()->IsInitialized());
@@ -21103,7 +21094,7 @@ index bc9cb1cb07..a839b38e3e 100644
  #endif
  
    // GLib's spawning of new processes is buggy, so it's important that at this
-@@ -567,7 +579,7 @@ int BrowserMainLoop::EarlyInitialization() {
+@@ -569,7 +581,7 @@ int BrowserMainLoop::EarlyInitialization() {
    base::PlatformThread::SetCurrentThreadType(base::ThreadType::kPresentation);
  
  #if BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || \
@@ -21724,7 +21715,7 @@ index ea2ef8b61a..a7296cc0e6 100644
    if (madvise(bitmap.getPixels(), size, MADV_POPULATE_WRITE) == 0) {
      return;
 diff --git a/content/browser/renderer_host/render_process_host_impl.cc b/content/browser/renderer_host/render_process_host_impl.cc
-index 773173cd93..dc43d379aa 100644
+index abe9030414..ad3365ea4d 100644
 --- a/content/browser/renderer_host/render_process_host_impl.cc
 +++ b/content/browser/renderer_host/render_process_host_impl.cc
 @@ -229,7 +229,7 @@
@@ -21754,7 +21745,7 @@ index 773173cd93..dc43d379aa 100644
    child_thread_type_switcher_.SetPid(child_pid);
  #endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
  }
-@@ -3779,7 +3779,7 @@ void RenderProcessHostImpl::AppendRendererCommandLine(
+@@ -3778,7 +3778,7 @@ void RenderProcessHostImpl::AppendRendererCommandLine(
              base::TimeTicks::UnixEpoch().since_origin().InMicroseconds()));
    }
  
@@ -21763,7 +21754,7 @@ index 773173cd93..dc43d379aa 100644
    // Append `kDisableVideoCaptureUseGpuMemoryBuffer` flag if there is no support
    // for NV12 GPU memory buffer.
    if (switches::IsVideoCaptureUseGpuMemoryBufferEnabled() &&
-@@ -3837,6 +3837,7 @@ void RenderProcessHostImpl::PropagateBrowserCommandLineToRenderer(
+@@ -3836,6 +3836,7 @@ void RenderProcessHostImpl::PropagateBrowserCommandLineToRenderer(
        switches::kDisableSkiaRuntimeOpts,
        switches::kDisableSpeechAPI,
        switches::kDisableThreadedCompositing,
@@ -21771,7 +21762,7 @@ index 773173cd93..dc43d379aa 100644
        switches::kDisableV8IdleTasks,
        switches::kDisableVideoCaptureUseGpuMemoryBuffer,
        switches::kDomAutomationController,
-@@ -5796,7 +5797,7 @@ uint64_t RenderProcessHostImpl::GetPrivateMemoryFootprint() {
+@@ -5795,7 +5796,7 @@ uint64_t RenderProcessHostImpl::GetPrivateMemoryFootprint() {
    // - Win: https://crbug.com/707022 .
    uint64_t total_size = 0;
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || \
@@ -21874,7 +21865,7 @@ index 2cc2886d17..18b6ac0d11 100644
    if (command_line->HasSwitch(switches::kSystemFontFamily)) {
      prefs->system_font_family_name =
 diff --git a/content/browser/renderer_host/render_widget_host_view_aura.cc b/content/browser/renderer_host/render_widget_host_view_aura.cc
-index 05c71dd664..8045a27c93 100644
+index f6fb54b974..bdae4e9b05 100644
 --- a/content/browser/renderer_host/render_widget_host_view_aura.cc
 +++ b/content/browser/renderer_host/render_widget_host_view_aura.cc
 @@ -132,7 +132,7 @@
@@ -21904,7 +21895,7 @@ index 05c71dd664..8045a27c93 100644
  bool RenderWidgetHostViewAura::SetCompositionFromExistingText(
      const gfx::Range& range,
      const std::vector<ui::ImeTextSpan>& ui_ime_text_spans) {
-@@ -3113,7 +3113,7 @@ bool RenderWidgetHostViewAura::NeedsInputGrab() {
+@@ -3124,7 +3124,7 @@ bool RenderWidgetHostViewAura::NeedsInputGrab() {
  }
  
  bool RenderWidgetHostViewAura::NeedsMouseCapture() {
@@ -21913,7 +21904,7 @@ index 05c71dd664..8045a27c93 100644
    return NeedsInputGrab();
  #else
    return false;
-@@ -3330,7 +3330,7 @@ void RenderWidgetHostViewAura::ForwardKeyboardEventWithLatencyInfo(
+@@ -3350,7 +3350,7 @@ void RenderWidgetHostViewAura::ForwardKeyboardEventWithLatencyInfo(
    if (!target_host)
      return;
  
@@ -21936,10 +21927,10 @@ index 45a1f3e8d6..d3eb4fbaeb 100644
        const gfx::Range& range,
        const std::vector<ui::ImeTextSpan>& ui_ime_text_spans) override;
 diff --git a/content/browser/renderer_host/render_widget_host_view_event_handler.cc b/content/browser/renderer_host/render_widget_host_view_event_handler.cc
-index 88c585ea22..21ced8c262 100644
+index e05bedffbb..04d580f384 100644
 --- a/content/browser/renderer_host/render_widget_host_view_event_handler.cc
 +++ b/content/browser/renderer_host/render_widget_host_view_event_handler.cc
-@@ -617,7 +617,7 @@ bool RenderWidgetHostViewEventHandler::CanRendererHandleEvent(
+@@ -629,7 +629,7 @@ bool RenderWidgetHostViewEventHandler::CanRendererHandleEvent(
    if (event->type() == ui::EventType::kMouseExited) {
      if (mouse_locked || selection_popup)
        return false;
@@ -24278,10 +24269,10 @@ index ecb3cf0c93..925f78285d 100644
  #elif BUILDFLAG(IS_APPLE)
    return wgpu::BackendType::Metal;
 diff --git a/gpu/command_buffer/service/gles2_cmd_decoder.cc b/gpu/command_buffer/service/gles2_cmd_decoder.cc
-index 3ba1ade7c8..147f30371d 100644
+index 85166319b1..3499e5acc9 100644
 --- a/gpu/command_buffer/service/gles2_cmd_decoder.cc
 +++ b/gpu/command_buffer/service/gles2_cmd_decoder.cc
-@@ -2996,7 +2996,7 @@ std::unique_ptr<GLES2Decoder> GLES2Decoder::Create(
+@@ -2999,7 +2999,7 @@ std::unique_ptr<GLES2Decoder> GLES2Decoder::Create(
    }
  
  // Allow linux to run fuzzers.
@@ -31091,41 +31082,6 @@ index a207aef0a1..7b8385dc01 100644
    ReadConfig();
  #endif
  }
-diff --git a/rollup/rust/bindings_napi/Cargo.toml b/rollup/rust/bindings_napi/Cargo.toml
-index dc6c178f95..192f976f85 100644
---- a/rollup/rust/bindings_napi/Cargo.toml
-+++ b/rollup/rust/bindings_napi/Cargo.toml
-@@ -15,7 +15,7 @@ napi-derive = "3.5.5"
- parse_ast = { path = "../parse_ast" }
- xxhash = { path = "../xxhash" }
- 
--[target.'cfg(not(any(target_os = "linux", target_os = "freebsd")))'.dependencies]
-+[target.'cfg(not(any(target_os = "linux", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd")))'.dependencies]
- mimalloc-safe = { version = "0.1.58" }
- 
- # Readable version of the target specifier
-@@ -33,7 +33,7 @@ mimalloc-safe = { version = "0.1.58" }
- # 		)
- # 	)
- # )
--[target.'cfg(any(all(target_os = "linux", not(target_arch = "loongarch64"), not(all(target_arch = "riscv64", target_env = "musl")), not(target_env = "ohos")), all(target_os = "freebsd", not(target_arch = "aarch64"))))'.dependencies]
-+[target.'cfg(any(all(target_os = "linux", not(target_arch = "loongarch64"), not(all(target_arch = "riscv64", target_env = "musl")), not(target_env = "ohos")), all(target_os = "openbsd", not(target_arch = "aarch64")), all(target_os = "freebsd", not(target_arch = "aarch64")), all(target_os = "netbsd", not(target_arch = "evbarm"))))'.dependencies]
- mimalloc-safe = { version = "0.1.58", features = ["local_dynamic_tls"] }
- 
- # Disable architecture specific optimizations on aarch64 platforms
-diff --git a/rollup/rust/bindings_napi/src/lib.rs b/rollup/rust/bindings_napi/src/lib.rs
-index dde2281861..3b5183b1e1 100644
---- a/rollup/rust/bindings_napi/src/lib.rs
-+++ b/rollup/rust/bindings_napi/src/lib.rs
-@@ -8,6 +8,8 @@ use std::mem;
-   not(all(target_os = "linux", target_arch = "riscv64", target_env = "musl")),
-   not(all(target_os = "linux", target_env = "ohos")),
-   not(all(target_os = "freebsd", target_arch = "aarch64")),
-+  not(all(target_os = "openbsd", target_arch = "aarch64")),
-+  not(all(target_os = "netbsd", target_arch = "evbarm")),
-   not(debug_assertions)
- ))]
- #[global_allocator]
 diff --git a/sandbox/BUILD.gn b/sandbox/BUILD.gn
 index 0820bc89c5..e75ac3dbb2 100644
 --- a/sandbox/BUILD.gn
@@ -35106,7 +35062,7 @@ index 78f938737f..2abfa7f188 100644
    }
  
 diff --git a/services/network/public/cpp/features.cc b/services/network/public/cpp/features.cc
-index f35a387444..e04f02f7ec 100644
+index ddae47d2d6..98032cab1f 100644
 --- a/services/network/public/cpp/features.cc
 +++ b/services/network/public/cpp/features.cc
 @@ -95,7 +95,7 @@ BASE_FEATURE(kSplitAuthCacheByNetworkIsolationKey,
@@ -36295,10 +36251,10 @@ index 1cdc803960..348388ec63 100644
          "rt",
          "dl",
 diff --git a/third_party/blink/common/features.cc b/third_party/blink/common/features.cc
-index d210598dfd..65ca35990a 100644
+index 1c03e395d8..cc00e043f9 100644
 --- a/third_party/blink/common/features.cc
 +++ b/third_party/blink/common/features.cc
-@@ -692,7 +692,7 @@ BASE_FEATURE(kDevToolsAdsPanel, base::FEATURE_DISABLED_BY_DEFAULT);
+@@ -698,7 +698,7 @@ BASE_FEATURE(kDevToolsAdsPanel, base::FEATURE_DISABLED_BY_DEFAULT);
  
  BASE_FEATURE(kDirectCompositorThreadIpc,
  #if BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || \
@@ -36307,7 +36263,7 @@ index d210598dfd..65ca35990a 100644
               base::FEATURE_ENABLED_BY_DEFAULT
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
-@@ -2071,7 +2071,7 @@ BASE_FEATURE(kPrefetchFontLookupTables,
+@@ -2077,7 +2077,7 @@ BASE_FEATURE(kPrefetchFontLookupTables,
  // currently out of scope.
  BASE_FEATURE(kPreloadingEagerHoverHeuristics,
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -36562,7 +36518,7 @@ index 9b617d1f11..c41b284f60 100644
  #endif
  };
 diff --git a/third_party/blink/renderer/core/dom/tree_scope.h b/third_party/blink/renderer/core/dom/tree_scope.h
-index 8d02cc0fac..e1655004d3 100644
+index 30aac20682..4ca0e945b9 100644
 --- a/third_party/blink/renderer/core/dom/tree_scope.h
 +++ b/third_party/blink/renderer/core/dom/tree_scope.h
 @@ -28,6 +28,7 @@
@@ -36854,7 +36810,7 @@ index 569ad95ca3..1e5f98e39d 100644
          expected_priority == base::ThreadType::kPresentation) {
        EXPECT_EQ(actual_priority, base::ThreadType::kDefault);
 diff --git a/third_party/blink/renderer/modules/webgl/webgl_rendering_context_base.cc b/third_party/blink/renderer/modules/webgl/webgl_rendering_context_base.cc
-index 11841ee241..0dfd426379 100644
+index ceb4c3f606..f81b9f4ded 100644
 --- a/third_party/blink/renderer/modules/webgl/webgl_rendering_context_base.cc
 +++ b/third_party/blink/renderer/modules/webgl/webgl_rendering_context_base.cc
 @@ -6684,7 +6684,7 @@ void WebGLRenderingContextBase::TexImageHelperMediaVideoFrame(
@@ -37194,7 +37150,7 @@ index 63011d9d02..e1b4ccd352 100644
  #else
    return false;
 diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
-index 826f6eb202..26a10d98c7 100644
+index b4ecce05e6..e11f1afe16 100644
 --- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
 +++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
 @@ -431,7 +431,7 @@
@@ -37260,7 +37216,7 @@ index 826f6eb202..26a10d98c7 100644
        status: "experimental",
        public: true,
      },
-@@ -2353,7 +2353,7 @@
+@@ -2364,7 +2364,7 @@
        name: "DocumentIsolationPolicy",
        status: "experimental",
        origin_trial_feature_name: "DocumentIsolationPolicy",
@@ -37269,7 +37225,7 @@ index 826f6eb202..26a10d98c7 100644
        base_feature: "none",
      },
      {
-@@ -2700,7 +2700,7 @@
+@@ -2711,7 +2711,7 @@
        base_feature: "none",
        public: true,
        origin_trial_feature_name: "FedCmMultipleIdentityProviders",
@@ -37278,7 +37234,7 @@ index 826f6eb202..26a10d98c7 100644
        origin_trial_allows_third_party: true,
      },
      {
-@@ -3534,7 +3534,7 @@
+@@ -3545,7 +3545,7 @@
        name: "InstallElement",
        status: {"Android": "", "default": "test"},
        origin_trial_feature_name: "InstallElement",
@@ -37287,7 +37243,7 @@ index 826f6eb202..26a10d98c7 100644
        public: true,
        base_feature_status: "enabled",
        copied_from_base_feature_if: "overridden",
-@@ -6279,7 +6279,7 @@
+@@ -6291,7 +6291,7 @@
        name: "UnrestrictedSharedArrayBuffer",
        base_feature: "none",
        origin_trial_feature_name: "UnrestrictedSharedArrayBuffer",
@@ -37296,7 +37252,7 @@ index 826f6eb202..26a10d98c7 100644
      },
      // Enables using policy-controlled feature "usb-unrestricted" to allow
      // isolated context to access protected USB interface classes and to
-@@ -6377,7 +6377,7 @@
+@@ -6389,7 +6389,7 @@
        status: "experimental",
        origin_trial_feature_name: "UserMediaElement",
        public: true,
@@ -37305,7 +37261,7 @@ index 826f6eb202..26a10d98c7 100644
        base_feature_status: "enabled",
        copied_from_base_feature_if: "overridden",
      },
-@@ -6492,7 +6492,7 @@
+@@ -6504,7 +6504,7 @@
        name: "WebAppInstallation",
        status: {"Android": "", "default": "test"},
        origin_trial_feature_name: "WebAppInstallation",
@@ -37314,7 +37270,7 @@ index 826f6eb202..26a10d98c7 100644
        public: true,
        base_feature_status: "enabled",
        copied_from_base_feature_if: "overridden",
-@@ -6506,7 +6506,7 @@
+@@ -6518,7 +6518,7 @@
      {
        name: "WebAppScopeExtensions",
        origin_trial_feature_name: "WebAppScopeExtensions",
@@ -42767,23 +42723,23 @@ index 88f80571b0..b2d3e929b1 100644
  #endif
  #if BUILDFLAG(IS_MAC)
 diff --git a/ui/base/cursor/cursor_factory.cc b/ui/base/cursor/cursor_factory.cc
-index 70fc265335..1508d8ebd4 100644
+index 17edd0d5c5..f3e2a52d8d 100644
 --- a/ui/base/cursor/cursor_factory.cc
 +++ b/ui/base/cursor/cursor_factory.cc
-@@ -97,7 +97,7 @@ void CursorFactory::ObserveThemeChanges() {
+@@ -98,7 +98,7 @@ void CursorFactory::ObserveThemeChanges() {
    NOTIMPLEMENTED();
  }
  
 -#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
 +#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
  
- // Returns a cursor name compatible with either X11 or the FreeDesktop.org
- // cursor spec ([1] and [2]), followed by fallbacks that can work as
+ bool IsValidCursorThemeName(std::string_view name) {
+   if (name.empty() || name == ".") {
 diff --git a/ui/base/cursor/cursor_factory.h b/ui/base/cursor/cursor_factory.h
-index abcc292e0a..0b303088fd 100644
+index 3fcfcdf372..9d00d5306f 100644
 --- a/ui/base/cursor/cursor_factory.h
 +++ b/ui/base/cursor/cursor_factory.h
-@@ -93,7 +93,7 @@ class COMPONENT_EXPORT(UI_BASE_CURSOR) CursorFactory {
+@@ -94,7 +94,7 @@ class COMPONENT_EXPORT(UI_BASE_CURSOR) CursorFactory {
    base::ObserverList<CursorFactoryObserver>::Unchecked observers_;
  };
  
@@ -42791,7 +42747,7 @@ index abcc292e0a..0b303088fd 100644
 +#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
  COMPONENT_EXPORT(UI_BASE_CURSOR)
  std::vector<std::string> CursorNamesFromType(mojom::CursorType type);
- #endif
+ 
 diff --git a/ui/base/dragdrop/os_exchange_data_provider_factory.cc b/ui/base/dragdrop/os_exchange_data_provider_factory.cc
 index 4f3f3f5398..80341089c5 100644
 --- a/ui/base/dragdrop/os_exchange_data_provider_factory.cc
@@ -42946,10 +42902,10 @@ index 22644c6716..c22bc6f961 100644
    // should only be used for composition scenario when IME wants to start
    // composition on existing text. Returns whether the operation was successful.
 diff --git a/ui/base/resource/resource_bundle.cc b/ui/base/resource/resource_bundle.cc
-index 73e2f1e749..d9c04f04f0 100644
+index 652348b2bb..8fe8be0cee 100644
 --- a/ui/base/resource/resource_bundle.cc
 +++ b/ui/base/resource/resource_bundle.cc
-@@ -996,7 +996,7 @@ void ResourceBundle::ReloadFonts() {
+@@ -999,7 +999,7 @@ void ResourceBundle::ReloadFonts() {
  }
  
  ResourceScaleFactor ResourceBundle::GetMaxResourceScaleFactor() const {
@@ -42985,7 +42941,7 @@ index ef9f4615d9..e09e772227 100644
  // not really available, the next time that ui_controls::SendMouseMove() or
  // ui_controls::SendMouseMoveNotifyWhenDone() is called, or some other method
 diff --git a/ui/base/ui_base_features.cc b/ui/base/ui_base_features.cc
-index f9d1b0539a..2277a79343 100644
+index 434225ce92..84c40bfc4a 100644
 --- a/ui/base/ui_base_features.cc
 +++ b/ui/base/ui_base_features.cc
 @@ -142,7 +142,7 @@ BASE_FEATURE(kWaylandExternalBeginFrameSource,
@@ -43186,10 +43142,10 @@ index ccb704922a..4b3f022a16 100644
        cursor_theme_observation_{this};
  #endif
 diff --git a/ui/base/x/x11_cursor_loader.cc b/ui/base/x/x11_cursor_loader.cc
-index ad5feb08ec..ca2121772b 100644
+index 9a88782345..f5a386f354 100644
 --- a/ui/base/x/x11_cursor_loader.cc
 +++ b/ui/base/x/x11_cursor_loader.cc
-@@ -38,7 +38,7 @@
+@@ -39,7 +39,7 @@
  #include "ui/gfx/x/connection.h"
  #include "ui/gfx/x/xproto.h"
  
@@ -43198,7 +43154,7 @@ index ad5feb08ec..ca2121772b 100644
  #include "ui/linux/linux_ui.h"
  #endif
  
-@@ -80,7 +80,11 @@ std::string CursorPathFromLibXcursor() {
+@@ -81,7 +81,11 @@ std::string CursorPathFromLibXcursor() {
      void operator()(void* ptr) const { dlclose(ptr); }
    };
  
@@ -43210,7 +43166,7 @@ index ad5feb08ec..ca2121772b 100644
    if (!lib)
      return "";
  
-@@ -235,7 +239,7 @@ scoped_refptr<base::RefCountedMemory> ReadCursorFile(
+@@ -234,7 +238,7 @@ scoped_refptr<base::RefCountedMemory> ReadCursorFile(
      const std::string& rm_xcursor_theme) {
    constexpr const char kDefaultTheme[] = "default";
    std::string themes[] = {
@@ -43219,7 +43175,7 @@ index ad5feb08ec..ca2121772b 100644
      // The toolkit theme has the highest priority.
      LinuxUi::instance() ? LinuxUi::instance()->GetCursorThemeName()
                          : std::string(),
-@@ -429,7 +433,7 @@ uint32_t XCursorLoader::GetPreferredCursorSize() const {
+@@ -428,7 +432,7 @@ uint32_t XCursorLoader::GetPreferredCursorSize() const {
      return size;
    }
  
@@ -43313,7 +43269,7 @@ index 980f6cca88..4358f9af68 100644
  #endif
  };
 diff --git a/ui/base/x/x11_shm_image_pool.cc b/ui/base/x/x11_shm_image_pool.cc
-index 8e418acfdb..9e0cfcb4e2 100644
+index dfab3aa134..7906a9b514 100644
 --- a/ui/base/x/x11_shm_image_pool.cc
 +++ b/ui/base/x/x11_shm_image_pool.cc
 @@ -16,6 +16,7 @@
@@ -43367,7 +43323,7 @@ index 8e418acfdb..9e0cfcb4e2 100644
  }
  #endif  // !BUILDFLAG(IS_CHROMEOS)
  
-@@ -182,7 +193,7 @@ bool XShmImagePool::Resize(const gfx::Size& pixel_size) {
+@@ -191,7 +202,7 @@ bool XShmImagePool::Resize(const gfx::Size& pixel_size) {
          shmctl(state.shmid, IPC_RMID, nullptr);
          return false;
        }
@@ -43376,7 +43332,7 @@ index 8e418acfdb..9e0cfcb4e2 100644
        // On Linux, a shmid can still be attached after IPC_RMID if otherwise
        // kept alive.  Detach before XShmAttach to prevent a memory leak in case
        // the process dies.
-@@ -201,7 +212,7 @@ bool XShmImagePool::Resize(const gfx::Size& pixel_size) {
+@@ -210,7 +221,7 @@ bool XShmImagePool::Resize(const gfx::Size& pixel_size) {
          return false;
        state.shmseg = shmseg;
        state.shmem_attached_to_server = true;
@@ -44570,7 +44526,7 @@ index a1db0f4126..be6209dd64 100644
  
    return vulkan_instance_.Initialize(path, required_extensions, {});
 diff --git a/ui/ozone/platform/wayland/host/wayland_buffer_manager_host.cc b/ui/ozone/platform/wayland/host/wayland_buffer_manager_host.cc
-index c67677137c..d4cf5f5ef4 100644
+index a7506130a0..3e66dc58e0 100644
 --- a/ui/ozone/platform/wayland/host/wayland_buffer_manager_host.cc
 +++ b/ui/ozone/platform/wayland/host/wayland_buffer_manager_host.cc
 @@ -46,9 +46,13 @@ std::string NumberToString(uint32_t number) {
@@ -44748,7 +44704,7 @@ index f269d3acf0..f7dac6f0d9 100644
  #endif
  };
 diff --git a/ui/ozone/platform/wayland/host/wayland_frame_manager.cc b/ui/ozone/platform/wayland/host/wayland_frame_manager.cc
-index dd3fb2e5c9..737ee7d4b3 100644
+index e84a0c06b8..e7c8340856 100644
 --- a/ui/ozone/platform/wayland/host/wayland_frame_manager.cc
 +++ b/ui/ozone/platform/wayland/host/wayland_frame_manager.cc
 @@ -5,7 +5,9 @@
@@ -44761,7 +44717,7 @@ index dd3fb2e5c9..737ee7d4b3 100644
  
  #include <cstdint>
  #include <variant>
-@@ -464,8 +466,10 @@ std::optional<bool> WaylandFrameManager::ApplySurfaceConfigure(
+@@ -468,8 +470,10 @@ std::optional<bool> WaylandFrameManager::ApplySurfaceConfigure(
    surface->UpdateBufferDamageRegion(
        gfx::ToEnclosingRectIgnoringError(surface_damage));
  
@@ -44772,7 +44728,7 @@ index dd3fb2e5c9..737ee7d4b3 100644
  
    bool needs_commit = false;
  
-@@ -497,6 +501,9 @@ std::optional<bool> WaylandFrameManager::ApplySurfaceConfigure(
+@@ -501,6 +505,9 @@ std::optional<bool> WaylandFrameManager::ApplySurfaceConfigure(
        case WaylandBufferHandle::SyncMethod::kNone:
          break;
        case WaylandBufferHandle::SyncMethod::kSyncobj:
@@ -44782,7 +44738,7 @@ index dd3fb2e5c9..737ee7d4b3 100644
          surface->RequestExplicitRelease(
              base::BindOnce(&WaylandFrameManager::OnExplicitBufferRelease,
                             weak_factory_.GetWeakPtr(), surface));
-@@ -504,6 +511,9 @@ std::optional<bool> WaylandFrameManager::ApplySurfaceConfigure(
+@@ -508,6 +515,9 @@ std::optional<bool> WaylandFrameManager::ApplySurfaceConfigure(
        case WaylandBufferHandle::SyncMethod::kDMAFence:
          [[fallthrough]];
        case WaylandBufferHandle::SyncMethod::kImplicit:
@@ -44792,7 +44748,7 @@ index dd3fb2e5c9..737ee7d4b3 100644
          buffer_handle->set_buffer_released_callback(
              base::BindOnce(&WaylandFrameManager::OnWlBufferRelease,
                             weak_factory_.GetWeakPtr(), surface),
-@@ -762,8 +772,10 @@ void WaylandFrameManager::OnExplicitBufferRelease(WaylandSurface* surface,
+@@ -766,8 +776,10 @@ void WaylandFrameManager::OnExplicitBufferRelease(WaylandSurface* surface,
  
        if (fence.is_valid()) {
          if (frame->merged_release_fence_fd.is_valid()) {
@@ -44803,7 +44759,7 @@ index dd3fb2e5c9..737ee7d4b3 100644
          } else {
            frame->merged_release_fence_fd = std::move(fence);
          }
-@@ -801,8 +813,10 @@ void WaylandFrameManager::OnWlBufferRelease(WaylandSurface* surface,
+@@ -805,8 +817,10 @@ void WaylandFrameManager::OnWlBufferRelease(WaylandSurface* surface,
  
          if (fence.is_valid()) {
            if (frame->merged_release_fence_fd.is_valid()) {
@@ -44973,7 +44929,7 @@ index 838b1fb377..69e7f9f205 100644
        display_scale_factor_observer_{this};
  #endif
 diff --git a/ui/ozone/platform/x11/x11_window.cc b/ui/ozone/platform/x11/x11_window.cc
-index 4920a19073..3b4aba3808 100644
+index f7ea9a33a4..19f2aee0bf 100644
 --- a/ui/ozone/platform/x11/x11_window.cc
 +++ b/ui/ozone/platform/x11/x11_window.cc
 @@ -1588,7 +1588,7 @@ void X11Window::OnXWindowStateChanged() {
@@ -45326,10 +45282,10 @@ index 8a6f5cd7d9..23840037ab 100644
    LabelButton* control_button = BuildButton(
        container, GetStringUTF16(IDS_WIDGET_CHILD_WIDGET_BUTTON_LABEL));
 diff --git a/ui/views/focus/focus_manager.cc b/ui/views/focus/focus_manager.cc
-index abb407e88c..2cf3a62860 100644
+index 5733804d62..cdc63b1c40 100644
 --- a/ui/views/focus/focus_manager.cc
 +++ b/ui/views/focus/focus_manager.cc
-@@ -622,7 +622,7 @@ bool FocusManager::RedirectAcceleratorToParentWidget(
+@@ -623,7 +623,7 @@ bool FocusManager::RedirectAcceleratorToParentWidget(
      return false;
    }
  
@@ -45338,7 +45294,7 @@ index abb407e88c..2cf3a62860 100644
    // Processing an accelerator can delete things. Because we
    // need these objects afterwards on Linux, save widget_ as weak pointer and
    // save the close_on_deactivate property value of widget_delegate in a
-@@ -640,7 +640,7 @@ bool FocusManager::RedirectAcceleratorToParentWidget(
+@@ -641,7 +641,7 @@ bool FocusManager::RedirectAcceleratorToParentWidget(
    const bool accelerator_processed =
        focus_manager->ProcessAccelerator(accelerator);
  
@@ -45488,7 +45444,7 @@ index d5381353a7..de13ad27ea 100644
  DesktopWindowTreeHost* DesktopWindowTreeHost::Create(
      internal::NativeWidgetDelegate* native_widget_delegate,
 diff --git a/ui/views/widget/widget.cc b/ui/views/widget/widget.cc
-index a4e9aa6ca8..630b57e15b 100644
+index 427068bf83..ff38b55894 100644
 --- a/ui/views/widget/widget.cc
 +++ b/ui/views/widget/widget.cc
 @@ -67,7 +67,7 @@
@@ -45500,7 +45456,7 @@ index a4e9aa6ca8..630b57e15b 100644
  #include "ui/linux/linux_ui.h"
  #endif
  
-@@ -2640,7 +2640,7 @@ const ui::NativeTheme* Widget::GetNativeTheme() const {
+@@ -2643,7 +2643,7 @@ const ui::NativeTheme* Widget::GetNativeTheme() const {
      return parent_->GetNativeTheme();
    }
  
@@ -45756,7 +45712,7 @@ index 6334faf2cb..90a4d34be3 100644
  # Turbofan is enabled by default, except in lite mode.
  if (v8_enable_turbofan == "") {
 diff --git a/v8/include/v8-internal.h b/v8/include/v8-internal.h
-index cf0110b6f5..8f10fd2630 100644
+index 5c9a05b675..6f54656ac5 100644
 --- a/v8/include/v8-internal.h
 +++ b/v8/include/v8-internal.h
 @@ -218,7 +218,7 @@ using SandboxedPointer_t = Address;
