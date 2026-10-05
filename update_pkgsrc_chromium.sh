@@ -1,0 +1,122 @@
+#!/bin/sh
+
+# Usage: ./update_pkgsrc_chromium.sh <chromium version>
+# Example: ./update_pkgsrc_chromium.sh 120.6099.216
+
+_startdir=$(pwd)
+. "$_startdir/kaiju.conf"
+
+#_rollup_ver="4.60.4"
+#_esbuild_ver="0.25.9"
+
+# func
+# err [what]
+err () {
+    _errc=$?
+    if [ -n "$1" ]; then
+        echo ">>> $1 failed ($_errc)"
+    fi
+}
+# die [what]
+die () {
+    _errc=$?
+    if [ -n "$1" ]; then
+        echo ">>> $1 failed ($_errc)"
+    fi
+    exit $_errc
+}
+
+if [ "$1" != "" ]; then
+	c_ver="$1"
+	c_ver_nosuffix=${c_ver%%-*}
+	c_main_ver=${c_ver%%.*}
+else
+	echo "Error: not set chromium version"
+	echo "Usage: ./update_pkgsrc_chromium.sh <chromium version>"
+	exit 1
+fi
+
+#c_tarball_url="https://commondatastorage.googleapis.com/chromium-browser-official"
+c_tarball_url="https://github.com/kikadf/chromium-tarballs/releases/download/${c_ver_nosuffix}"
+#c_tarball_url="https://nerd.hu/distfiles"
+
+# create workdir
+mkdir -p "$tools_workdir" || die
+
+# get chromium
+if [ ! -f "$tools_workdir/chromium-${c_ver}-download_done" ]; then
+    cd "$tools_workdir" || die
+    if [ ! -f "$distfiles/chromium-${c_ver}.tar.xz" ]; then
+        curl -L "${c_tarball_url}/chromium-${c_ver}.tar.xz" -o "$distfiles/chromium-${c_ver}.tar.xz" || die "curl chromium"
+    fi
+    #curl "${c_tarball_url}/chrome-gn-${c_ver}-src.tar.xz" -o "chrome-gn-${c_ver}-src.tar.xz" || die "curl chrome-gn"
+    curl "${c_tarball_url}/chromium-${c_ver}.tar.xz.hashes" -o "chromium-${c_ver}.tar.xz.hashes" || die "curl hashes"
+    cd "$distfiles" || die
+    sed -n 's|sha256 *\(.*\)|\1|p' "$tools_workdir/chromium-${c_ver}.tar.xz.hashes" | sha256 -c || die checksum
+
+    # Extra sources
+#    if [ ! -f "$distfiles/rollup-rollup-v${_rollup_ver}.tar.gz" ]; then
+#        curl -L "https://github.com/rollup/rollup/archive/v${_rollup_ver}.tar.gz" \
+#             -o "$distfiles/rollup-rollup-v${_rollup_ver}.tar.gz" \
+#             || die "curl rollup"
+#    fi
+#    if [ ! -f "$distfiles/evanw-esbuild-v${_esbuild_ver}.tar.gz" ]; then
+#        curl -L "https://github.com/evanw/esbuild/archive/v${_esbuild_ver}.tar.gz" \
+#             -o "$distfiles/evanw-esbuild-v${_esbuild_ver}.tar.gz" \
+#             || die "curl esbuild"
+#    fi
+
+    cd "$_startdir" || die
+    touch "$tools_workdir/chromium-${c_ver}-download_done"
+fi
+
+# extract tarballs
+if [ ! -f "$tools_workdir/chromium-${c_ver}-extract_done" ]; then
+    cd "$tools_workdir" || die
+    mkdir "chromium-${c_ver}" || die
+    tar -xJf "$distfiles/chromium-${c_ver}.tar.xz" --strip-components=1 -C "chromium-${c_ver}" || die "extract chromium"
+    #tar -xJf "chrome-gn-${c_ver}-src.tar.xz" --strip-components=1 -C "chromium-${c_ver}" || die "extract chrome-gn"
+    sed -i'' 's/swiftshader/swiftshaderXXX/g' "chromium-${c_ver}/third_party/.gitignore"
+    sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "chromium-${c_ver}/third_party/vulkan-deps/.gitignore"
+    sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "chromium-${c_ver}/third_party/.gitignore"
+    sed -i'' 's/vulkan-loader/vulkan-loadersXXX/g' "chromium-${c_ver}/third_party/.gitignore"
+    sed -i'' 's/vulkan-loader/vulkan-loadersXXX/g' "chromium-${c_ver}/third_party/vulkan-deps/.gitignore"
+    sed -i'' 's/dawn_commit_hash/dawn_commit_hashXXX/g' "chromium-${c_ver}/gpu/webgpu/.gitignore"
+    sed -i'' 's/third_party\/\*/third_partyXXX\/\*/g' "chromium-${c_ver}/third_party/devtools-frontend/src/.gitignore"
+
+    # Extra sources
+#    mkdir "chromium-${c_ver}/rollup" || die
+#    tar -xzf "$distfiles/rollup-rollup-v${_rollup_ver}.tar.gz" --strip-components=1 -C "chromium-${c_ver}/rollup" || die "extract rollup"
+#    mkdir "chromium-${c_ver}/esbuild" || die
+#    tar -xzf "$distfiles/evanw-esbuild-v${_esbuild_ver}.tar.gz" --strip-components=1 -C "chromium-${c_ver}/esbuild" || die "extract esbuild"
+
+    cd "$_startdir" || die
+    touch "$tools_workdir/chromium-${c_ver}-extract_done"
+fi
+
+# init git repo
+if [ ! -f "$tools_workdir/chromium-${c_ver}-init_done" ]; then
+    cd "$tools_workdir/chromium-${c_ver}" || die
+    git init || die
+    git add . || die
+    git commit -m "Chromium-${c_ver}" || die
+    cd "$_startdir" || die
+    touch "$tools_workdir/chromium-${c_ver}-init_done"
+fi
+
+# Apply NetBSD delta patch
+cd "$tools_workdir/chromium-${c_ver}" || die
+if [ -e "$_startdir/patches/chromium${c_main_ver}/pkgsrc.patch" ]; then
+
+    # clean distfiles, status files
+    #rm "../chromium-${c_ver}.tar.xz" || die
+    #rm "../chrome-gn-${c_ver}-src.tar.xz" || die
+    rm "../chromium-${c_ver}.tar.xz.hashes" || die
+    rm "../chromium-${c_ver}-download_done"
+    rm "../chromium-${c_ver}-extract_done"
+    rm "../chromium-${c_ver}-init_done"
+
+    git apply --reject "$_startdir/patches/chromium${c_main_ver}/pkgsrc.patch" || die "Apply pkgsrc patches"
+fi
+
+exit 0
