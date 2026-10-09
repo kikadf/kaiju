@@ -3,10 +3,10 @@
 # Usage: ./get_electron_versions.sh <electron-port>
 # Example: ./get_electron_versions.sh "electron34"
 
-_startdir=$(pwd)
+_startdir=$PWD
 
 . "$_startdir/kaiju.conf"
-. "$_startdir/../include/kaiju.sh"
+. "$_startdir/include/kaiju.sh"
 
 if [ "$1" != "" ]; then
 	ename="$1"
@@ -28,9 +28,9 @@ _sq_ver=$(get_value SQUIRREL_MAC_VER "$ename")
 _ro_ver=$(get_value REACTIVEOBJC_VER "$ename")
 _m_ver=$(get_value MANTLE_VER "$ename")
 _eng_ver=$(get_value ENGFLOW_RECLIENT_CONFIGS_VER "$ename")
-_c_rver=$(get_urlsf_chr "$ename")
+_rollup_ver=$(get_value ROLLUP_VER "$ename")
 
-_versions="$_e_ver:$_c_ver:$_node_ver:$_nan_ver:$_sq_ver:$_ro_ver:$_m_ver:$_eng_ver:$_c_rver"
+_versions="$_e_ver:$_c_ver:$_node_ver:$_nan_ver:$_sq_ver:$_ro_ver:$_m_ver:$_eng_ver:$_rollup_ver"
 
 grep -q "$_versions" "$_startdir/electron.versions" \
     || echo "$_versions" >> "$_startdir/electron.versions"

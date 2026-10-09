@@ -1,0 +1,7 @@
+MD5 (./chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc.rej.106) = ff4c487ae0226c9b96c15fa2cb55c903
+MD5 (./chrome/browser/process_singleton_posix.cc.rej.65) = 2e1d84d24adeaf3065d1b1fb195cfb90
+MD5 (./content/browser/child_process_launcher_helper_linux.cc.rej.36) = c22c6d687b00452c01d1d83d1f61dbcc
+MD5 (./content/browser/child_process_launcher_helper_linux.cc.rej.81) = 901f0041335fc4af4e4e89fdadc833c7
+MD5 (./net/dns/dns_config_service_posix.cc.rej.17) = 51eaad8134730c2b5140fe456816efff
+MD5 (./ui/gfx/font_util.cc.rej.333) = 9a164dc75da2b905694bdf69246b8053
+MD5 (./ui/gtk/gtk_compat.cc.rej.72) = f475a863e52bc803fd3ed646c00e2826

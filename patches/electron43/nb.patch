@@ -1,0 +1,3959 @@
+diff --git a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc
+index 1ba949fdc2..32a5ae7074 100644
+--- a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc
++++ b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc
+@@ -291,214 +291,10 @@ bool MaybeIsLocalUNCPath(const base::FilePath& path) {
+ }
+ #endif
+ 
+-// A wrapper around `base::NormalizeFilePath` that returns its result instead of
+-// using an out parameter.
+-base::FilePath NormalizeFilePath(const base::FilePath& path) {
+-  base::FilePath absolute_path = path;
+-  if (!absolute_path.IsAbsolute()) {
+-    absolute_path = base::MakeAbsoluteFilePath(absolute_path);
+-  }
+-
+-  if (absolute_path.empty()) {
+-    return absolute_path;
+-  }
+-
+-  // TODO(crbug.com/368130513O): On Windows, this call will fail if the target
+-  // file path is greater than MAX_PATH. We should decide how to handle this
+-  // scenario.
+-  // If the path is invalid, the `base::NormalizeFilePath` will also return
+-  // false, so we return the empty path.
+-  base::FilePath normalized_path;
+-  if (!base::NormalizeFilePath(absolute_path, &normalized_path)) {
+-    return absolute_path;
+-  }
+-  CHECK_EQ(path.empty(), normalized_path.empty());
+-  return normalized_path;
+-}
+-
+-using BlockType = ChromeFileSystemAccessPermissionContext::BlockType;
+-
+-std::unique_ptr<ChromeFileSystemAccessPermissionContext::BlockPathRules>
+-GenerateBlockPaths(bool should_normalize_file_path) {
+-  using BlockPath = ChromeFileSystemAccessPermissionContext::BlockPath;
+-  static constexpr BlockPath kBlockPaths[] = {
+-      // Don't allow users to share their entire home directory, entire desktop
+-      // or entire documents folder, but do allow sharing anything inside those
+-      // directories not otherwise blocked.
+-      BlockPath::CreateRelative(base::DIR_HOME, BlockType::kDontBlockChildren),
+-      BlockPath::CreateRelative(base::DIR_USER_DESKTOP,
+-                                BlockType::kDontBlockChildren),
+-      BlockPath::CreateRelative(chrome::DIR_USER_DOCUMENTS,
+-                                BlockType::kDontBlockChildren),
+-      // Similar restrictions for the downloads directory.
+-      BlockPath::CreateRelative(chrome::DIR_DEFAULT_DOWNLOADS,
+-                                BlockType::kDontBlockChildren),
+-      BlockPath::CreateRelative(chrome::DIR_DEFAULT_DOWNLOADS_SAFE,
+-                                BlockType::kDontBlockChildren),
+-      // The Chrome installation itself should not be modified by the web.
+-      BlockPath::CreateRelative(base::DIR_EXE, BlockType::kBlockAllChildren),
+-      BlockPath::CreateRelative(base::DIR_MODULE, BlockType::kBlockAllChildren),
+-      BlockPath::CreateRelative(base::DIR_ASSETS, BlockType::kBlockAllChildren),
+-      // And neither should the configuration of at least the currently running
+-      // Chrome instance (note that this does not take --user-data-dir command
+-      // line overrides into account).
+-      BlockPath::CreateRelative(chrome::DIR_USER_DATA,
+-                                BlockType::kBlockAllChildren),
+-      // ~/.ssh is pretty sensitive on all platforms, so block access to that.
+-      BlockPath::CreateRelative(base::DIR_HOME, FILE_PATH_LITERAL(".ssh"),
+-                                BlockType::kBlockAllChildren),
+-      // And limit access to ~/.gnupg as well.
+-      BlockPath::CreateRelative(base::DIR_HOME, FILE_PATH_LITERAL(".gnupg"),
+-                                BlockType::kBlockAllChildren),
+-#if BUILDFLAG(IS_WIN)
+-      // Some Windows specific directories to block, basically all apps, the
+-      // operating system itself, as well as configuration data for apps.
+-      BlockPath::CreateRelative(base::DIR_PROGRAM_FILES,
+-                                BlockType::kBlockAllChildren),
+-      BlockPath::CreateRelative(base::DIR_PROGRAM_FILESX86,
+-                                BlockType::kBlockAllChildren),
+-      BlockPath::CreateRelative(base::DIR_PROGRAM_FILES6432,
+-                                BlockType::kBlockAllChildren),
+-      BlockPath::CreateRelative(base::DIR_WINDOWS,
+-                                BlockType::kBlockAllChildren),
+-      BlockPath::CreateRelative(base::DIR_ROAMING_APP_DATA,
+-                                BlockType::kBlockAllChildren),
+-      BlockPath::CreateRelative(base::DIR_LOCAL_APP_DATA,
+-                                BlockType::kBlockAllChildren),
+-      BlockPath::CreateRelative(base::DIR_COMMON_APP_DATA,
+-                                BlockType::kBlockAllChildren),
+-      // Opening a file from an MTP device, such as a smartphone or a camera, is
+-      // implemented by Windows as opening a file in the temporary internet
+-      // files directory. To support that, allow opening files in that
+-      // directory, but not whole directories.
+-      BlockPath::CreateRelative(base::DIR_IE_INTERNET_CACHE,
+-                                BlockType::kBlockNestedDirectories),
+-      // Block */.git/hooks on Windows, see crbug.com/465668234.
+-      BlockPath::CreateSuffix(FILE_PATH_LITERAL(".git/hooks"),
+-                              BlockType::kBlockWrite),
+-#endif
+-#if BUILDFLAG(IS_MAC)
+-      // Similar Mac specific blocks.
+-      BlockPath::CreateRelative(base::DIR_APP_DATA,
+-                                BlockType::kBlockAllChildren),
+-      // Block access to the current bundle directory.
+-      BlockPath::CreateRelative(chrome::DIR_OUTER_BUNDLE,
+-                                BlockType::kBlockAllChildren),
+-      // Block access to the user's Applications directory.
+-      BlockPath::CreateRelative(base::DIR_HOME,
+-                                FILE_PATH_LITERAL("Applications"),
+-                                BlockType::kBlockAllChildren),
+-      // Block access to the root Applications directory.
+-      BlockPath::CreateAbsolute(FILE_PATH_LITERAL("/Applications"),
+-                                BlockType::kBlockAllChildren),
+-      BlockPath::CreateRelative(base::DIR_HOME, FILE_PATH_LITERAL("Library"),
+-                                BlockType::kBlockAllChildren),
+-      // Allow access to other cloud files, such as Google Drive.
+-      BlockPath::CreateRelative(base::DIR_HOME,
+-                                FILE_PATH_LITERAL("Library/CloudStorage"),
+-                                BlockType::kDontBlockChildren),
+-      // Allow the site to interact with data from its corresponding natively
+-      // installed (sandboxed) application. It would be nice to limit a site to
+-      // access only _its_ corresponding natively installed application, but
+-      // unfortunately there's no straightforward way to do that. See
+-      // https://crbug.com/40095723#comment23.
+-      BlockPath::CreateRelative(base::DIR_HOME,
+-                                FILE_PATH_LITERAL("Library/Containers"),
+-                                BlockType::kDontBlockChildren),
+-      // Allow access to iCloud files...
+-      BlockPath::CreateRelative(base::DIR_HOME,
+-                                FILE_PATH_LITERAL("Library/Mobile Documents"),
+-                                BlockType::kDontBlockChildren),
+-      // ... which may also appear at this directory.
+-      BlockPath::CreateRelative(
+-          base::DIR_HOME,
+-          FILE_PATH_LITERAL("Library/Mobile Documents/com~apple~CloudDocs"),
+-          BlockType::kDontBlockChildren),
+-#endif
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_BSD)
+-      // On Linux also block access to devices via /dev.
+-      BlockPath::CreateAbsolute(FILE_PATH_LITERAL("/dev"),
+-                                BlockType::kBlockAllChildren),
+-      // And security sensitive data in /proc and /sys.
+-      BlockPath::CreateAbsolute(FILE_PATH_LITERAL("/proc"),
+-                                BlockType::kBlockAllChildren),
+-      BlockPath::CreateAbsolute(FILE_PATH_LITERAL("/sys"),
+-                                BlockType::kBlockAllChildren),
+-      // And system files in /boot and /etc.
+-      BlockPath::CreateAbsolute(FILE_PATH_LITERAL("/boot"),
+-                                BlockType::kBlockAllChildren),
+-      BlockPath::CreateAbsolute(FILE_PATH_LITERAL("/etc"),
+-                                BlockType::kBlockAllChildren),
+-      // And block all of ~/.config, matching the similar restrictions on mac
+-      // and windows.
+-      BlockPath::CreateRelative(base::DIR_HOME, FILE_PATH_LITERAL(".config"),
+-                                BlockType::kBlockAllChildren),
+-      // Block ~/.dbus as well, just in case, although there probably isn't much
+-      // a website can do with access to that directory and its contents.
+-      BlockPath::CreateRelative(base::DIR_HOME, FILE_PATH_LITERAL(".dbus"),
+-                                BlockType::kBlockAllChildren),
+-#endif
+-#if BUILDFLAG(IS_ANDROID)
+-      BlockPath::CreateRelative(base::DIR_ANDROID_APP_DATA,
+-                                BlockType::kBlockAllChildren),
+-      BlockPath::CreateRelative(base::DIR_CACHE, BlockType::kBlockAllChildren),
+-#endif
+-      // TODO(crbug.com/40095723): Refine this list, for example add
+-      // XDG_CONFIG_HOME when it is not set ~/.config?
+-  };
+-
+-  // ChromeOS supports multi-user sign-in. base::DIR_HOME only returns the
+-  // profile path for the primary user, the first user to sign in. We want to
+-  // use the `profile_path` instead since that's associated with user that
+-  // initiated this blocklist check.
+-  //
+-  // TODO(crbug.com/375490221): Improve the ChromeOS blocklist logic.
+-  constexpr bool kUseProfilePathForDirHome = BUILDFLAG(IS_CHROMEOS);
+-  // Populate the hard-coded rules.
+-  auto block_path_rules = std::make_unique<
+-      ChromeFileSystemAccessPermissionContext::BlockPathRules>();
+-
+-  for (const auto& blocked_path : kBlockPaths) {
+-    base::FilePath path;
+-    switch (blocked_path.block_path_type) {
+-      case ChromeFileSystemAccessPermissionContext::BlockPathType::kAbsolute: {
+-        CHECK(blocked_path.path);
+-        path = base::FilePath(blocked_path.path);
+-        break;
+-      }
+-      case ChromeFileSystemAccessPermissionContext::BlockPathType::kRelative: {
+-        CHECK(blocked_path.base_path_key);
+-        if (kUseProfilePathForDirHome &&
+-            blocked_path.base_path_key == base::DIR_HOME) {
+-          block_path_rules->profile_based_block_path_rules_.emplace_back(
+-              blocked_path.path, blocked_path.block_type);
+-          continue;
+-        }
+-
+-        if (!base::PathService::Get(blocked_path.base_path_key.value(),
+-                                    &path)) {
+-          continue;
+-        }
+-
+-        if (blocked_path.path) {
+-          path = path.Append(blocked_path.path);
+-        }
+-        break;
+-      }
+-      case ChromeFileSystemAccessPermissionContext::BlockPathType::kSuffix: {
+-        block_path_rules->suffix_block_path_rules_.emplace_back(
+-            blocked_path.path, blocked_path.block_type);
+-        continue;
+-      }
+-    }
+-
+-    block_path_rules->block_path_rules_.emplace_back(
+-        should_normalize_file_path ? NormalizeFilePath(path) : path,
+-        blocked_path.block_type);
+-  }
+-
+-  return block_path_rules;
+-}
++// This patch moves the deleted content from this file over to
++// chrome/browser/file_system_access/chrome_file_system_access_permission_context.h.
++// NOTE IF THERE IS A CONFLICT ABOVE, you will need to copy the changes in the
++// removed block over to chrome_file_system_access_permission_context.h.
+ 
+ // Checks if `path` should be blocked by the `rules`.
+ // The BlockType of the nearest ancestor of a path to check is what
+diff --git a/chrome/browser/process_singleton_posix.cc b/chrome/browser/process_singleton_posix.cc
+index f0694f2777..675f4f4f1d 100644
+--- a/chrome/browser/process_singleton_posix.cc
++++ b/chrome/browser/process_singleton_posix.cc
+@@ -105,7 +105,7 @@
+ #include "ui/base/l10n/l10n_util.h"
+ #include "ui/base/resource/scoped_startup_resource_bundle.h"
+ 
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
++#if 0
+ #include "chrome/browser/ui/process_singleton_dialog_linux.h"
+ #endif
+ 
+diff --git a/content/browser/child_process_launcher_helper_linux.cc b/content/browser/child_process_launcher_helper_linux.cc
+index c188cd72bc..d0a99a2d21 100644
+--- a/content/browser/child_process_launcher_helper_linux.cc
++++ b/content/browser/child_process_launcher_helper_linux.cc
+@@ -73,7 +73,25 @@ bool ChildProcessLauncherHelper::BeforeLaunchOnLauncherThread(
+       options->fds_to_remap.emplace_back(sandbox_fd, GetSandboxFD());
+     }
+ 
++    for (const auto& remapped_fd : file_data_->additional_remapped_fds) {
++      options->fds_to_remap.emplace_back(remapped_fd.second.get(),
++                                         remapped_fd.first);
++    }
++
++#if !BUILDFLAG(IS_BSD)
++    // (For Electron), if we're launching without zygote, that means we're
++    // launching an unsandboxed process (since all sandboxed processes are
++    // forked from the zygote). Relax the allow_new_privs option to permit
++    // launching suid processes from unsandboxed child processes.
++    if (!base::CommandLine::ForCurrentProcess()->HasSwitch(switches::kNoZygote) &&
++        delegate_->GetZygote() == nullptr) {
++      options->allow_new_privs = true;
++    }
++#endif
++
++    options->current_directory = delegate_->GetCurrentDirectory();
+     options->environment = delegate_->GetEnvironment();
++    options->clear_environment = !delegate_->ShouldInheritEnvironment();
+   } else {
+ #if !BUILDFLAG(IS_BSD)
+     DCHECK(GetZygoteForLaunch());
+diff --git a/electron/BUILD.gn b/electron/BUILD.gn
+index d48b822377..689c934811 100644
+--- a/electron/BUILD.gn
++++ b/electron/BUILD.gn
+@@ -629,7 +629,7 @@ source_set("electron_lib") {
+     defines += [ "GDK_DISABLE_DEPRECATION_WARNINGS" ]
+   }
+ 
+-  if (!is_mas_build) {
++  if (!is_mas_build && !is_bsd) {
+     deps += [
+       "//components/crash/core/app",
+       "//components/crash/core/browser",
+@@ -743,6 +743,12 @@ source_set("electron_lib") {
+       cflags_objcc = [ "-fobjc-weak" ]
+     }
+   }
++  if (is_bsd) {
++    sources -= [
++      "shell/common/crash_keys.cc",
++      "shell/common/crash_keys.h",
++    ]
++  }
+   if (is_linux) {
+     libs = [ "xshmfence" ]
+     deps += [
+@@ -1555,7 +1561,7 @@ if (is_mac) {
+     } else if (is_linux) {
+       sources = [
+         "shell/app/electron_main_linux.cc",
+-        "shell/app/environ_linux.cc",
++        # "shell/app/environ_linux.cc",
+         "shell/app/uv_stdio_fix.cc",
+         "shell/app/uv_stdio_fix.h",
+       ]
+@@ -1567,7 +1573,7 @@ if (is_mac) {
+       ":electron_lib",
+       ":electron_win32_resources",
+       ":packed_resources",
+-      "//components/crash/core/app",
++      # "//components/crash/core/app",
+       "//content:sandbox_helper_win",
+       "//electron/buildflags",
+       "//third_party/electron_node:libnode",
+@@ -1594,7 +1600,7 @@ if (is_mac) {
+       public_deps = [ "//tools/v8_context_snapshot" ]
+     }
+ 
+-    if (is_linux) {
++    if (is_linux && !is_bsd) {
+       data_deps += [ "//components/crash/core/app:chrome_crashpad_handler" ]
+     }
+ 
+@@ -1661,7 +1667,7 @@ if (is_mac) {
+         configs += [ "//build/config/gcc:rpath_for_built_shared_libraries" ]
+       }
+ 
+-      if (is_linux) {
++      if (is_linux && !is_bsd) {
+         deps += [ "//sandbox/linux:chrome_sandbox" ]
+       }
+     }
+@@ -1782,7 +1788,9 @@ dist_zip("electron_dist_zip") {
+       ]
+     }
+ 
+-    data_deps += [ "//sandbox/linux:chrome_sandbox" ]
++    if (!is_bsd) {
++      data_deps += [ "//sandbox/linux:chrome_sandbox" ]
++    }
+   }
+   deps = data_deps
+   outputs = [ "$root_build_dir/dist.zip" ]
+diff --git a/electron/build/args/all.gn b/electron/build/args/all.gn
+index d003f068f1..31676e18c1 100644
+--- a/electron/build/args/all.gn
++++ b/electron/build/args/all.gn
+@@ -31,8 +31,8 @@ v8_enable_snapshot_native_code_counters = false
+ v8_enable_javascript_promise_hooks = true
+ 
+ enable_cdm_host_verification = false
+-ffmpeg_branding = "Chrome"
+-proprietary_codecs = true
++# ffmpeg_branding = "Chrome"
++# proprietary_codecs = true
+ 
+ enable_printing = true
+ 
+diff --git a/electron/default_app/default_app.ts b/electron/default_app/default_app.ts
+index 443c9c2f00..0812396f87 100644
+--- a/electron/default_app/default_app.ts
++++ b/electron/default_app/default_app.ts
+@@ -94,7 +94,7 @@ async function createWindow(backgroundColor?: string) {
+     show: false
+   };
+ 
+-  if (process.platform === 'linux') {
++  if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+     options.icon = url.fileURLToPath(new URL('icon.png', import.meta.url));
+   }
+ 
+diff --git a/electron/filenames.gni b/electron/filenames.gni
+index 2fa9af5475..f9a2745cbe 100644
+--- a/electron/filenames.gni
++++ b/electron/filenames.gni
+@@ -245,8 +245,8 @@ filenames = {
+     "shell/app/command_line_args.h",
+     "shell/app/electron_content_client.cc",
+     "shell/app/electron_content_client.h",
+-    "shell/app/electron_crash_reporter_client.cc",
+-    "shell/app/electron_crash_reporter_client.h",
++    # "shell/app/electron_crash_reporter_client.cc",
++    # "shell/app/electron_crash_reporter_client.h",
+     "shell/app/electron_main_delegate.cc",
+     "shell/app/electron_main_delegate.h",
+     "shell/app/node_main.cc",
+diff --git a/electron/lib/browser/api/app.ts b/electron/lib/browser/api/app.ts
+index b60a4e5a95..14b52b1f68 100644
+--- a/electron/lib/browser/api/app.ts
++++ b/electron/lib/browser/api/app.ts
+@@ -71,7 +71,7 @@ if (process.platform === 'darwin') {
+   app.dock!.getMenu = () => dockMenu;
+ }
+ 
+-if (process.platform === 'linux') {
++if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+   const patternVmRSS = /^VmRSS:\s*(\d+) kB$/m;
+   const patternVmHWM = /^VmHWM:\s*(\d+) kB$/m;
+ 
+diff --git a/electron/lib/browser/api/dialog.ts b/electron/lib/browser/api/dialog.ts
+index 29bccd68d0..af8b39d0f6 100644
+--- a/electron/lib/browser/api/dialog.ts
++++ b/electron/lib/browser/api/dialog.ts
+@@ -49,7 +49,7 @@ const normalizeAccessKey = (text: string) => {
+   // existing single underscores with a second underscore, replace double
+   // ampersands with a single ampersand, and replace a single ampersand with
+   // a single underscore
+-  if (process.platform === 'linux') {
++  if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+     return text.replaceAll('_', '__').replaceAll(/&(.?)/g, (match, after) => {
+       if (after === '&') return after;
+       return `_${after}`;
+diff --git a/electron/lib/browser/api/menu-item-roles.ts b/electron/lib/browser/api/menu-item-roles.ts
+index 63f443ff4f..d422c923dd 100644
+--- a/electron/lib/browser/api/menu-item-roles.ts
++++ b/electron/lib/browser/api/menu-item-roles.ts
+@@ -3,7 +3,7 @@ import type { WebContents, MenuItemConstructorOptions } from 'electron/main';
+ 
+ const isMac = process.platform === 'darwin';
+ const isWindows = process.platform === 'win32';
+-const isLinux = process.platform === 'linux';
++const isLinux = (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd');
+ 
+ type RoleId =
+   | 'about'
+diff --git a/electron/lib/browser/api/power-monitor.ts b/electron/lib/browser/api/power-monitor.ts
+index f8ec5f8420..a129b49314 100644
+--- a/electron/lib/browser/api/power-monitor.ts
++++ b/electron/lib/browser/api/power-monitor.ts
+@@ -18,7 +18,7 @@ class PowerMonitor extends EventEmitter implements Electron.PowerMonitor {
+       pm = createPowerMonitor();
+       pm.emit = this.emit.bind(this);
+ 
+-      if (process.platform === 'linux') {
++      if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+         // On Linux, we inhibit shutdown in order to give the app a chance to
+         // decide whether or not it wants to prevent the shutdown. We don't
+         // inhibit the shutdown event unless there's a listener for it. This
+diff --git a/electron/lib/browser/rpc-server.ts b/electron/lib/browser/rpc-server.ts
+index 031d0b39ce..1f3238020a 100644
+--- a/electron/lib/browser/rpc-server.ts
++++ b/electron/lib/browser/rpc-server.ts
+@@ -36,7 +36,7 @@ const allowedClipboardMethods = (() => {
+   switch (process.platform) {
+     case 'darwin':
+       return new Set(['readFindText', 'writeFindText']);
+-    case 'linux':
++    case 'linux': case 'freebsd': case 'netbsd':
+       return new Set(Object.keys(clipboard));
+     default:
+       return new Set();
+diff --git a/electron/lib/renderer/api/clipboard.ts b/electron/lib/renderer/api/clipboard.ts
+index 3b53f410da..c2ba5a28e2 100644
+--- a/electron/lib/renderer/api/clipboard.ts
++++ b/electron/lib/renderer/api/clipboard.ts
+@@ -27,7 +27,7 @@ const makeRemoteMethod = function (method: keyof Electron.Clipboard): any {
+   };
+ };
+ 
+-if (process.platform === 'linux') {
++if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+   // On Linux we could not access clipboard in renderer process.
+   for (const method of Object.keys(originalClipboard) as (keyof Electron.Clipboard)[]) {
+     clipboard[method] = makeRemoteMethod(method);
+diff --git a/electron/script/lib/config.py b/electron/script/lib/config.py
+index d2076fbd94..9731db0d7c 100644
+--- a/electron/script/lib/config.py
++++ b/electron/script/lib/config.py
+@@ -7,6 +7,11 @@ PLATFORM = {
+   'cygwin': 'win32',
+   'msys': 'win32',
+   'darwin': 'darwin',
++  'freebsd13': 'freebsd',
++  'freebsd14': 'freebsd',
++  'freebsd15': 'freebsd',
++  'freebsd16': 'freebsd',
++  'netbsd': 'netbsd',
+   'linux': 'linux',
+   'linux2': 'linux',
+   'win32': 'win32',
+diff --git a/electron/script/lib/utils.js b/electron/script/lib/utils.js
+index 7de83f0181..a16669af93 100644
+--- a/electron/script/lib/utils.js
++++ b/electron/script/lib/utils.js
+@@ -20,7 +20,7 @@ function getElectronExec() {
+       return `out/${OUT_DIR}/Electron.app/Contents/MacOS/Electron`;
+     case 'win32':
+       return `out/${OUT_DIR}/electron.exe`;
+-    case 'linux':
++    case 'linux': case 'freebsd': case 'netbsd':
+       return `out/${OUT_DIR}/electron`;
+     default:
+       throw new Error('Unknown platform');
+diff --git a/electron/script/pgo/collect-profile.js b/electron/script/pgo/collect-profile.js
+index a3ca206ff3..fa217ed2db 100644
+--- a/electron/script/pgo/collect-profile.js
++++ b/electron/script/pgo/collect-profile.js
+@@ -75,7 +75,7 @@ function log(...args) {
+ // network workload coverage degrades but collection still succeeds.
+ function installTrustedCA(caCertPath) {
+   try {
+-    if (process.platform === 'linux') {
++    if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+       const nssDb = path.join(os.homedir(), '.pki', 'nssdb');
+       if (!fs.existsSync(nssDb)) {
+         fs.mkdirSync(nssDb, { recursive: true });
+diff --git a/electron/script/spec-runner.js b/electron/script/spec-runner.js
+index bd2dd09237..b8f4a2bba3 100755
+--- a/electron/script/spec-runner.js
++++ b/electron/script/spec-runner.js
+@@ -586,7 +586,7 @@ function toVitestInvocation(exe, specDir, runnerArgs) {
+   };
+   let command = process.execPath;
+   let commandArgs = vitestArgs;
+-  if (process.platform === 'linux') {
++  if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+     // The mock D-Bus services are started once around the whole run; every
+     // Electron worker inherits the bus addresses from the CLI's environment.
+     commandArgs = [path.resolve(__dirname, 'dbus_mock.py'), command, ...commandArgs];
+@@ -689,7 +689,7 @@ async function installSpecModules(dir) {
+     process.exit(1);
+   }
+ 
+-  if (process.platform === 'linux') {
++  if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+     const { status: rebuildStatus } = childProcess.spawnSync('npm', ['rebuild', 'abstract-socket'], {
+       env,
+       cwd: dir,
+@@ -767,7 +767,7 @@ async function installSpecModules(dir) {
+ // the same GCC that rejects the headers, so nothing on that host can build
+ // the fixtures.
+ function getNativeAddonToolchainEnv() {
+-  if (args.electronVersion || process.platform !== 'linux') {
++  if (args.electronVersion || (process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')) {
+     return {};
+   }
+   const outDir = utils.getOutDir();
+diff --git a/electron/shell/app/electron_crash_reporter_client.cc b/electron/shell/app/electron_crash_reporter_client.cc
+index 2006fdf3e4..dc453d7af1 100644
+--- a/electron/shell/app/electron_crash_reporter_client.cc
++++ b/electron/shell/app/electron_crash_reporter_client.cc
+@@ -91,7 +91,7 @@ ElectronCrashReporterClient::ElectronCrashReporterClient() = default;
+ 
+ ElectronCrashReporterClient::~ElectronCrashReporterClient() = default;
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ void ElectronCrashReporterClient::SetCrashReporterClientIdFromGUID(
+     const std::string& client_guid) {
+   crash_keys::SetMetricsClientIdFromGUID(client_guid);
+@@ -172,7 +172,7 @@ void ElectronCrashReporterClient::GetProcessSimpleAnnotations(
+   (*annotations)["ver"] = ELECTRON_VERSION_STRING;
+ }
+ 
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_BSD)
+ bool ElectronCrashReporterClient::ShouldMonitorCrashHandlerExpensively() {
+   return false;
+ }
+diff --git a/electron/shell/app/electron_crash_reporter_client.h b/electron/shell/app/electron_crash_reporter_client.h
+index 8b1c4d1a97..0c29a23b7c 100644
+--- a/electron/shell/app/electron_crash_reporter_client.h
++++ b/electron/shell/app/electron_crash_reporter_client.h
+@@ -30,7 +30,7 @@ class ElectronCrashReporterClient : public crash_reporter::CrashReporterClient {
+       const std::map<std::string, std::string>& annotations);
+ 
+   // crash_reporter::CrashReporterClient implementation.
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   void SetCrashReporterClientIdFromGUID(
+       const std::string& client_guid) override;
+   base::FilePath GetReporterLogFilename() override;
+@@ -64,7 +64,7 @@ class ElectronCrashReporterClient : public crash_reporter::CrashReporterClient {
+   bool ReportingIsEnforcedByPolicy(bool* breakpad_enabled) override;
+ #endif
+ 
+-#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   bool ShouldMonitorCrashHandlerExpensively() override;
+ #endif
+ 
+diff --git a/electron/shell/app/electron_main_delegate.cc b/electron/shell/app/electron_main_delegate.cc
+index dea6ede197..b6af574732 100644
+--- a/electron/shell/app/electron_main_delegate.cc
++++ b/electron/shell/app/electron_main_delegate.cc
+@@ -67,7 +67,7 @@
+ #include "chrome/child/v8_crashpad_support_win.h"
+ #endif
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include "base/nix/xdg_util.h"
+ #include "ui/linux/display_server_utils.h"
+ #include "v8/include/v8-wasm-trap-handler-posix.h"
+@@ -78,7 +78,7 @@
+ #include "ui/ozone/public/ozone_platform.h"
+ #endif  // BUILDFLAG(IS_OZONE)
+ 
+-#if !IS_MAS_BUILD()
++#if !IS_MAS_BUILD() && !BUILDFLAG(IS_BSD)
+ #include "components/crash/core/app/crash_switches.h"  // nogncheck
+ #include "components/crash/core/app/crashpad.h"        // nogncheck
+ #include "components/crash/core/common/crash_key.h"
+@@ -218,7 +218,7 @@ std::optional<int> ElectronMainDelegate::BasicStartupComplete() {
+     base::win::PinUser32();
+ #endif
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // Check for --no-sandbox parameter when running as root.
+   if (getuid() == 0 && IsSandboxEnabled(command_line))
+     LOG(FATAL) << "Running as root without --"
+@@ -268,7 +268,7 @@ void ElectronMainDelegate::PreSandboxStartup() {
+       /* is_preinit = */ IsBrowserProcess() || IsZygoteProcess());
+ #endif
+ 
+-#if !IS_MAS_BUILD()
++#if !IS_MAS_BUILD() && !BUILDFLAG(IS_BSD)
+   crash_reporter::InitializeCrashKeys();
+ #endif
+ 
+@@ -303,7 +303,7 @@ void ElectronMainDelegate::PreSandboxStartup() {
+   }
+ #endif
+ 
+-#if !IS_MAS_BUILD()
++#if !IS_MAS_BUILD() && !BUILDFLAG(IS_BSD)
+   crash_keys::SetCrashKeysFromCommandLine(*command_line);
+   crash_keys::SetPlatformCrashKey();
+ #endif
+@@ -322,7 +322,7 @@ void ElectronMainDelegate::PreSandboxStartup() {
+ #if BUILDFLAG(IS_OZONE)
+     // Initialize Ozone platform and add required feature flags as per
+     // platform's properties.
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+     ui::SetOzonePlatformForLinuxIfNeeded(*command_line);
+ #endif
+     ui::OzonePlatform::PreSandboxStartup();
+@@ -355,7 +355,7 @@ std::optional<int> ElectronMainDelegate::PreBrowserMain() {
+ #if BUILDFLAG(IS_MAC)
+   RegisterAtomCrApp();
+ #endif
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // Set the global activation token sent as an environment variable.
+   auto env = base::Environment::Create();
+   base::nix::ExtractXdgActivationTokenFromEnv(*env);
+diff --git a/electron/shell/app/node_main.cc b/electron/shell/app/node_main.cc
+index 714b673a6d..8c33a0e7ea 100644
+--- a/electron/shell/app/node_main.cc
++++ b/electron/shell/app/node_main.cc
+@@ -54,7 +54,7 @@
+ #include "shell/common/mac/codesign_util.h"
+ #endif
+ 
+-#if !IS_MAS_BUILD()
++#if !IS_MAS_BUILD() && !BUILDFLAG(IS_BSD)
+ #include "components/crash/core/app/crashpad.h"  // nogncheck
+ #include "shell/app/electron_crash_reporter_client.h"
+ #include "shell/common/crash_keys.h"
+@@ -106,14 +106,14 @@ bool UnsetHijackableEnvs(base::Environment* env) {
+ }
+ #endif
+ 
+-#if IS_MAS_BUILD()
++#if IS_MAS_BUILD() || BUILDFLAG(IS_BSD)
+ void SetCrashKeyStub(const std::string& key, const std::string& value) {}
+ void ClearCrashKeyStub(const std::string& key) {}
+ #endif
+ 
+ v8::Local<v8::Value> GetParameters(v8::Isolate* isolate) {
+   std::map<std::string, std::string> keys;
+-#if !IS_MAS_BUILD()
++#if !IS_MAS_BUILD() && !BUILDFLAG(IS_BSD)
+   electron::crash_keys::GetCrashKeys(&keys);
+ #endif
+   return gin::ConvertToV8(isolate, keys);
+@@ -329,7 +329,7 @@ int NodeMain() {
+       // Setup process.crashReporter in child node processes
+       auto reporter = gin_helper::Dictionary::CreateEmpty(isolate);
+       reporter.SetMethod("getParameters", &GetParameters);
+-#if IS_MAS_BUILD()
++#if IS_MAS_BUILD() || BUILDFLAG(IS_BSD)
+       reporter.SetMethod("addExtraParameter", &SetCrashKeyStub);
+       reporter.SetMethod("removeExtraParameter", &ClearCrashKeyStub);
+ #else
+diff --git a/electron/shell/browser/api/electron_api_app.cc b/electron/shell/browser/api/electron_api_app.cc
+index d8ba5f83b6..88ac82dd4e 100644
+--- a/electron/shell/browser/api/electron_api_app.cc
++++ b/electron/shell/browser/api/electron_api_app.cc
+@@ -110,7 +110,7 @@
+ #include "ui/base/resource/resource_bundle.h"
+ #endif
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include "base/nix/scoped_xdg_activation_token_injector.h"
+ #include "base/nix/xdg_util.h"
+ #endif
+@@ -438,7 +438,7 @@ bool NotificationCallbackWrapper(
+     base::CommandLine cmd,
+     const base::FilePath& cwd,
+     const std::vector<uint8_t> additional_data) {
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // Set the global activation token sent as a command line switch by another
+   // electron app instance. This also removes the switch after use to prevent
+   // any side effects of leaving it in the command line after this point.
+@@ -623,7 +623,7 @@ void App::OnWillFinishLaunching() {
+ }
+ 
+ void App::OnFinishLaunching(base::DictValue launch_info) {
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // Set the application name for audio streams shown in external
+   // applications. Only affects pulseaudio currently.
+   media::AudioManager::SetGlobalAppName(Browser::Get()->GetName());
+@@ -972,7 +972,7 @@ void App::SetPath(gin_helper::ErrorThrower thrower,
+ }
+ 
+ void App::SetDesktopName(const std::string& desktop_name) {
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   auto env = base::Environment::Create();
+   env->SetVar("CHROME_DESKTOP", desktop_name);
+ #endif
+@@ -1074,7 +1074,7 @@ bool App::RequestSingleInstanceLock(gin::Arguments* args) {
+       base::BindRepeating(NotificationCallbackWrapper, cb));
+ #endif
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // Read the xdg-activation token and set it in the command line for the
+   // duration of the notification in order to ensure this is propagated to an
+   // already running electron app instance if it exists.
+@@ -1470,7 +1470,7 @@ std::vector<gin_helper::Dictionary> App::GetAppMetrics(v8::Isolate* isolate) {
+       pid_dict.Set("name", process_metric.second->name);
+     }
+ 
+-#if !BUILDFLAG(IS_LINUX)
++#if !BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_BSD)
+     auto memory_info = process_metric.second->GetMemoryInfo();
+ 
+     auto memory_dict = gin_helper::Dictionary::CreateEmpty(isolate);
+@@ -1974,7 +1974,7 @@ gin::ObjectTemplateBuilder App::GetObjectTemplateBuilder(v8::Isolate* isolate) {
+       .SetMethod("getJumpListSettings", &App::GetJumpListSettings)
+       .SetMethod("setJumpList", &App::SetJumpList)
+ #endif
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+       .SetMethod("isUnityRunning",
+                  base::BindRepeating(&Browser::IsUnityRunning, browser))
+ #endif
+diff --git a/electron/shell/browser/api/electron_api_base_window.cc b/electron/shell/browser/api/electron_api_base_window.cc
+index 4816418b53..f4882a65ff 100644
+--- a/electron/shell/browser/api/electron_api_base_window.cc
++++ b/electron/shell/browser/api/electron_api_base_window.cc
+@@ -43,7 +43,7 @@
+ #include "shell/browser/ui/views/win_frame_view.h"
+ #include "shell/browser/ui/win/taskbar_host.h"
+ #include "ui/base/win/shell.h"
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include "shell/browser/ui/views/electron_frame_view_linux.h"
+ #include "ui/gfx/image/image_skia.h"
+ #endif
+@@ -1063,7 +1063,7 @@ void BaseWindow::SetIconImpl(v8::Isolate* isolate,
+   static_cast<NativeWindowViews*>(window_.get())
+       ->SetIcon(native_image->GetHICON(GetSystemMetrics(SM_CXSMICON)),
+                 native_image->GetHICON(GetSystemMetrics(SM_CXICON)));
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   static_cast<NativeWindowViews*>(window_.get())
+       ->SetIcon(native_image->image().AsImageSkia());
+ #endif
+@@ -1164,7 +1164,7 @@ v8::Local<v8::Value> BaseWindow::GetAccentColor() const {
+ }
+ #endif
+ 
+-#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ void BaseWindow::SetTitleBarOverlay(const gin_helper::Dictionary& options,
+                                     gin::Arguments* args) {
+   static_cast<NativeWindowViews*>(window_.get())
+@@ -1346,7 +1346,7 @@ void BaseWindow::BuildPrototype(v8::Isolate* isolate,
+       .SetMethod("setThumbnailToolTip", &BaseWindow::SetThumbnailToolTip)
+       .SetMethod("setAppDetails", &BaseWindow::SetAppDetails)
+ #endif
+-#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+       .SetMethod("setTitleBarOverlay", &BaseWindow::SetTitleBarOverlay)
+ #endif
+       .SetProperty("id", &BaseWindow::GetID);
+diff --git a/electron/shell/browser/api/electron_api_base_window.h b/electron/shell/browser/api/electron_api_base_window.h
+index 3bc1469ebf..4f17f85376 100644
+--- a/electron/shell/browser/api/electron_api_base_window.h
++++ b/electron/shell/browser/api/electron_api_base_window.h
+@@ -265,7 +265,7 @@ class BaseWindow : public gin_helper::TrackableObject<BaseWindow>,
+   v8::Local<v8::Value> GetAccentColor() const;
+ #endif
+ 
+-#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   void SetTitleBarOverlay(const gin_helper::Dictionary& options,
+                           gin::Arguments* args);
+ #endif
+diff --git a/electron/shell/browser/api/electron_api_crash_reporter.cc b/electron/shell/browser/api/electron_api_crash_reporter.cc
+index 989dc67b50..c9cb7641c1 100644
+--- a/electron/shell/browser/api/electron_api_crash_reporter.cc
++++ b/electron/shell/browser/api/electron_api_crash_reporter.cc
+@@ -31,7 +31,7 @@
+ #include "shell/common/process_util.h"
+ #include "shell/common/thread_restrictions.h"
+ 
+-#if !IS_MAS_BUILD()
++#if !IS_MAS_BUILD() && !BUILDFLAG(IS_BSD)
+ #include "components/crash/core/app/crashpad.h"  // nogncheck
+ #include "components/crash/core/browser/crash_upload_list_crashpad.h"  // nogncheck
+ #include "components/crash/core/common/crash_key.h"
+@@ -65,7 +65,7 @@ bool g_crash_reporter_initialized = false;
+ 
+ namespace electron::api::crash_reporter {
+ 
+-#if IS_MAS_BUILD()
++#if IS_MAS_BUILD() || BUILDFLAG(IS_BSD)
+ namespace {
+ 
+ void NoOp() {}
+@@ -136,7 +136,7 @@ void Start(const std::string& submit_url,
+            const std::map<std::string, std::string>& extra,
+            bool is_node_process) {
+   TRACE_EVENT0("electron", "crash_reporter::Start");
+-#if !IS_MAS_BUILD()
++#if !IS_MAS_BUILD() && !BUILDFLAG(IS_BSD)
+   if (g_crash_reporter_initialized)
+     return;
+   g_crash_reporter_initialized = true;
+@@ -182,7 +182,7 @@ void Start(const std::string& submit_url,
+ 
+ namespace {
+ 
+-#if IS_MAS_BUILD()
++#if IS_MAS_BUILD() || BUILDFLAG(IS_BSD)
+ void GetUploadedReports(
+     v8::Isolate* isolate,
+     base::OnceCallback<void(v8::Local<v8::Value>)> callback) {
+@@ -237,13 +237,13 @@ v8::Local<v8::Value> GetUploadedReports(v8::Isolate* isolate) {
+ #endif
+ 
+ void SetUploadToServer(bool upload) {
+-#if !IS_MAS_BUILD()
++#if !IS_MAS_BUILD() && !BUILDFLAG(IS_BSD)
+   ElectronCrashReporterClient::Get()->SetCollectStatsConsent(upload);
+ #endif
+ }
+ 
+ bool GetUploadToServer() {
+-#if IS_MAS_BUILD()
++#if IS_MAS_BUILD() || BUILDFLAG(IS_BSD)
+   return false;
+ #else
+   return ElectronCrashReporterClient::Get()->GetCollectStatsConsent();
+@@ -252,7 +252,7 @@ bool GetUploadToServer() {
+ 
+ v8::Local<v8::Value> GetParameters(v8::Isolate* isolate) {
+   std::map<std::string, std::string> keys;
+-#if !IS_MAS_BUILD()
++#if !IS_MAS_BUILD() && !BUILDFLAG(IS_BSD)
+   electron::crash_keys::GetCrashKeys(&keys);
+ #endif
+   return gin::ConvertToV8(isolate, keys);
+@@ -265,7 +265,7 @@ void Initialize(v8::Local<v8::Object> exports,
+   v8::Isolate* const isolate = electron::JavascriptEnvironment::GetIsolate();
+   gin_helper::Dictionary dict(isolate, exports);
+   dict.SetMethod("start", &electron::api::crash_reporter::Start);
+-#if IS_MAS_BUILD()
++#if IS_MAS_BUILD() || BUILDFLAG(IS_BSD)
+   dict.SetMethod("addExtraParameter", &electron::api::crash_reporter::NoOp);
+   dict.SetMethod("removeExtraParameter", &electron::api::crash_reporter::NoOp);
+ #else
+diff --git a/electron/shell/browser/api/electron_api_desktop_capturer.cc b/electron/shell/browser/api/electron_api_desktop_capturer.cc
+index 8d358e67f6..f87120de1e 100644
+--- a/electron/shell/browser/api/electron_api_desktop_capturer.cc
++++ b/electron/shell/browser/api/electron_api_desktop_capturer.cc
+@@ -55,7 +55,7 @@
+ #endif
+ 
+ namespace {
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ // Private function in ui/base/x/x11_display_util.cc
+ base::flat_map<x11::RandR::Output, int> GetMonitors(
+     std::pair<uint32_t, uint32_t> version,
+diff --git a/electron/shell/browser/api/electron_api_power_monitor.cc b/electron/shell/browser/api/electron_api_power_monitor.cc
+index 7fe7b8842d..996ce529c4 100644
+--- a/electron/shell/browser/api/electron_api_power_monitor.cc
++++ b/electron/shell/browser/api/electron_api_power_monitor.cc
+@@ -137,6 +137,11 @@ void PowerMonitor::OnSpeedLimitChange(int speed_limit) {
+       gin::DataObjectBuilder(isolate).Set("limit", speed_limit).Build());
+ }
+ 
++#if BUILDFLAG(IS_BSD)
++void PowerMonitor::SetListeningForShutdown(bool is_listening) {
++}
++#endif
++
+ #if BUILDFLAG(IS_LINUX)
+ void PowerMonitor::SetListeningForShutdown(bool is_listening) {
+   if (is_listening) {
+@@ -160,7 +165,7 @@ gin::ObjectTemplateBuilder PowerMonitor::GetObjectTemplateBuilder(
+   auto builder =
+       gin_helper::EventEmitterMixin<PowerMonitor>::GetObjectTemplateBuilder(
+           isolate);
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   builder.SetMethod("setListeningForShutdown",
+                     &PowerMonitor::SetListeningForShutdown);
+ #endif
+diff --git a/electron/shell/browser/api/electron_api_power_monitor.h b/electron/shell/browser/api/electron_api_power_monitor.h
+index 6e0994d733..5a4deda058 100644
+--- a/electron/shell/browser/api/electron_api_power_monitor.h
++++ b/electron/shell/browser/api/electron_api_power_monitor.h
+@@ -44,7 +44,7 @@ class PowerMonitor final : public gin::Wrappable<PowerMonitor>,
+   PowerMonitor& operator=(const PowerMonitor&) = delete;
+ 
+  private:
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   void SetListeningForShutdown(bool);
+ #endif
+ 
+diff --git a/electron/shell/browser/api/electron_api_safe_storage.cc b/electron/shell/browser/api/electron_api_safe_storage.cc
+index f9c54027a9..c1a69af056 100644
+--- a/electron/shell/browser/api/electron_api_safe_storage.cc
++++ b/electron/shell/browser/api/electron_api_safe_storage.cc
+@@ -70,7 +70,7 @@ gin::ObjectTemplateBuilder SafeStorage::GetObjectTemplateBuilder(
+       .SetMethod("decryptString", &SafeStorage::DecryptString)
+       .SetMethod("encryptStringAsync", &SafeStorage::encryptStringAsync)
+       .SetMethod("decryptStringAsync", &SafeStorage::decryptStringAsync)
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+       .SetMethod("getSelectedStorageBackend",
+                  &SafeStorage::GetSelectedLinuxBackend)
+ #endif
+@@ -148,7 +148,7 @@ const char* SafeStorage::GetTypeName() {
+ bool SafeStorage::IsEncryptionAvailable() {
+   if (!electron::Browser::Get()->is_ready())
+     return false;
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   return OSCrypt::IsEncryptionAvailable() ||
+          (use_password_v10_ &&
+           static_cast<BrowserProcessImpl*>(g_browser_process)
+@@ -168,7 +168,7 @@ v8::Local<v8::Promise> SafeStorage::IsAsyncEncryptionAvailable(
+     return handle;
+   }
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   if (use_password_v10_ && static_cast<BrowserProcessImpl*>(g_browser_process)
+                                    ->linux_storage_backend() == "basic_text") {
+     promise.Resolve(true);
+@@ -191,7 +191,7 @@ void SafeStorage::SetUsePasswordV10(bool use) {
+   use_password_v10_ = use;
+ }
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ std::string SafeStorage::GetSelectedLinuxBackend() {
+   if (!electron::Browser::Get()->is_ready())
+     return "unknown";
+diff --git a/electron/shell/browser/api/electron_api_safe_storage.h b/electron/shell/browser/api/electron_api_safe_storage.h
+index c23378ae64..0b957e1487 100644
+--- a/electron/shell/browser/api/electron_api_safe_storage.h
++++ b/electron/shell/browser/api/electron_api_safe_storage.h
+@@ -78,7 +78,7 @@ class SafeStorage final : public gin_helper::DeprecatedWrappable<SafeStorage> {
+   v8::Local<v8::Promise> decryptStringAsync(v8::Isolate* isolate,
+                                             v8::Local<v8::Value> buffer);
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   std::string GetSelectedLinuxBackend();
+ #endif
+ 
+diff --git a/electron/shell/browser/api/electron_api_screen.cc b/electron/shell/browser/api/electron_api_screen.cc
+index 6c68ec6fc9..82d21d2115 100644
+--- a/electron/shell/browser/api/electron_api_screen.cc
++++ b/electron/shell/browser/api/electron_api_screen.cc
+@@ -29,7 +29,7 @@
+ #include "ui/display/win/screen_win.h"
+ #endif
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include "shell/browser/linux/x11_util.h"
+ #endif
+ 
+@@ -91,7 +91,7 @@ Screen::~Screen() {
+ }
+ 
+ gfx::Point Screen::GetCursorScreenPoint(v8::Isolate* isolate) {
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   if (x11_util::IsWayland())
+     return {};
+ #endif
+@@ -165,7 +165,7 @@ void Screen::OnDisplayMetricsChanged(const display::Display& display,
+ gfx::PointF Screen::ScreenToDIPPoint(const gfx::PointF& point_px) {
+ #if BUILDFLAG(IS_WIN)
+   return display::win::GetScreenWin()->ScreenToDIPPoint(point_px);
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   if (x11_util::IsX11()) {
+     gfx::Point pt_px = gfx::ToFlooredPoint(point_px);
+     display::Display display = GetDisplayNearestPoint(pt_px);
+@@ -184,7 +184,7 @@ gfx::PointF Screen::ScreenToDIPPoint(const gfx::PointF& point_px) {
+ gfx::Point Screen::DIPToScreenPoint(const gfx::Point& point_dip) {
+ #if BUILDFLAG(IS_WIN)
+   return display::win::GetScreenWin()->DIPToScreenPoint(point_dip);
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   if (x11_util::IsX11()) {
+     display::Display display = GetDisplayNearestPoint(point_dip);
+     gfx::Rect bounds_dip = display.bounds();
+@@ -226,7 +226,7 @@ gin::ObjectTemplateBuilder Screen::GetObjectTemplateBuilder(
+       .SetMethod("getPrimaryDisplay", &Screen::GetPrimaryDisplay)
+       .SetMethod("getAllDisplays", &Screen::GetAllDisplays)
+       .SetMethod("getDisplayNearestPoint", &Screen::GetDisplayNearestPoint)
+-#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+       .SetMethod("screenToDipPoint", &Screen::ScreenToDIPPoint)
+       .SetMethod("dipToScreenPoint", &Screen::DIPToScreenPoint)
+ #endif
+diff --git a/electron/shell/browser/api/electron_api_system_preferences.cc b/electron/shell/browser/api/electron_api_system_preferences.cc
+index 52ac57acd0..c82f0be782 100644
+--- a/electron/shell/browser/api/electron_api_system_preferences.cc
++++ b/electron/shell/browser/api/electron_api_system_preferences.cc
+@@ -10,7 +10,7 @@
+ #include "shell/common/gin_helper/handle.h"
+ #include "shell/common/node_includes.h"
+ #include "ui/gfx/animation/animation.h"
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include "content/public/browser/browser_task_traits.h"
+ #include "content/public/browser/browser_thread.h"
+ #include "shell/browser/api/electron_api_system_preferences.h"
+@@ -26,7 +26,7 @@ gin::DeprecatedWrapperInfo SystemPreferences::kWrapperInfo = {
+ SystemPreferences::SystemPreferences() {
+   InitializeWindow();
+ }
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ SystemPreferences::SystemPreferences()
+     : ui_theme_(ui::NativeTheme::GetInstanceForNativeUi()) {
+   ui_theme_->AddObserver(this);
+@@ -55,7 +55,7 @@ v8::Local<v8::Value> SystemPreferences::GetAnimationSettings(
+   return dict.GetHandle();
+ }
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ std::string SystemPreferences::GetAccentColor() {
+   auto const color = ui_theme_->user_color();
+   if (!color.has_value())
+diff --git a/electron/shell/browser/api/electron_api_system_preferences.h b/electron/shell/browser/api/electron_api_system_preferences.h
+index 0c155118e3..2fe3298ef0 100644
+--- a/electron/shell/browser/api/electron_api_system_preferences.h
++++ b/electron/shell/browser/api/electron_api_system_preferences.h
+@@ -18,7 +18,7 @@
+ #include "shell/browser/browser.h"
+ #include "shell/browser/browser_observer.h"
+ #endif
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include "base/memory/raw_ptr.h"
+ #include "ui/native_theme/native_theme.h"
+ #include "ui/native_theme/native_theme_observer.h"
+@@ -49,7 +49,7 @@ class SystemPreferences final
+ #if BUILDFLAG(IS_WIN)
+     ,
+       public BrowserObserver
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+     ,
+       public ui::NativeThemeObserver
+ #endif
+@@ -126,7 +126,7 @@ class SystemPreferences final
+   // are running tests on a Mojave machine
+   v8::Local<v8::Value> GetEffectiveAppearance(v8::Isolate* isolate);
+ 
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // ui::NativeThemeObserver:
+   void OnNativeThemeUpdated(ui::NativeTheme* theme) override;
+ #endif
+@@ -174,7 +174,7 @@ class SystemPreferences final
+   // Color/high contrast mode change observer.
+   base::CallbackListSubscription hwnd_subscription_;
+ #endif
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   void OnNativeThemeUpdatedOnUI();
+ 
+   raw_ptr<ui::NativeTheme> ui_theme_;
+diff --git a/electron/shell/browser/api/electron_api_web_contents.cc b/electron/shell/browser/api/electron_api_web_contents.cc
+index 22565c4a77..b34730f5c0 100644
+--- a/electron/shell/browser/api/electron_api_web_contents.cc
++++ b/electron/shell/browser/api/electron_api_web_contents.cc
+@@ -188,11 +188,11 @@
+ #include "ui/base/cocoa/defaults_utils.h"
+ #endif
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include "ui/linux/linux_ui.h"
+ #endif
+ 
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_WIN)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_WIN) || BUILDFLAG(IS_BSD)
+ #include "ui/aura/client/focus_client.h"
+ #include "ui/aura/window.h"
+ #include "ui/gfx/font_render_params.h"
+@@ -223,7 +223,7 @@
+ #include "content/public/browser/plugin_service.h"
+ #endif
+ 
+-#if !IS_MAS_BUILD()
++#if !IS_MAS_BUILD() && !BUILDFLAG(IS_BSD)
+ #include "chrome/browser/hang_monitor/hang_crash_dump.h"  // nogncheck
+ #endif
+ 
+@@ -658,7 +658,7 @@ std::optional<base::TimeDelta> GetCursorBlinkInterval() {
+       ui::TextInsertionCaretBlinkPeriodFromDefaults());
+   if (system_value)
+     return *system_value;
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   if (auto* native_theme = ui::NativeTheme::GetInstanceForNativeUi())
+     return native_theme->caret_blink_interval();
+ #elif BUILDFLAG(IS_WIN)
+@@ -1060,7 +1060,7 @@ void WebContents::InitWithSessionAndOptions(
+   accept_languages.pop_back();
+   prefs->accept_languages = accept_languages;
+ 
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_WIN)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_WIN) || BUILDFLAG(IS_BSD)
+   // Update font settings.
+   static const gfx::FontRenderParams params(
+       gfx::GetFontRenderParams(gfx::FontRenderParamsQuery(), nullptr));
+@@ -3311,13 +3311,13 @@ void WebContents::ForcefullyCrashRenderer() {
+ 
+   content::RenderProcessHost* rph = rwh->GetProcess();
+   if (rph) {
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
+     // A generic |CrashDumpHungChildProcess()| is not implemented for Linux.
+     // Instead we send an explicit IPC to crash on the renderer's IO thread.
+     rph->ForceCrash();
+ #else
+     // Try to generate a crash report for the hung process.
+-#if !IS_MAS_BUILD()
++#if !IS_MAS_BUILD() && !BUILDFLAG(IS_BSD)
+     CrashDumpHungChildProcess(rph->GetProcess().Handle());
+ #endif
+     rph->Shutdown(content::RESULT_CODE_HUNG);
+@@ -3958,7 +3958,7 @@ void WebContents::CopyImageAt(int x, int y) {
+ void WebContents::Focus() {
+   // Focusing on WebContents does not automatically focus the window on macOS
+   // and Linux, do it manually to match the behavior on Windows.
+-#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   if (owner_window())
+     owner_window()->Focus(true);
+ #endif
+@@ -4918,7 +4918,7 @@ ui::ImageModel WebContents::GetDevToolsWindowIcon() {
+ }
+ #endif
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ void WebContents::GetDevToolsWindowWMClass(std::string* name,
+                                            std::string* class_name) {
+   *class_name = Browser::Get()->GetName();
+diff --git a/electron/shell/browser/api/electron_api_web_contents.h b/electron/shell/browser/api/electron_api_web_contents.h
+index b9fcb34ccb..46181a3b5e 100644
+--- a/electron/shell/browser/api/electron_api_web_contents.h
++++ b/electron/shell/browser/api/electron_api_web_contents.h
+@@ -794,7 +794,7 @@ class WebContents final : public ExclusiveAccessContext,
+ #if defined(TOOLKIT_VIEWS) && !BUILDFLAG(IS_MAC)
+   ui::ImageModel GetDevToolsWindowIcon() override;
+ #endif
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   void GetDevToolsWindowWMClass(std::string* name,
+                                 std::string* class_name) override;
+ #endif
+diff --git a/electron/shell/browser/api/process_metric.h b/electron/shell/browser/api/process_metric.h
+index 07978f1c38..6ee1cfe830 100644
+--- a/electron/shell/browser/api/process_metric.h
++++ b/electron/shell/browser/api/process_metric.h
+@@ -14,7 +14,7 @@
+ 
+ namespace electron {
+ 
+-#if !BUILDFLAG(IS_LINUX)
++#if !BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_BSD)
+ struct ProcessMemoryInfo {
+   size_t working_set_size = 0;
+   size_t peak_working_set_size = 0;
+@@ -48,7 +48,7 @@ struct ProcessMetric {
+                 const std::string& name = std::string());
+   ~ProcessMetric();
+ 
+-#if !BUILDFLAG(IS_LINUX)
++#if !BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_BSD)
+   ProcessMemoryInfo GetMemoryInfo() const;
+ #endif
+ 
+diff --git a/electron/shell/browser/browser.cc b/electron/shell/browser/browser.cc
+index c353115f06..6090461cb9 100644
+--- a/electron/shell/browser/browser.cc
++++ b/electron/shell/browser/browser.cc
+@@ -105,7 +105,7 @@ bool Browser::IsValidProtocolScheme(const std::string& scheme) {
+   return true;
+ }
+ 
+-#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ void Browser::Focus(gin::Arguments* args) {
+   // Focus on the first visible window.
+   for (auto* const window : WindowList::GetWindows()) {
+diff --git a/electron/shell/browser/browser.h b/electron/shell/browser/browser.h
+index 924955227d..5e4a086f13 100644
+--- a/electron/shell/browser/browser.h
++++ b/electron/shell/browser/browser.h
+@@ -295,10 +295,10 @@ class Browser : private WindowListObserver {
+   PCWSTR GetAppUserModelID();
+ #endif  // BUILDFLAG(IS_WIN)
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // Whether Unity launcher is running.
+   bool IsUnityRunning();
+-#endif  // BUILDFLAG(IS_LINUX)
++#endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ 
+   // Tell the application to open a file.
+   bool OpenFile(const std::string& file_path);
+diff --git a/electron/shell/browser/browser_linux.cc b/electron/shell/browser/browser_linux.cc
+index ee39626a88..063d7ad095 100644
+--- a/electron/shell/browser/browser_linux.cc
++++ b/electron/shell/browser/browser_linux.cc
+@@ -9,7 +9,7 @@
+ 
+ #include <string_view>
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include <gio/gdesktopappinfo.h>
+ #include <gio/gio.h>
+ #include <gtk/gtk.h>
+@@ -37,7 +37,7 @@
+ #include "ui/gtk/gtk_compat.h"  // nogncheck
+ #include "ui/gtk/gtk_util.h"    // nogncheck
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include "shell/browser/linux/unity_service.h"
+ #endif
+ 
+diff --git a/electron/shell/browser/browser_process_impl.cc b/electron/shell/browser/browser_process_impl.cc
+index cc3b65d308..c642fa2cb7 100644
+--- a/electron/shell/browser/browser_process_impl.cc
++++ b/electron/shell/browser/browser_process_impl.cc
+@@ -50,7 +50,7 @@
+ #include "chrome/browser/printing/print_job_manager.h"
+ #endif
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include "chrome/browser/browser_features.h"
+ #include "components/os_crypt/async/browser/freedesktop_secret_key_provider.h"
+ #include "components/os_crypt/async/browser/secret_portal_key_provider.h"
+@@ -149,7 +149,7 @@ void BrowserProcessImpl::PostEarlyInitialization() {
+   OSCrypt::RegisterLocalPrefs(pref_registry.get());
+ #endif
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   os_crypt_async::SecretPortalKeyProvider::RegisterLocalPrefs(
+       pref_registry.get());
+ #endif
+@@ -404,7 +404,7 @@ electron::ResolveProxyHelper* BrowserProcessImpl::GetResolveProxyHelper() {
+   return resolve_proxy_helper_.get();
+ }
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ void BrowserProcessImpl::SetLinuxStorageBackend(
+     os_crypt::SelectedLinuxBackend selected_backend) {
+   switch (selected_backend) {
+@@ -427,7 +427,7 @@ void BrowserProcessImpl::SetLinuxStorageBackend(
+       NOTREACHED();
+   }
+ }
+-#endif  // BUILDFLAG(IS_LINUX)
++#endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ 
+ void BrowserProcessImpl::SetApplicationLocale(const std::string& locale) {
+   locale_ = locale;
+@@ -479,7 +479,7 @@ void BrowserProcessImpl::CreateOSCryptAsync() {
+       std::make_unique<os_crypt_async::DPAPIKeyProvider>(local_state()));
+ #endif  // BUILDFLAG(IS_WIN)
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   base::CommandLine* cmd_line = base::CommandLine::ForCurrentProcess();
+   const auto password_store =
+       cmd_line->GetSwitchValueASCII(password_manager::kPasswordStore);
+@@ -507,7 +507,7 @@ void BrowserProcessImpl::CreateOSCryptAsync() {
+       std::make_unique<os_crypt_async::FreedesktopSecretKeyProvider>(
+           password_store, electron::GetApplicationName(), freedesktop_config,
+           nullptr));
+-#endif  // BUILDFLAG(IS_LINUX)
++#endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ 
+ #if BUILDFLAG(IS_POSIX) && !BUILDFLAG(IS_MAC)
+   // On other POSIX systems, this is the only key provider. On Linux, it is used
+diff --git a/electron/shell/browser/browser_process_impl.h b/electron/shell/browser/browser_process_impl.h
+index 0b7daef173..0921daf6df 100644
+--- a/electron/shell/browser/browser_process_impl.h
++++ b/electron/shell/browser/browser_process_impl.h
+@@ -22,7 +22,7 @@
+ #include "shell/browser/net/system_network_context_manager.h"
+ #include "ui/base/unowned_user_data/unowned_user_data_host.h"
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include "components/os_crypt/sync/key_storage_util_linux.h"
+ #endif
+ 
+@@ -65,7 +65,7 @@ class BrowserProcessImpl : public BrowserProcess {
+   const std::string& GetSystemLocale() const;
+   electron::ResolveProxyHelper* GetResolveProxyHelper();
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   void SetLinuxStorageBackend(os_crypt::SelectedLinuxBackend selected_backend);
+   [[nodiscard]] const std::string& linux_storage_backend() const {
+     return selected_linux_storage_backend_;
+@@ -161,7 +161,7 @@ class BrowserProcessImpl : public BrowserProcess {
+   std::unique_ptr<PrefService> local_state_;
+   std::string locale_;
+   std::string system_locale_;
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   std::string selected_linux_storage_backend_;
+ #endif
+   embedder_support::OriginTrialsSettingsStorage origin_trials_settings_storage_;
+diff --git a/electron/shell/browser/electron_browser_main_parts.cc b/electron/shell/browser/electron_browser_main_parts.cc
+index d1c59d2dd3..014848c1f4 100644
+--- a/electron/shell/browser/electron_browser_main_parts.cc
++++ b/electron/shell/browser/electron_browser_main_parts.cc
+@@ -81,7 +81,7 @@
+ #include "ui/wm/core/wm_state.h"
+ #endif
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include <dlfcn.h>
+ 
+ #include "base/environment.h"
+@@ -142,7 +142,7 @@ namespace electron {
+ 
+ namespace {
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ // The display server connection or the session bus is gone: exit like
+ // Chrome's SessionEnding(), with an off-thread watchdog that crashes us if
+ // exiting hangs on the dead connection.
+@@ -214,13 +214,17 @@ ElectronBrowserMainParts::ElectronBrowserMainParts()
+   self_ = this;
+ }
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ namespace {
+ 
+ // Resolved via dlsym: a direct reference would bind to Chromium's bundled
+ // FontConfig rather than the system copy GTK and Pango use.
+ void* SystemFontConfigSymbol(const char* name) {
++#if BUILDFLAG(IS_BSD)
++  void* lib = dlopen("libfontconfig.so", RTLD_NOW);
++#else
+   void* lib = dlopen("libfontconfig.so.1", RTLD_NOW);
++#endif
+   return lib ? dlsym(lib, name) : nullptr;
+ }
+ 
+@@ -251,10 +255,10 @@ std::vector<std::optional<std::string>> SnapshotFontConfigEnv() {
+ }
+ 
+ }  // namespace
+-#endif  // BUILDFLAG(IS_LINUX)
++#endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ 
+ ElectronBrowserMainParts::~ElectronBrowserMainParts() {
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   JoinSystemFontConfigInit();
+ #endif
+ }
+@@ -321,7 +325,7 @@ void ElectronBrowserMainParts::PostEarlyInitialization() {
+ 
+   node_bindings_->Initialize(isolate, context);
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // Runs during Node.js environment creation and is joined before any app
+   // code can run, so nothing else touches FontConfig or the environment.
+   const auto fontconfig_env = SnapshotFontConfigEnv();
+@@ -357,7 +361,7 @@ void ElectronBrowserMainParts::PostEarlyInitialization() {
+   // Wrap the uv loop with global env.
+   node_bindings_->set_uv_env(node_env_.get());
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   JoinSystemFontConfigInit();
+ #endif
+ 
+@@ -367,7 +371,7 @@ void ElectronBrowserMainParts::PostEarlyInitialization() {
+   // Wait for app
+   node_bindings_->JoinAppCode();
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // Reload if the app's main script changed the FontConfig environment.
+   if (fontconfig_env != SnapshotFontConfigEnv()) {
+     if (auto fc_reinit = reinterpret_cast<int (*)()>(
+@@ -432,7 +436,7 @@ int ElectronBrowserMainParts::PreCreateThreads() {
+   // happen before the ResourceBundle is loaded
+   if (locale.empty())
+     l10n_util::OverrideLocaleWithCocoaLocale();
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // l10n_util::GetApplicationLocaleInternal uses g_get_language_names(),
+   // which keys off of getenv("LC_ALL").
+   // We must set this env first to make ui::ResourceBundle accept the custom
+@@ -461,7 +465,7 @@ int ElectronBrowserMainParts::PreCreateThreads() {
+   ElectronBrowserClient::SetApplicationLocale(app_locale);
+   fake_browser_process_->SetApplicationLocale(app_locale);
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // Reset to the original LC_ALL since we should not be changing it.
+   if (!locale.empty()) {
+     if (lc_all)
+@@ -517,7 +521,7 @@ void ElectronBrowserMainParts::PostDestroyThreads() {
+ }
+ 
+ void ElectronBrowserMainParts::ToolkitInitialized() {
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // GTK3's gtk_init() probes the display for OpenGL and loads the GL driver
+   // into this process; nothing here uses GdkGLContext. GDK_GL is read once at
+   // init and only by GTK3 (GTK4 renders with GL itself and ignores it).
+@@ -567,14 +571,14 @@ void ElectronBrowserMainParts::ToolkitInitialized() {
+ #endif
+ }
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ void ElectronBrowserMainParts::JoinSystemFontConfigInit() {
+   if (system_fontconfig_thread_.is_null())
+     return;
+   base::PlatformThread::Join(system_fontconfig_thread_);
+   system_fontconfig_thread_ = base::PlatformThreadHandle();
+ }
+-#endif  // BUILDFLAG(IS_LINUX)
++#endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ 
+ int ElectronBrowserMainParts::PreMainMessageLoopRun() {
+   // Run user's main script before most things get initialized, so we can have
+@@ -647,19 +651,23 @@ void ElectronBrowserMainParts::WillRunMainMessageLoop(
+ }
+ 
+ void ElectronBrowserMainParts::PostCreateMainMessageLoop() {
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_BSD)
+   std::string app_name = electron::Browser::Get()->GetName();
+ #endif
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   ui::OzonePlatform::GetInstance()->PostCreateMainMessageLoop(
+       base::BindOnce(&ExitOnSessionLoss),
+       content::GetUIThreadTaskRunner({content::BrowserTaskType::kUserInput}));
+   dbus_thread_linux::SetDisconnectedCallback(
+       base::BindRepeating(&ExitOnSessionLoss));
+ 
++#if BUILDFLAG(IS_LINUX)
+   if (!bluez::BluezDBusManager::IsInitialized())
+     bluez::DBusBluezManagerWrapperLinux::Initialize();
++#endif
++#endif
+ 
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // Set up crypt config. This needs to be done before anything starts the
+   // network service, as the raw encryption key needs to be shared with the
+   // network service for encrypted cookie storage.
+@@ -756,7 +764,7 @@ void ElectronBrowserMainParts::PostMainMessageLoopRun() {
+   fake_browser_process_->PostMainMessageLoopRun();
+   content::DevToolsAgentHost::StopRemoteDebuggingPipeHandler();
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   ui::OzonePlatform::GetInstance()->PostMainMessageLoopRun();
+ #endif
+ }
+diff --git a/electron/shell/browser/electron_browser_main_parts.h b/electron/shell/browser/electron_browser_main_parts.h
+index 1ecdf8fae2..d3a9efd7d2 100644
+--- a/electron/shell/browser/electron_browser_main_parts.h
++++ b/electron/shell/browser/electron_browser_main_parts.h
+@@ -144,7 +144,7 @@ class ElectronBrowserMainParts : public content::BrowserMainParts {
+   std::unique_ptr<display::Screen> screen_;
+ #endif
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   void JoinSystemFontConfigInit();
+ 
+   base::PlatformThreadHandle system_fontconfig_thread_;
+diff --git a/electron/shell/browser/electron_browser_main_parts_posix.cc b/electron/shell/browser/electron_browser_main_parts_posix.cc
+index e25db80c80..2a3a0e9480 100644
+--- a/electron/shell/browser/electron_browser_main_parts_posix.cc
++++ b/electron/shell/browser/electron_browser_main_parts_posix.cc
+@@ -191,12 +191,16 @@ void ElectronBrowserMainParts::InstallShutdownSignalHandlers(
+   g_pipe_pid = getpid();
+   g_shutdown_pipe_read_fd = pipefd[0];
+   g_shutdown_pipe_write_fd = pipefd[1];
++#if defined(OS_BSD)
++  const size_t kShutdownDetectorThreadStackSize = 0;
++#else
+ #if !defined(ADDRESS_SANITIZER)
+   const size_t kShutdownDetectorThreadStackSize = PTHREAD_STACK_MIN * 2;
+ #else
+   // ASan instrumentation bloats the stack frames, so we need to increase the
+   // stack size to avoid hitting the guard page.
+   const size_t kShutdownDetectorThreadStackSize = PTHREAD_STACK_MIN * 4;
++#endif
+ #endif
+   ShutdownDetector* detector = new ShutdownDetector(
+       g_shutdown_pipe_read_fd, std::move(shutdown_callback), task_runner);
+diff --git a/electron/shell/browser/extensions/api/runtime/electron_runtime_api_delegate.cc b/electron/shell/browser/extensions/api/runtime/electron_runtime_api_delegate.cc
+index 696638e9d1..9267d67f17 100644
+--- a/electron/shell/browser/extensions/api/runtime/electron_runtime_api_delegate.cc
++++ b/electron/shell/browser/extensions/api/runtime/electron_runtime_api_delegate.cc
+@@ -56,6 +56,10 @@ bool ElectronRuntimeAPIDelegate::GetPlatformInfo(PlatformInfo* info) {
+     info->os = extensions::api::runtime::PlatformOs::kLinux;
+   } else if (os == "openbsd") {
+     info->os = extensions::api::runtime::PlatformOs::kOpenbsd;
++  } else if (os == "freebsd") {
++    info->os = extensions::api::runtime::PlatformOs::kFreebsd;
++  } else if (os == "netbsd") {
++    info->os = extensions::api::runtime::PlatformOs::kNetbsd;
+   } else {
+     NOTREACHED();
+   }
+diff --git a/electron/shell/browser/feature_list.cc b/electron/shell/browser/feature_list.cc
+index 0aa5ac92b2..23576880ad 100644
+--- a/electron/shell/browser/feature_list.cc
++++ b/electron/shell/browser/feature_list.cc
+@@ -30,7 +30,7 @@
+ #include "pdf/pdf_features.h"
+ #endif
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include "printing/printing_features.h"
+ #include "ui/base/ui_base_features.h"
+ #endif
+@@ -84,7 +84,7 @@ void InitializeFeatureList() {
+       std::string(",") + chrome_pdf::features::kPdfUseShowSaveFilePicker.name;
+ #endif
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // Without this, globalShortcut is a silent no-op on GNOME Wayland (the
+   // ozone factory returns no listener there). Chromium keeps it off due to
+   // https://gitlab.gnome.org/GNOME/xdg-desktop-portal-gnome/-/issues/185,
+diff --git a/electron/shell/browser/linux/x11_util.cc b/electron/shell/browser/linux/x11_util.cc
+index e58c8fe4c8..e770ccbc4c 100644
+--- a/electron/shell/browser/linux/x11_util.cc
++++ b/electron/shell/browser/linux/x11_util.cc
+@@ -10,7 +10,7 @@
+ namespace x11_util {
+ 
+ bool IsX11() {
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   static const bool is = ui::GetOzonePlatformId() == ui::kPlatformX11;
+   return is;
+ #else
+@@ -19,7 +19,7 @@ bool IsX11() {
+ }
+ 
+ bool IsWayland() {
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   static const bool is = ui::GetOzonePlatformId() == ui::kPlatformWayland;
+   return is;
+ #else
+diff --git a/electron/shell/browser/native_window.cc b/electron/shell/browser/native_window.cc
+index 3980d7a1c5..e4311321cd 100644
+--- a/electron/shell/browser/native_window.cc
++++ b/electron/shell/browser/native_window.cc
+@@ -33,7 +33,7 @@
+ 
+ #if BUILDFLAG(IS_WIN)
+ #include "shell/browser/ui/views/frameless_view.h"
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include "shell/browser/ui/views/electron_frame_view_linux.h"
+ #endif
+ 
+@@ -185,7 +185,7 @@ void NativeWindow::InitFromOptions(const gin_helper::Dictionary& options) {
+   } else if (bool center; options.Get(options::kCenter, &center) && center) {
+     Center();
+   }
+-#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   if (bool val; options.Get(options::kClosable, &val))
+     SetClosable(val);
+ #endif
+diff --git a/electron/shell/browser/native_window_views.cc b/electron/shell/browser/native_window_views.cc
+index d23c9ce8e4..6c8a82e236 100644
+--- a/electron/shell/browser/native_window_views.cc
++++ b/electron/shell/browser/native_window_views.cc
+@@ -57,7 +57,7 @@
+ #include "ui/views/window/non_client_view.h"
+ #include "ui/wm/core/window_util.h"
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include "base/notimplemented.h"
+ #include "shell/browser/browser.h"
+ #include "shell/browser/linux/unity_service.h"
+@@ -294,7 +294,7 @@ NativeWindowViews::NativeWindowViews(const int32_t base_window_id,
+   // If a client frame, we need to draw our own shadows.
+   if (transparent() || has_client_frame())
+     params.opacity = InitParams::WindowOpacity::kTranslucent;
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // Resize handles and shadows on frameless windows need translucent insets.
+   if (!has_frame())
+     params.opacity = InitParams::WindowOpacity::kTranslucent;
+@@ -313,7 +313,7 @@ NativeWindowViews::NativeWindowViews(const int32_t base_window_id,
+     params.parent = parent->GetNativeWindow();
+ 
+   params.native_widget = new ElectronDesktopNativeWidgetAura{this, widget()};
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // Set the WM_CLASS and XDG App ID to the same value
+   // for best compatibility with both X11 and Wayland.
+   const auto app_id = platform_util::GetXdgAppId();
+@@ -343,7 +343,7 @@ NativeWindowViews::NativeWindowViews(const int32_t base_window_id,
+   std::string window_type;
+   options.Get(options::kType, &window_type);
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // Set _GTK_THEME_VARIANT to dark if we have "dark-theme" option set.
+   if (options.ValueOrDefault(options::kDarkTheme, false))
+     SetGTKDarkThemeEnabled(true);
+@@ -415,7 +415,7 @@ NativeWindowViews::NativeWindowViews(const int32_t base_window_id,
+   ::SetWindowLong(GetAcceleratedWidget(), GWL_EXSTYLE, ex_style);
+ #endif
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   options.Get(options::kRoundedCorners, &rounded_corner_);
+ #endif
+ 
+@@ -535,7 +535,7 @@ void NativeWindowViews::SetTitleBarOverlay(
+     auto* fv = widget()->non_client_view()->frame_view();
+     if (auto* frameless = views::AsViewClass<FramelessView>(fv)) {
+       frameless->InvalidateCaptionButtons();
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+     } else if (auto* fvl = views::AsViewClass<views::FrameViewLinux>(fv)) {
+       fvl->InvalidateLayout();
+       fvl->SchedulePaint();
+@@ -545,7 +545,7 @@ void NativeWindowViews::SetTitleBarOverlay(
+ }
+ 
+ void NativeWindowViews::SetGTKDarkThemeEnabled(bool use_dark_theme) {
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   if (x11_util::IsX11()) {
+     const std::string color = use_dark_theme ? "dark" : "light";
+     auto* connection = x11::Connection::Get();
+@@ -611,7 +611,7 @@ void NativeWindowViews::Show() {
+ 
+   NotifyWindowShow();
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   if (global_menu_bar_)
+     global_menu_bar_->OnWindowMapped();
+ 
+@@ -627,7 +627,7 @@ void NativeWindowViews::ShowInactive() {
+ 
+   NotifyWindowShow();
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   if (global_menu_bar_)
+     global_menu_bar_->OnWindowMapped();
+ 
+@@ -646,7 +646,7 @@ void NativeWindowViews::Hide() {
+ 
+   NotifyWindowHide();
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   if (global_menu_bar_)
+     global_menu_bar_->OnWindowUnmapped();
+ #endif
+@@ -677,7 +677,7 @@ bool NativeWindowViews::IsVisible() const {
+ bool NativeWindowViews::IsEnabled() const {
+ #if BUILDFLAG(IS_WIN)
+   return ::IsWindowEnabled(GetAcceleratedWidget());
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   return !enable_event_listening_;
+ #endif
+ }
+@@ -894,7 +894,7 @@ void NativeWindowViews::SetBounds(const gfx::Rect& bounds, bool animate) {
+   }
+ #endif
+ 
+-#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // On Linux and Windows the minimum and maximum size should be updated with
+   // window size when window is not resizable.
+   if (!CanResize()) {
+@@ -949,7 +949,7 @@ void NativeWindowViews::SetContentSizeConstraints(
+   // of this to determine whether native widget has initialized.
+   if (widget() && widget()->widget_delegate())
+     widget()->OnSizeConstraintsChanged();
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   if (resizable_)
+     old_size_constraints_ = GetSizeConstraints();
+ #endif
+@@ -1169,7 +1169,7 @@ bool NativeWindowViews::IsClosable() const {
+     return false;
+   }
+   return !(info.fState & MFS_DISABLED);
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   return true;
+ #endif
+ }
+@@ -1309,7 +1309,7 @@ void NativeWindowViews::SetBackgroundColor(SkColor background_color) {
+   InvalidateRect(GetAcceleratedWidget(), nullptr, 1);
+ #endif
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // Widget and root view need to be transparent for CSD to draw shadow regions
+   // and custom edges and corners. The web contents view will still be
+   // painted with the true background color, which is cached in state.
+@@ -1332,7 +1332,7 @@ void NativeWindowViews::SetHasShadow(bool has_shadow) {
+   // so we no longer call wm::SetShadowElevation and similar to avoid
+   // artifacts. https://github.com/electron/electron/issues/51456.
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   auto* efvl = views::AsViewClass<ElectronFrameViewLinux>(
+       widget()->non_client_view()->frame_view());
+   if (efvl) {
+@@ -1456,7 +1456,7 @@ bool NativeWindowViews::IsFocusable() const {
+ }
+ 
+ void NativeWindowViews::SetMenu(ElectronMenuModel* menu_model) {
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // Remove global menu bar.
+   if (global_menu_bar_ && menu_model == nullptr) {
+     global_menu_bar_.reset();
+@@ -1512,7 +1512,7 @@ void NativeWindowViews::SetMenu(ElectronMenuModel* menu_model) {
+ void NativeWindowViews::SetParentWindow(NativeWindow* parent) {
+   NativeWindow::SetParentWindow(parent);
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   if (x11_util::IsX11()) {
+     auto* connection = x11::Connection::Get();
+     connection->SetProperty(
+@@ -1566,7 +1566,7 @@ gfx::Insets NativeWindowViews::GetRestoredFrameBorderInsets() const {
+   if (auto* frameless = views::AsViewClass<FramelessView>(frame_view))
+     return frameless->RestoredFrameBorderInsets();
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   if (auto* fvl = views::AsViewClass<views::FrameViewLinux>(frame_view))
+     return fvl->GetRestoredFrameBorderInsets();
+ #endif
+@@ -1578,7 +1578,7 @@ void NativeWindowViews::SetProgressBar(double progress,
+                                        NativeWindow::ProgressState state) {
+ #if BUILDFLAG(IS_WIN)
+   taskbar_host_.SetProgressBar(GetAcceleratedWidget(), progress, state);
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   if (unity::IsRunning()) {
+     unity::SetProgressFraction(progress);
+   }
+@@ -1704,7 +1704,7 @@ content::DesktopMediaID NativeWindowViews::GetDesktopMediaID() const {
+ #if BUILDFLAG(IS_WIN)
+   window_handle =
+       reinterpret_cast<content::DesktopMediaID::Id>(accelerated_widget);
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   window_handle = static_cast<uint32_t>(accelerated_widget);
+ #endif
+   aura::WindowTreeHost* const host =
+@@ -1834,7 +1834,7 @@ void NativeWindowViews::SetIcon(HICON window_icon, HICON app_icon) {
+   SendMessage(hwnd, WM_SETICON, ICON_BIG,
+               reinterpret_cast<LPARAM>(app_icon_.get()));
+ }
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ void NativeWindowViews::SetIcon(const gfx::ImageSkia& icon) {
+   auto* tree_host = views::DesktopWindowTreeHostLinux::GetHostForWidget(
+       GetAcceleratedWidget());
+@@ -1955,7 +1955,7 @@ bool NativeWindowViews::CanMaximize() const {
+ bool NativeWindowViews::CanMinimize() const {
+ #if BUILDFLAG(IS_WIN)
+   return minimizable_;
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   return true;
+ #endif
+ }
+@@ -2002,7 +2002,7 @@ std::unique_ptr<views::FrameView> NativeWindowViews::CreateFrameView(
+ #endif
+ }
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ views::FrameViewLinux* NativeWindowViews::GetFrameViewLinux() const {
+   auto* ncv = widget()->non_client_view();
+   if (!ncv)
+@@ -2021,7 +2021,7 @@ void NativeWindowViews::HandleKeyboardEvent(
+   if (widget_destroyed_)
+     return;
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   if (event.windows_key_code == ui::VKEY_BROWSER_BACK)
+     NotifyWindowExecuteAppCommand(kBrowserBackward);
+   else if (event.windows_key_code == ui::VKEY_BROWSER_FORWARD)
+@@ -2040,7 +2040,7 @@ void NativeWindowViews::OnMouseEvent(ui::MouseEvent* event) {
+   // Alt+Click should not toggle menu bar.
+   root_view_.ResetAltState();
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   if (event->changed_button_flags() == ui::EF_BACK_MOUSE_BUTTON)
+     NotifyWindowExecuteAppCommand(kBrowserBackward);
+   else if (event->changed_button_flags() == ui::EF_FORWARD_MOUSE_BUTTON)
+diff --git a/electron/shell/browser/native_window_views.h b/electron/shell/browser/native_window_views.h
+index b3c7b8ef1b..d47f27cf88 100644
+--- a/electron/shell/browser/native_window_views.h
++++ b/electron/shell/browser/native_window_views.h
+@@ -31,7 +31,7 @@ namespace gin {
+ class Arguments;
+ }  // namespace gin
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ namespace views {
+ class FrameViewLinux;
+ }  // namespace views
+@@ -39,7 +39,7 @@ class FrameViewLinux;
+ 
+ namespace electron {
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ class GlobalMenuBarX11;
+ #endif
+ 
+@@ -183,7 +183,7 @@ class NativeWindowViews : public NativeWindow,
+                     LPARAM l_param,
+                     LRESULT* result);
+   void SetIcon(HICON small_icon, HICON app_icon);
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   void SetIcon(const gfx::ImageSkia& icon);
+ #endif
+ 
+@@ -205,7 +205,7 @@ class NativeWindowViews : public NativeWindow,
+     return overlay_symbol_color_;
+   }
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   views::FrameViewLinux* GetFrameViewLinux() const;
+   [[nodiscard]] bool ignore_mouse_events() const {
+     return ignore_mouse_events_;
+@@ -289,7 +289,7 @@ class NativeWindowViews : public NativeWindow,
+   // events from resizing the window.
+   extensions::SizeConstraints old_size_constraints_;
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   std::unique_ptr<GlobalMenuBarX11> global_menu_bar_;
+ 
+   // Set while the window is disabled; running it re-enables event dispatch.
+@@ -308,7 +308,7 @@ class NativeWindowViews : public NativeWindow,
+   // This value is determined when the window is created.
+   bool rounded_corner_ = true;
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   bool ignore_mouse_events_ = false;
+ #endif
+ 
+diff --git a/electron/shell/browser/osr/osr_host_display_client.cc b/electron/shell/browser/osr/osr_host_display_client.cc
+index 9464358174..6c9275319b 100644
+--- a/electron/shell/browser/osr/osr_host_display_client.cc
++++ b/electron/shell/browser/osr/osr_host_display_client.cc
+@@ -102,7 +102,7 @@ void OffScreenHostDisplayClient::CreateLayeredWindowUpdater(
+   layered_window_updater_->SetActive(active_);
+ }
+ 
+-#if BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CHROMEOS)
++#if (BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CHROMEOS)) || BUILDFLAG(IS_BSD)
+ void OffScreenHostDisplayClient::DidCompleteSwapWithNewSize(
+     const gfx::Size& size) {}
+ #endif
+diff --git a/electron/shell/browser/osr/osr_host_display_client.h b/electron/shell/browser/osr/osr_host_display_client.h
+index 274bc5caf9..84103c974e 100644
+--- a/electron/shell/browser/osr/osr_host_display_client.h
++++ b/electron/shell/browser/osr/osr_host_display_client.h
+@@ -74,7 +74,7 @@ class OffScreenHostDisplayClient : public viz::HostDisplayClient {
+       mojo::PendingReceiver<viz::mojom::LayeredWindowUpdater> receiver)
+       override;
+ 
+-#if BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CHROMEOS)
++#if (BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CHROMEOS)) || BUILDFLAG(IS_BSD)
+   void DidCompleteSwapWithNewSize(const gfx::Size& size) override;
+ #endif
+ 
+diff --git a/electron/shell/browser/osr/osr_paint_event.h b/electron/shell/browser/osr/osr_paint_event.h
+index b3e37a6a16..9398e96ba3 100644
+--- a/electron/shell/browser/osr/osr_paint_event.h
++++ b/electron/shell/browser/osr/osr_paint_event.h
+@@ -99,7 +99,7 @@ struct OffscreenSharedTextureValue {
+   // On Windows it is a HANDLE to the shared D3D11 texture.
+   // On macOS it is a IOSurface* to the shared IOSurface.
+   uintptr_t shared_texture_handle;
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   std::vector<OffscreenNativePixmapPlaneInfo> planes;
+   uint64_t modifier;
+   bool supports_zero_copy_webgpu_import;
+diff --git a/electron/shell/browser/osr/osr_video_consumer.cc b/electron/shell/browser/osr/osr_video_consumer.cc
+index cf1afd92f4..2a9fcf2be0 100644
+--- a/electron/shell/browser/osr/osr_video_consumer.cc
++++ b/electron/shell/browser/osr/osr_video_consumer.cc
+@@ -49,7 +49,7 @@ bool IsPlatformSharedTextureHandle(const gfx::GpuMemoryBufferHandle& handle) {
+   return handle.type == gfx::DXGI_SHARED_HANDLE;
+ #elif BUILDFLAG(IS_APPLE)
+   return handle.type == gfx::IO_SURFACE_BUFFER;
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   return handle.type == gfx::NATIVE_PIXMAP;
+ #else
+   return false;
+@@ -160,7 +160,7 @@ void OffScreenVideoConsumer::OnFrameCaptured(
+ #elif BUILDFLAG(IS_APPLE)
+     texture.shared_texture_handle =
+         reinterpret_cast<uintptr_t>(gmb_handle.io_surface().get());
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+     const auto& native_pixmap = gmb_handle.native_pixmap_handle();
+     texture.modifier = native_pixmap.modifier;
+     texture.supports_zero_copy_webgpu_import =
+diff --git a/electron/shell/browser/printing/printing_utils.cc b/electron/shell/browser/printing/printing_utils.cc
+index 1975c2d894..3c21dcf1c3 100644
+--- a/electron/shell/browser/printing/printing_utils.cc
++++ b/electron/shell/browser/printing/printing_utils.cc
+@@ -31,7 +31,7 @@
+ #include <ApplicationServices/ApplicationServices.h>
+ #endif
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include <gtk/gtk.h>
+ #endif
+ 
+diff --git a/electron/shell/browser/relauncher_linux.cc b/electron/shell/browser/relauncher_linux.cc
+index ab9b6b62c8..67b13ad3a8 100644
+--- a/electron/shell/browser/relauncher_linux.cc
++++ b/electron/shell/browser/relauncher_linux.cc
+@@ -6,8 +6,10 @@
+ 
+ #include <fcntl.h>
+ #include <signal.h>
++#if !defined(__FreeBSD__) && !defined(__NetBSD__)
+ #include <sys/prctl.h>
+ #include <sys/signalfd.h>
++#endif
+ 
+ #include "base/files/scoped_file.h"
+ #include "base/logging.h"
+@@ -28,6 +30,10 @@ void RelauncherSynchronizeWithParent() {
+   base::ScopedFD relauncher_sync_fd(kRelauncherSyncFD);
+   static const auto signum = SIGUSR2;
+ 
++#if defined(__FreeBSD__) || defined(__NetBSD__)
++  PLOG(ERROR) << "signalfd & prctl";
++  fprintf(stderr, "Not Implemented signalfd & prctl in atom/browser/relauncher_linux.cc");
++#else
+   // send signum to current process when parent process ends.
+   if (HANDLE_EINTR(prctl(PR_SET_PDEATHSIG, signum)) != 0) {
+     PLOG(ERROR) << "prctl";
+@@ -51,6 +57,7 @@ void RelauncherSynchronizeWithParent() {
+ 
+   // Wait for the parent to exit
+   GetParentWaiter().Wait();
++#endif
+ }
+ 
+ int LaunchProgram(const StringVector& relauncher_args,
+diff --git a/electron/shell/browser/ui/inspectable_web_contents.cc b/electron/shell/browser/ui/inspectable_web_contents.cc
+index cf46b8b697..ea956555f9 100644
+--- a/electron/shell/browser/ui/inspectable_web_contents.cc
++++ b/electron/shell/browser/ui/inspectable_web_contents.cc
+@@ -619,7 +619,7 @@ void InspectableWebContents::LoadCompleted() {
+           dock_state_ = "right";
+         }
+       }
+-#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+       auto* api_web_contents = api::WebContents::From(GetWebContents());
+       if (api_web_contents) {
+         auto* win =
+diff --git a/electron/shell/browser/ui/inspectable_web_contents_view.cc b/electron/shell/browser/ui/inspectable_web_contents_view.cc
+index 003cf51973..ca3e4b3dd3 100644
+--- a/electron/shell/browser/ui/inspectable_web_contents_view.cc
++++ b/electron/shell/browser/ui/inspectable_web_contents_view.cc
+@@ -236,7 +236,7 @@ void InspectableWebContentsView::SetIsDocked(bool docked, bool activate) {
+     params.delegate = devtools_window_delegate_;
+     params.bounds = inspectable_web_contents()->dev_tools_bounds();
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+     params.wm_role_name = "devtools";
+     if (GetDelegate())
+       GetDelegate()->GetDevToolsWindowWMClass(&params.wm_class_name,
+diff --git a/electron/shell/browser/ui/inspectable_web_contents_view_delegate.h b/electron/shell/browser/ui/inspectable_web_contents_view_delegate.h
+index 46593888c4..62ad739447 100644
+--- a/electron/shell/browser/ui/inspectable_web_contents_view_delegate.h
++++ b/electron/shell/browser/ui/inspectable_web_contents_view_delegate.h
+@@ -24,7 +24,7 @@ class InspectableWebContentsViewDelegate {
+   // Returns the icon of devtools window.
+   virtual ui::ImageModel GetDevToolsWindowIcon();
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // Called when creating devtools window.
+   virtual void GetDevToolsWindowWMClass(std::string* name,
+                                         std::string* class_name) {}
+diff --git a/electron/shell/browser/ui/views/electron_views_delegate.cc b/electron/shell/browser/ui/views/electron_views_delegate.cc
+index 9417844e8a..67b3d0683d 100644
+--- a/electron/shell/browser/ui/views/electron_views_delegate.cc
++++ b/electron/shell/browser/ui/views/electron_views_delegate.cc
+@@ -10,7 +10,7 @@
+ #include "ui/views/widget/native_widget_aura.h"
+ #include "ui/views/window/default_frame_view.h"
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include "base/environment.h"
+ #include "base/nix/xdg_util.h"
+ #include "ui/linux/linux_ui.h"
+@@ -18,7 +18,7 @@
+ 
+ namespace {
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ bool IsDesktopEnvironmentUnity() {
+   auto env = base::Environment::Create();
+   base::nix::DesktopEnvironment desktop_env =
+@@ -55,7 +55,7 @@ void ViewsDelegate::NotifyMenuItemFocused(const std::u16string& menu_name,
+                                           int item_count,
+                                           bool has_submenu) {}
+ 
+-#if BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CHROMEOS)
++#if (BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CHROMEOS)) || BUILDFLAG(IS_BSD)
+ gfx::ImageSkia* ViewsDelegate::GetDefaultWindowIcon() const {
+   return nullptr;
+ }
+@@ -83,7 +83,7 @@ void ViewsDelegate::OnBeforeWidgetInit(
+ }
+ 
+ bool ViewsDelegate::WindowManagerProvidesTitleBar(bool maximized) {
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // On Ubuntu Unity, the system always provides a title bar for maximized
+   // windows.
+   if (!maximized)
+diff --git a/electron/shell/browser/ui/views/electron_views_delegate.h b/electron/shell/browser/ui/views/electron_views_delegate.h
+index 2b97b0906f..823c979e4e 100644
+--- a/electron/shell/browser/ui/views/electron_views_delegate.h
++++ b/electron/shell/browser/ui/views/electron_views_delegate.h
+@@ -44,7 +44,7 @@ class ViewsDelegate : public views::ViewsDelegate {
+   HICON GetSmallWindowIcon() const override;
+   int GetAppbarAutohideEdges(HMONITOR monitor,
+                              base::OnceClosure callback) override;
+-#elif BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CHROMEOS)
++#elif (BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CHROMEOS)) || BUILDFLAG(IS_BSD)
+   gfx::ImageSkia* GetDefaultWindowIcon() const override;
+ #endif
+   std::unique_ptr<views::FrameView> CreateDefaultFrameView(
+diff --git a/electron/shell/browser/ui/views/menu_bar.cc b/electron/shell/browser/ui/views/menu_bar.cc
+index 0f09312b6b..f4ce38c5bc 100644
+--- a/electron/shell/browser/ui/views/menu_bar.cc
++++ b/electron/shell/browser/ui/views/menu_bar.cc
+@@ -14,7 +14,7 @@
+ #include "ui/views/background.h"
+ #include "ui/views/layout/box_layout.h"
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include "ui/gtk/gtk_util.h"  // nogncheck
+ #endif
+ 
+@@ -215,7 +215,7 @@ void MenuBar::ViewHierarchyChanged(
+ 
+ void MenuBar::RefreshColorCache(const ui::NativeTheme* theme) {
+   if (theme) {
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+     background_color_ = gtk::GetBgColor("GtkMenuBar#menubar");
+     enabled_color_ =
+         gtk::GetFgColor("GtkMenuBar#menubar GtkMenuItem#menuitem GtkLabel");
+@@ -241,7 +241,7 @@ void MenuBar::RebuildChildren() {
+ }
+ 
+ void MenuBar::UpdateViewColors() {
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // set menubar background color
+   SetBackground(views::CreateSolidBackground(background_color_));
+ #endif
+@@ -249,7 +249,7 @@ void MenuBar::UpdateViewColors() {
+   // set child colors
+   if (menu_model_ == nullptr)
+     return;
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   const auto& textColor =
+       window_->IsFocused() ? enabled_color_ : disabled_color_;
+   for (views::View* child : GetChildrenInZOrder()) {
+diff --git a/electron/shell/browser/ui/views/menu_bar.h b/electron/shell/browser/ui/views/menu_bar.h
+index a9ecef470c..c1c4b41738 100644
+--- a/electron/shell/browser/ui/views/menu_bar.h
++++ b/electron/shell/browser/ui/views/menu_bar.h
+@@ -81,7 +81,7 @@ class MenuBar : public views::AccessiblePaneView,
+   View* FindAccelChild(char16_t key);
+ 
+   SkColor background_color_;
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   SkColor enabled_color_;
+   SkColor disabled_color_;
+ #endif
+diff --git a/electron/shell/browser/ui/views/submenu_button.cc b/electron/shell/browser/ui/views/submenu_button.cc
+index fdcdd3b1c8..f2343d9f21 100644
+--- a/electron/shell/browser/ui/views/submenu_button.cc
++++ b/electron/shell/browser/ui/views/submenu_button.cc
+@@ -23,7 +23,7 @@ SubmenuButton::SubmenuButton(PressedCallback callback,
+                              const SkColor& background_color)
+     : views::MenuButton(std::move(callback), gfx::RemoveAccelerator(title)),
+       background_color_(background_color) {
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // Don't use native style border.
+   SetBorder(CreateDefaultBorder());
+ #endif
+diff --git a/electron/shell/common/api/electron_api_clipboard.cc b/electron/shell/common/api/electron_api_clipboard.cc
+index 6a2b75bbf0..838f36297a 100644
+--- a/electron/shell/common/api/electron_api_clipboard.cc
++++ b/electron/shell/common/api/electron_api_clipboard.cc
+@@ -95,7 +95,7 @@ std::string Clipboard::Read(const std::string& format_string) {
+       ui::ClipboardFormatType::CustomPlatformType(format_string));
+   bool rawFormatAvailable =
+       IsFormatAvailable(clipboard, rawFormat, ui::ClipboardBuffer::kCopyPaste);
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   if (!rawFormatAvailable) {
+     rawFormatAvailable = IsFormatAvailable(clipboard, rawFormat,
+                                            ui::ClipboardBuffer::kSelection);
+@@ -133,7 +133,7 @@ std::string Clipboard::Read(const std::string& format_string) {
+             &custom_format_names, run_loop.QuitClosure()));
+     run_loop.Run();
+   }
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   if (!custom_format_names.contains(format_string)) {
+     base::RunLoop run_loop(base::RunLoop::Type::kNestableTasksAllowed);
+     clipboard->ExtractCustomPlatformNames(
+diff --git a/electron/shell/common/api/electron_api_native_image.cc b/electron/shell/common/api/electron_api_native_image.cc
+index 71105a21b4..b12dd9dac1 100644
+--- a/electron/shell/common/api/electron_api_native_image.cc
++++ b/electron/shell/common/api/electron_api_native_image.cc
+@@ -676,7 +676,7 @@ void Initialize(v8::Local<v8::Object> exports,
+   native_image.SetMethod("createFromNamedImage",
+                          &NativeImage::CreateFromNamedImage);
+   native_image.SetMethod("createMenuSymbol", &NativeImage::CreateMenuSymbol);
+-#if !BUILDFLAG(IS_LINUX)
++#if !BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_BSD)
+   native_image.SetMethod("createThumbnailFromPath",
+                          &NativeImage::CreateThumbnailFromPath);
+ #endif
+diff --git a/electron/shell/common/api/electron_api_native_image.h b/electron/shell/common/api/electron_api_native_image.h
+index 8d547c40d8..627cec3d3a 100644
+--- a/electron/shell/common/api/electron_api_native_image.h
++++ b/electron/shell/common/api/electron_api_native_image.h
+@@ -73,7 +73,7 @@ class NativeImage final : public gin::Wrappable<NativeImage> {
+   static NativeImage* CreateFromNamedImage(gin::Arguments* args,
+                                            std::string name);
+   static NativeImage* CreateMenuSymbol(gin::Arguments* args, std::string name);
+-#if !BUILDFLAG(IS_LINUX)
++#if !BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_BSD)
+   static v8::Local<v8::Promise> CreateThumbnailFromPath(
+       v8::Isolate* isolate,
+       const base::FilePath& path,
+diff --git a/electron/shell/common/api/electron_api_shared_texture.cc b/electron/shell/common/api/electron_api_shared_texture.cc
+index 8043b42440..9388031d9e 100644
+--- a/electron/shell/common/api/electron_api_shared_texture.cc
++++ b/electron/shell/common/api/electron_api_shared_texture.cc
+@@ -27,7 +27,7 @@
+ #include "third_party/blink/renderer/platform/graphics/gpu/shared_gpu_context.h"  // nogncheck
+ #include "ui/compositor/compositor.h"
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include "base/posix/eintr_wrapper.h"
+ #include "base/strings/string_number_conversions.h"
+ #endif
+@@ -591,7 +591,7 @@ struct ImportSharedTextureInfo {
+   // On macOS, it is an IOSurfaceRef, this must be a valid IOSurface at the
+   // current process.
+   uintptr_t io_surface = 0;
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // On Linux, to be implemented.
+   std::vector<ImportSharedTextureInfoPlane> planes;
+   uint64_t modifier = gfx::NativePixmapHandle::kNoModifier;
+@@ -661,7 +661,7 @@ struct Converter<ImportSharedTextureInfo> {
+     GetNativeHandle("ntHandle", &out->nt_handle);
+ #elif BUILDFLAG(IS_APPLE)
+     GetNativeHandle("ioSurface", &out->io_surface);
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+     v8::Local<v8::Object> native_pixmap;
+     if (shared_texture.Get("nativePixmap", &native_pixmap)) {
+       gin::Dictionary v8_native_pixmap(isolate, native_pixmap);
+@@ -741,7 +741,7 @@ v8::Local<v8::Value> ImportSharedTexture(v8::Isolate* isolate,
+   auto io_surface_scoped = base::apple::ScopedCFTypeRef<IOSurfaceRef>(
+       io_surface, base::scoped_policy::RETAIN);
+   gmb_handle = gfx::GpuMemoryBufferHandle(std::move(io_surface_scoped));
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   gfx::NativePixmapHandle pixmap;
+   pixmap.modifier = shared_texture.modifier;
+   pixmap.supports_zero_copy_webgpu_import =
+diff --git a/electron/shell/common/api/electron_api_testing.cc b/electron/shell/common/api/electron_api_testing.cc
+index 518b1b347c..a2b921c86f 100644
+--- a/electron/shell/common/api/electron_api_testing.cc
++++ b/electron/shell/common/api/electron_api_testing.cc
+@@ -27,7 +27,7 @@
+ #include "ui/accessibility/platform/ax_platform.h"
+ #include "v8/include/v8.h"
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include <glib.h>
+ #elif BUILDFLAG(IS_MAC)
+ #include <CoreFoundation/CoreFoundation.h>
+@@ -239,7 +239,7 @@ struct SettleOutsideTask {
+                                                  std::move(self->after_settle));
+   }
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   static gboolean OnIdle(gpointer data) {
+     Run(base::WrapUnique(static_cast<SettleOutsideTask*>(data)));
+     return G_SOURCE_REMOVE;
+@@ -269,7 +269,7 @@ v8::Local<v8::Promise> SettlePromiseOutsideTask(
+   auto state = std::make_unique<SettleOutsideTask>(SettleOutsideTask{
+       gin_helper::Promise<void>(isolate), std::move(after_settle)});
+   v8::Local<v8::Promise> handle = state->promise.GetHandle();
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   g_idle_add(&SettleOutsideTask::OnIdle, state.release());
+ #elif BUILDFLAG(IS_MAC)
+   CFRunLoopTimerContext context = {0, state.release(), nullptr, nullptr,
+diff --git a/electron/shell/common/api/electron_bindings.cc b/electron/shell/common/api/electron_bindings.cc
+index 288de1a5a7..a8043846cd 100644
+--- a/electron/shell/common/api/electron_bindings.cc
++++ b/electron/shell/common/api/electron_bindings.cc
+@@ -185,7 +185,7 @@ v8::Local<v8::Value> ElectronBindings::GetSystemMemoryInfo(
+ #endif
+   dict.Set("free", free.InKiB());
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   dict.Set("available", mem_info.available.InKiB());
+ #endif
+ 
+@@ -261,7 +261,7 @@ void ElectronBindings::DidReceiveMemoryDump(
+     if (target_pid == dump.pid()) {
+       auto dict = gin_helper::Dictionary::CreateEmpty(isolate);
+       const auto& osdump = dump.os_dump();
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_WIN)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_WIN) || BUILDFLAG(IS_BSD)
+       dict.Set("residentSet", osdump.resident_set_kb);
+ #endif
+       dict.Set("private", osdump.private_footprint_kb);
+diff --git a/electron/shell/common/electron_command_line.cc b/electron/shell/common/electron_command_line.cc
+index 45c26715fd..1ee902c405 100644
+--- a/electron/shell/common/electron_command_line.cc
++++ b/electron/shell/common/electron_command_line.cc
+@@ -39,7 +39,7 @@ std::vector<std::string> ElectronCommandLine::AsUtf8() {
+ #endif
+ }
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ // static
+ void ElectronCommandLine::InitializeFromCommandLine() {
+   argv() = base::CommandLine::ForCurrentProcess()->argv();
+diff --git a/electron/shell/common/electron_command_line.h b/electron/shell/common/electron_command_line.h
+index 5595bd0e5a..7bb3df1342 100644
+--- a/electron/shell/common/electron_command_line.h
++++ b/electron/shell/common/electron_command_line.h
+@@ -24,7 +24,7 @@ class ElectronCommandLine {
+ 
+   static void Init(int argc, base::CommandLine::CharType const* const* argv);
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // On Linux the command line has to be read from base::CommandLine since
+   // it is using zygote.
+   static void InitializeFromCommandLine();
+diff --git a/electron/shell/common/electron_paths.cc b/electron/shell/common/electron_paths.cc
+index 5624c805f9..665caed9f7 100644
+--- a/electron/shell/common/electron_paths.cc
++++ b/electron/shell/common/electron_paths.cc
+@@ -12,7 +12,7 @@
+ #include "shell/common/platform_util.h"
+ #include "shell/common/thread_restrictions.h"
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include "base/nix/xdg_util.h"
+ #endif
+ 
+@@ -62,7 +62,7 @@ bool ElectronPathProvider(int key, base::FilePath* result) {
+       create_dir = true;
+       break;
+     }
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+     case DIR_APP_DATA: {
+       auto env = base::Environment::Create();
+       cur = base::nix::GetXDGDirectory(
+diff --git a/electron/shell/common/electron_paths.h b/electron/shell/common/electron_paths.h
+index ec4f7c279c..4175310995 100644
+--- a/electron/shell/common/electron_paths.h
++++ b/electron/shell/common/electron_paths.h
+@@ -31,7 +31,7 @@ enum {
+   DIR_RECENT,  // Directory where recent files live
+ #endif
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   DIR_APP_DATA,  // Application Data directory under the user profile.
+ #endif
+ 
+diff --git a/electron/shell/common/gin_converters/osr_converter.cc b/electron/shell/common/gin_converters/osr_converter.cc
+index c9d87d05e1..b31a039795 100644
+--- a/electron/shell/common/gin_converters/osr_converter.cc
++++ b/electron/shell/common/gin_converters/osr_converter.cc
+@@ -12,7 +12,7 @@
+ 
+ #include "base/containers/to_vector.h"
+ #include "base/task/single_thread_task_runner.h"
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include "base/strings/string_number_conversions.h"
+ #endif
+ #include "shell/common/gin_converters/gfx_converter.h"
+@@ -131,7 +131,7 @@ v8::Local<v8::Value> Converter<electron::OffscreenSharedTextureValue>::ToV8(
+       electron::Buffer::Copy(
+           isolate, base::byte_span_from_ref(val.shared_texture_handle))
+           .ToLocalChecked());
+-#elif BUILDFLAG(IS_LINUX)
++#elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   gin::Dictionary nativePixmap(isolate, v8::Object::New(isolate));
+   auto v8_planes = base::ToVector(val.planes, [isolate](const auto& plane) {
+     gin::Dictionary v8_plane(isolate, v8::Object::New(isolate));
+diff --git a/electron/shell/common/gin_converters/std_converter.h b/electron/shell/common/gin_converters/std_converter.h
+index df4957af84..893ecabc4b 100644
+--- a/electron/shell/common/gin_converters/std_converter.h
++++ b/electron/shell/common/gin_converters/std_converter.h
+@@ -57,7 +57,7 @@ struct Converter<std::array<T, N>> {
+   }
+ };
+ 
+-#if !BUILDFLAG(IS_LINUX)
++#if !BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_BSD)
+ template <>
+ struct Converter<unsigned long> {  // NOLINT(runtime/int)
+   static v8::Local<v8::Value> ToV8(v8::Isolate* isolate,
+diff --git a/electron/shell/common/node_bindings.cc b/electron/shell/common/node_bindings.cc
+index ebdd29647e..9892180afe 100644
+--- a/electron/shell/common/node_bindings.cc
++++ b/electron/shell/common/node_bindings.cc
+@@ -57,7 +57,7 @@
+ #include "third_party/electron_node/src/node_snapshot_builder.h"
+ #include "v8/include/v8-statistics.h"
+ 
+-#if !IS_MAS_BUILD()
++#if !IS_MAS_BUILD() && !BUILDFLAG(IS_BSD)
+ #include "shell/common/crash_keys.h"
+ #include "shell/common/v8_oom_diagnostics.h"
+ #endif
+@@ -175,7 +175,7 @@ bool g_is_initialized = false;
+ void V8FatalErrorCallback(const char* location, const char* message) {
+   LOG(ERROR) << "Fatal error in V8: " << location << " " << message;
+ 
+-#if !IS_MAS_BUILD()
++#if !IS_MAS_BUILD() && !BUILDFLAG(IS_BSD)
+   electron::crash_keys::SetCrashKey("electron.v8-fatal.message", message);
+   electron::crash_keys::SetCrashKey("electron.v8-fatal.location", location);
+ #endif
+@@ -197,7 +197,7 @@ void V8OOMErrorCallback(const char* location, const v8::OOMDetails& details) {
+     LOG(ERROR) << "OOM detail: " << details.detail;
+   }
+ 
+-#if !IS_MAS_BUILD()
++#if !IS_MAS_BUILD() && !BUILDFLAG(IS_BSD)
+   // TryGetCurrent() instead of GetCurrent() to avoid FATAL if no isolate.
+   v8::Isolate* isolate = v8::Isolate::TryGetCurrent();
+   electron::v8_oom::RecordErrorDetails(isolate, location, details);
+@@ -655,7 +655,7 @@ void NodeBindings::Initialize(v8::Isolate* const isolate,
+   TRACE_EVENT0("electron", "NodeBindings::Initialize");
+   // Open node's error reporting system for browser process.
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // Get real command line in renderer process forked by zygote.
+   if (browser_env_ != BrowserEnvironment::kBrowser)
+     ElectronCommandLine::InitializeFromCommandLine();
+diff --git a/electron/shell/common/node_bindings_linux.cc b/electron/shell/common/node_bindings_linux.cc
+index 0773d86fb0..82217ab214 100644
+--- a/electron/shell/common/node_bindings_linux.cc
++++ b/electron/shell/common/node_bindings_linux.cc
+@@ -4,13 +4,26 @@
+ 
+ #include "shell/common/node_bindings_linux.h"
+ 
++#if !defined(OS_BSD)
+ #include <sys/epoll.h>
++#else
++#include <errno.h>
++#include <sys/select.h>
++#include <sys/sysctl.h>
++#include <sys/time.h>
++#include <sys/types.h>
++#endif
+ 
+ namespace electron {
+ 
+ NodeBindingsLinux::NodeBindingsLinux(BrowserEnvironment browser_env,
+                                      uv_loop_t* loop)
++#if !defined(OS_BSD)
+     : NodeBindings(browser_env, loop), epoll_(epoll_create(1)) {
++#else
++    : NodeBindings(browser_env, loop) {
++#endif
++#if !defined(OS_BSD)
+   auto* const event_loop = uv_loop();
+ 
+   int backend_fd = uv_backend_fd(event_loop);
+@@ -18,11 +31,13 @@ NodeBindingsLinux::NodeBindingsLinux(BrowserEnvironment browser_env,
+   ev.events = EPOLLIN;
+   ev.data.fd = backend_fd;
+   epoll_ctl(epoll_, EPOLL_CTL_ADD, backend_fd, &ev);
++#endif
+ }
+ 
+ void NodeBindingsLinux::PollEvents() {
+   auto* const event_loop = uv_loop();
+ 
++#if !defined(OS_BSD)
+   int timeout = uv_backend_timeout(event_loop);
+ 
+   // Wait for new libuv events.
+@@ -31,6 +46,26 @@ void NodeBindingsLinux::PollEvents() {
+     struct epoll_event ev;
+     r = epoll_wait(epoll_, &ev, 1, timeout);
+   } while (r == -1 && errno == EINTR);
++#else
++  struct timeval tv;
++  int timeout = uv_backend_timeout(event_loop);
++  if (timeout != -1) {
++    tv.tv_sec = timeout / 1000;
++    tv.tv_usec = (timeout % 1000) * 1000;
++  }
++
++  fd_set readset;
++  int fd = uv_backend_fd(event_loop);
++  FD_ZERO(&readset);
++  FD_SET(fd, &readset);
++
++  // Wait for new libuv events.
++  int r;
++  do {
++    r = select(fd + 1, &readset, nullptr, nullptr,
++               timeout == -1 ? nullptr : &tv);
++   } while (r == -1 && errno == EINTR);
++#endif
+ }
+ 
+ // static
+diff --git a/electron/shell/common/platform_util.h b/electron/shell/common/platform_util.h
+index 51b4ac6ba7..ce02f181dc 100644
+--- a/electron/shell/common/platform_util.h
++++ b/electron/shell/common/platform_util.h
+@@ -60,7 +60,7 @@ bool SetLoginItemEnabled(const std::string& type,
+                          bool enabled);
+ #endif
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ // Returns a desktop name (e.g. 'myapp.desktop') if available.
+ // Unlike libgtkui, this does *not* use "chromium-browser.desktop" as a
+ // fallback.
+diff --git a/electron/shell/common/v8_oom_diagnostics.cc b/electron/shell/common/v8_oom_diagnostics.cc
+index 21e60a1e63..728479aa06 100644
+--- a/electron/shell/common/v8_oom_diagnostics.cc
++++ b/electron/shell/common/v8_oom_diagnostics.cc
+@@ -15,7 +15,7 @@
+ 
+ namespace electron::v8_oom {
+ 
+-#if !IS_MAS_BUILD()
++#if !IS_MAS_BUILD() && !BUILDFLAG(IS_BSD)
+ 
+ namespace {
+ 
+@@ -140,6 +140,6 @@ bool RecordHeapDiagnostics(v8::Isolate*) {
+ void RecordErrorDetails(v8::Isolate*, const char*, const v8::OOMDetails&) {}
+ void RecordJsStack(v8::Isolate*, std::string_view) {}
+ 
+-#endif  // !IS_MAS_BUILD()
++#endif  // !IS_MAS_BUILD() && !BUILDFLAG(IS_BSD)
+ 
+ }  // namespace electron::v8_oom
+diff --git a/electron/shell/renderer/api/electron_api_crash_reporter_renderer.cc b/electron/shell/renderer/api/electron_api_crash_reporter_renderer.cc
+index fa91f31203..6dabe22cfb 100644
+--- a/electron/shell/renderer/api/electron_api_crash_reporter_renderer.cc
++++ b/electron/shell/renderer/api/electron_api_crash_reporter_renderer.cc
+@@ -6,7 +6,7 @@
+ #include "shell/common/gin_helper/dictionary.h"
+ #include "shell/common/node_includes.h"
+ 
+-#if !IS_MAS_BUILD()
++#if !IS_MAS_BUILD() && !BUILDFLAG(IS_BSD)
+ #include "shell/common/crash_keys.h"
+ #endif
+ 
+@@ -14,13 +14,13 @@ namespace {
+ 
+ v8::Local<v8::Value> GetParameters(v8::Isolate* isolate) {
+   std::map<std::string, std::string> keys;
+-#if !IS_MAS_BUILD()
++#if !IS_MAS_BUILD() && !BUILDFLAG(IS_BSD)
+   electron::crash_keys::GetCrashKeys(&keys);
+ #endif
+   return gin::ConvertToV8(isolate, keys);
+ }
+ 
+-#if IS_MAS_BUILD()
++#if IS_MAS_BUILD() || BUILDFLAG(IS_BSD)
+ void SetCrashKeyStub(const std::string& key, const std::string& value) {}
+ void ClearCrashKeyStub(const std::string& key) {}
+ #endif
+@@ -31,7 +31,7 @@ void Initialize(v8::Local<v8::Object> exports,
+                 void* priv) {
+   v8::Isolate* const isolate = v8::Isolate::GetCurrent();
+   gin_helper::Dictionary dict{isolate, exports};
+-#if IS_MAS_BUILD()
++#if IS_MAS_BUILD() || BUILDFLAG(IS_BSD)
+   dict.SetMethod("addExtraParameter", &SetCrashKeyStub);
+   dict.SetMethod("removeExtraParameter", &ClearCrashKeyStub);
+ #else
+diff --git a/electron/shell/services/node/node_service.cc b/electron/shell/services/node/node_service.cc
+index e28ae6c8b7..6ae2563be6 100644
+--- a/electron/shell/services/node/node_service.cc
++++ b/electron/shell/services/node/node_service.cc
+@@ -26,7 +26,7 @@
+ #include "shell/common/v8_util.h"
+ #include "shell/services/node/parent_port.h"
+ 
+-#if !IS_MAS_BUILD()
++#if !IS_MAS_BUILD() && !BUILDFLAG(IS_BSD)
+ #include "shell/common/crash_keys.h"
+ #endif
+ 
+@@ -47,7 +47,7 @@ void V8FatalErrorCallback(const char* location, const char* message) {
+     GetRemote()->OnV8FatalError(location, outstream.str());
+   }
+ 
+-#if !IS_MAS_BUILD()
++#if !IS_MAS_BUILD() && !BUILDFLAG(IS_BSD)
+   electron::crash_keys::SetCrashKey("electron.v8-fatal.message", message);
+   electron::crash_keys::SetCrashKey("electron.v8-fatal.location", location);
+ #endif
+diff --git a/electron/spec/api-app.spec.ts b/electron/spec/api-app.spec.ts
+index bb71f983ba..12350d9c11 100644
+--- a/electron/spec/api-app.spec.ts
++++ b/electron/spec/api-app.spec.ts
+@@ -127,7 +127,7 @@ describe('app module', () => {
+     });
+   });
+ 
+-  ifdescribe(process.platform === 'linux')('app.setDesktopName(name)', () => {
++  ifdescribe(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('app.setDesktopName(name)', () => {
+     it('sets the desktop name to the CHROME_DESKTOP environment variable', () => {
+       const original = process.env.CHROME_DESKTOP;
+       defer(() => {
+@@ -156,11 +156,11 @@ describe('app module', () => {
+   });
+ 
+   describe('app.getPreferredSystemLanguages()', () => {
+-    ifit(process.platform !== 'linux')('should not be empty', () => {
++    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('should not be empty', () => {
+       expect(app.getPreferredSystemLanguages().length).to.not.equal(0);
+     });
+ 
+-    ifit(process.platform === 'linux')('should be empty or contain C entry', () => {
++    ifit(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('should be empty or contain C entry', () => {
+       const languages = app.getPreferredSystemLanguages();
+       if (languages.length) {
+         expect(languages).to.not.include('C');
+@@ -202,7 +202,7 @@ describe('app module', () => {
+     });
+   });
+ 
+-  ifdescribe(process.platform === 'linux' && fs.existsSync('/usr/bin/dbus-daemon'))(
++  ifdescribe((process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') && fs.existsSync('@PREFIX@/bin/dbus-daemon'))(
+     'when a D-Bus bus goes away',
+     () => {
+       it('exits cleanly instead of crashing', async () => {
+@@ -293,7 +293,7 @@ describe('app module', () => {
+       }
+     });
+ 
+-    ifit(['darwin', 'linux'].includes(process.platform))('exits gracefully', async function () {
++    ifit(['darwin', 'linux', 'freebsd', 'netbsd'].includes(process.platform))('exits gracefully', async function () {
+       const electronPath = process.execPath;
+       const appPath = path.join(fixturesPath, 'api', 'singleton');
+       appProcess = cp.spawn(electronPath, [appPath]);
+@@ -491,7 +491,7 @@ describe('app module', () => {
+   });
+ 
+   // GitHub Actions macOS-13 runners used for x64 seem to have a problem with this test.
+-  ifdescribe(process.platform !== 'linux' && !isMacOSx64)('app.{add|get|clear}RecentDocument(s)', () => {
++  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd' && !isMacOSx64)('app.{add|get|clear}RecentDocument(s)', () => {
+     const tempFiles = [
+       path.join(fixturesPath, 'foo.txt'),
+       path.join(fixturesPath, 'bar.txt'),
+@@ -620,7 +620,7 @@ describe('app module', () => {
+   //   let w = null
+ 
+   //   before(function () {
+-  //     if (process.platform !== 'linux') {
++  //     if (process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd') {
+   //       this.skip()
+   //     }
+   //   })
+@@ -733,7 +733,7 @@ describe('app module', () => {
+ 
+   describe('app.badgeCount', () => {
+     const platformIsNotSupported =
+-      process.platform === 'win32' || (process.platform === 'linux' && !app.isUnityRunning());
++      process.platform === 'win32' || (process.platform === 'linux' && !app.isUnityRunning()) || process.platform === 'freebsd' || process.platform === 'netbsd';
+ 
+     const expectedBadgeCount = 42;
+ 
+@@ -780,7 +780,7 @@ describe('app module', () => {
+   });
+ 
+   ifdescribe(
+-    process.platform !== 'linux' && !process.mas && (process.platform !== 'darwin' || process.arch === 'arm64')
++    process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd' && !process.mas && (process.platform !== 'darwin' || process.arch === 'arm64')
+   )('app.get/setLoginItemSettings API', function () {
+     const isMac = process.platform === 'darwin';
+     const isWin = process.platform === 'win32';
+@@ -1207,7 +1207,7 @@ describe('app module', () => {
+     });
+   });
+ 
+-  ifdescribe(process.platform !== 'linux')('accessibility support functionality', () => {
++  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('accessibility support functionality', () => {
+     // These tests toggle a process-wide AXMode. Turn it back off so the rest of
+     // the suite doesn't run with renderer accessibility enabled.
+     afterEach(() => {
+@@ -1483,7 +1483,7 @@ describe('app module', () => {
+     });
+   });
+ 
+-  ifdescribe(process.platform !== 'linux')('select-client-certificate event', () => {
++  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('select-client-certificate event', () => {
+     let w: BrowserWindow;
+ 
+     before(function () {
+@@ -1626,7 +1626,7 @@ describe('app module', () => {
+ 
+   describe('getApplicationNameForProtocol()', () => {
+     // TODO: Linux CI doesn't have registered http & https handlers
+-    ifit(!(process.env.CI && process.platform === 'linux') && !isWayland)(
++    ifit(!(process.env.CI && (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')) && !isWayland)(
+       'returns application names for common protocols',
+       function () {
+         // We can't expect particular app names here, but these protocols should
+@@ -1643,7 +1643,7 @@ describe('app module', () => {
+       expect(app.getApplicationNameForProtocol('bogus-protocol://')).to.equal('');
+     });
+ 
+-    ifdescribe(process.platform === 'linux')('on Linux with mocked XDG dirs', () => {
++    ifdescribe(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('on Linux with mocked XDG dirs', () => {
+       const desktopFileId = 'mock-browser.desktop';
+       const mockDisplayName = 'Mock Browser';
+       const mockScheme = 'mockproto';
+@@ -1693,7 +1693,7 @@ describe('app module', () => {
+     let xdgBinDir: string;
+ 
+     before(() => {
+-      if (process.platform !== 'linux') {
++      if (process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd') {
+         return;
+       }
+ 
+@@ -1710,7 +1710,7 @@ describe('app module', () => {
+     });
+ 
+     after(() => {
+-      if (process.platform === 'linux') {
++      if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+         fs.rmSync(xdgDir, { recursive: true, force: true });
+       }
+     });
+@@ -1722,7 +1722,7 @@ describe('app module', () => {
+     });
+ 
+     it('returns resolved promise with appPath, displayName and icon', async function () {
+-      if (process.platform === 'linux') {
++      if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+         const appInfo = await spawnProtocolInfoWithXdgMock(`${mockScheme}://`, xdgDataHome, xdgConfigHome);
+         expect(appInfo.name).to.equal(mockDisplayName);
+         expect(appInfo.path).to.equal('/usr/bin/true');
+@@ -1736,7 +1736,7 @@ describe('app module', () => {
+       expect(appInfo.icon).not.to.be.undefined();
+     });
+ 
+-    ifit(process.platform === 'linux')('resolves an executable name via PATH', async () => {
++    ifit(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('resolves an executable name via PATH', async () => {
+       const pathLookupExecutable = 'mock-browser';
+       const pathLookupExecutablePath = path.join(xdgBinDir, pathLookupExecutable);
+       const pathLookupDisplayName = 'Mock Browser PATH';
+@@ -1770,7 +1770,7 @@ describe('app module', () => {
+     });
+   });
+ 
+-  ifdescribe(process.platform === 'linux')('default protocol client APIs', () => {
++  ifdescribe(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('default protocol client APIs', () => {
+     const protocol = 'electron-test-linux';
+     const desktopFileId = 'electron-test.desktop';
+     const protocolMimeType = `x-scheme-handler/${protocol}`;
+@@ -1887,7 +1887,7 @@ describe('app module', () => {
+   });
+ 
+   // FIXME Get these specs running on Linux CI
+-  ifdescribe(process.platform !== 'linux')('getFileIcon() API', () => {
++  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('getFileIcon() API', () => {
+     const iconPath = path.join(import.meta.dirname, 'fixtures/assets/icon.ico');
+     const sizes = {
+       small: 16,
+@@ -1969,7 +1969,7 @@ describe('app module', () => {
+           expect(entry.memory).to.have.property('privateBytes').that.is.greaterThan(0);
+         }
+ 
+-        if (process.platform !== 'linux') {
++        if (process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd') {
+           expect(entry.sandboxed).to.be.a('boolean');
+         }
+ 
+@@ -1986,7 +1986,7 @@ describe('app module', () => {
+     });
+   });
+ 
+-  ifdescribe(process.platform === 'linux')('GDK_BACKEND', () => {
++  ifdescribe(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('GDK_BACKEND', () => {
+     const fixture = path.join(fixturesPath, 'apps', 'gdk-backend');
+     const run = async (env: NodeJS.ProcessEnv) => {
+       const child = cp.spawn(process.execPath, [fixture], { env, stdio: ['ignore', 'pipe', 'ignore'] });
+@@ -2063,7 +2063,7 @@ describe('app module', () => {
+ 
+     it('succeeds with complete GPUInfo', async () => {
+       const completeInfo = await getGPUInfo('complete');
+-      if (process.platform === 'linux') {
++      if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+         // For linux and macOS complete info is same as basic info
+         await verifyBasicGPUInfo(completeInfo);
+         const basicInfo = await getGPUInfo('basic');
+@@ -2087,7 +2087,7 @@ describe('app module', () => {
+     });
+   });
+ 
+-  ifdescribe(!(process.platform === 'linux' && (process.arch === 'arm64' || process.arch === 'arm')))(
++  ifdescribe(!((process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') && (process.arch === 'arm64' || process.arch === 'arm')))(
+     'sandbox options',
+     () => {
+       let appProcess: cp.ChildProcess = null as any;
+diff --git a/electron/spec/api-browser-window-ignore-mouse-events.spec.ts b/electron/spec/api-browser-window-ignore-mouse-events.spec.ts
+index 1baadc7337..e8f5504cd4 100644
+--- a/electron/spec/api-browser-window-ignore-mouse-events.spec.ts
++++ b/electron/spec/api-browser-window-ignore-mouse-events.spec.ts
+@@ -41,11 +41,11 @@ type PageEvent = { type: string; x?: number; y?: number };
+ // Nothing can inject input into a Wayland compositor from a client, so only
+ // X11 is covered on Linux.
+ const hasRealInput =
+-  process.platform === 'win32' || process.platform === 'darwin' || (process.platform === 'linux' && !isWayland);
++  process.platform === 'win32' || process.platform === 'darwin' || ((process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') && !isWayland);
+ // { forward: true } is macOS and Windows only.
+ const canForward = process.platform === 'win32' || process.platform === 'darwin';
+ // Only these can ask the OS which window it hit tests at a point.
+-const canHitTest = process.platform === 'win32' || process.platform === 'linux';
++const canHitTest = process.platform === 'win32' || process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd';
+ 
+ // #target turns orange while hovered. Element.matches(':hover') is not usable
+ // here: it stays false while the (never focused) window is inactive even
+diff --git a/electron/spec/api-browser-window.spec.ts b/electron/spec/api-browser-window.spec.ts
+index f01e0ca05f..765f3a0424 100755
+--- a/electron/spec/api-browser-window.spec.ts
++++ b/electron/spec/api-browser-window.spec.ts
+@@ -105,7 +105,7 @@ describe('BrowserWindow module', () => {
+       }).not.to.throw();
+     });
+ 
+-    ifit(process.platform === 'linux')('does not crash when setting large window icons', async () => {
++    ifit(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('does not crash when setting large window icons', async () => {
+       const appPath = path.join(fixtures, 'apps', 'xwindow-icon');
+       const appProcess = childProcess.spawn(process.execPath, [appPath]);
+       await once(appProcess, 'exit');
+@@ -400,7 +400,7 @@ describe('BrowserWindow module', () => {
+     });
+   });
+ 
+-  ifdescribe(process.platform !== 'linux')('BrowserWindow.getContentProtection', () => {
++  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('BrowserWindow.getContentProtection', () => {
+     afterEach(closeAllWindows);
+     it('can set content protection', async () => {
+       const w = new BrowserWindow({ show: false });
+@@ -1397,7 +1397,7 @@ describe('BrowserWindow module', () => {
+ 
+     describe('BrowserWindow.minimize()', () => {
+       // TODO(codebytere): Enable for Linux once maximize/minimize events work in CI.
+-      ifit(process.platform !== 'linux')('should not be visible when the window is minimized', async () => {
++      ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('should not be visible when the window is minimized', async () => {
+         const minimize = once(w, 'minimize');
+         w.minimize();
+         await minimize;
+@@ -1414,7 +1414,7 @@ describe('BrowserWindow module', () => {
+       });
+ 
+       // TODO(dsanders11): Enable for Linux once CI plays nice with these kinds of tests
+-      ifit(process.platform !== 'linux')('should not restore maximized windows', async () => {
++      ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('should not restore maximized windows', async () => {
+         const maximize = once(w, 'maximize');
+         const shown = once(w, 'show');
+         w.maximize();
+@@ -1511,7 +1511,7 @@ describe('BrowserWindow module', () => {
+         }
+       );
+ 
+-      ifit(process.platform !== 'linux')('acquires focus status from the other windows', async () => {
++      ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('acquires focus status from the other windows', async () => {
+         const w1 = new BrowserWindow({ show: false });
+         const w2 = new BrowserWindow({ show: false });
+         const w3 = new BrowserWindow({ show: false });
+@@ -1616,7 +1616,7 @@ describe('BrowserWindow module', () => {
+         expect(w.isFocused()).to.equal(false);
+       });
+ 
+-      ifit(process.platform !== 'linux')('transfers focus status to the next window', async () => {
++      ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('transfers focus status to the next window', async () => {
+         const w1 = new BrowserWindow({ show: false });
+         const w2 = new BrowserWindow({ show: false });
+         const w3 = new BrowserWindow({ show: false });
+@@ -2170,7 +2170,7 @@ describe('BrowserWindow module', () => {
+         });
+       });
+ 
+-      ifdescribe(process.platform !== 'linux')('Maximized state', () => {
++      ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('Maximized state', () => {
+         it('checks normal bounds when maximized', async () => {
+           const bounds = w.getBounds();
+           const maximize = once(w, 'maximize');
+@@ -2388,7 +2388,7 @@ describe('BrowserWindow module', () => {
+         });
+       });
+ 
+-      ifdescribe(process.platform !== 'linux')('Minimized state', () => {
++      ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('Minimized state', () => {
+         it('checks normal bounds when minimized', async () => {
+           const bounds = w.getBounds();
+           const minimize = once(w, 'minimize');
+@@ -3497,7 +3497,7 @@ describe('BrowserWindow module', () => {
+   describe('BrowserWindow.setOpacity(opacity)', () => {
+     afterEach(closeAllWindows);
+ 
+-    ifdescribe(process.platform !== 'linux')('Windows and Mac', () => {
++    ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('Windows and Mac', () => {
+       it('make window with initial opacity', () => {
+         const w = new BrowserWindow({ show: false, opacity: 0.5 });
+         expect(w.getOpacity()).to.equal(0.5);
+@@ -3523,7 +3523,7 @@ describe('BrowserWindow module', () => {
+       });
+     });
+ 
+-    ifdescribe(process.platform === 'linux')('Linux', () => {
++    ifdescribe(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('Linux', () => {
+       it('sets 1 regardless of parameter', () => {
+         const w = new BrowserWindow({ show: false });
+         w.setOpacity(0);
+@@ -3753,7 +3753,7 @@ describe('BrowserWindow module', () => {
+       expect(overlayRectPreMax.height).to.equal(size);
+ 
+       // 'maximize' event is not emitted on Linux in CI.
+-      if (process.platform !== 'linux' && !w.isMaximized()) {
++      if ((process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd') && !w.isMaximized()) {
+         const maximize = once(w, 'maximize');
+         w.show();
+         w.maximize();
+@@ -3883,7 +3883,7 @@ describe('BrowserWindow module', () => {
+         expect(preMaxHeight).to.equal(size);
+ 
+         // 'maximize' event is not emitted on Linux in CI.
+-        if (process.platform !== 'linux' && !w.isMaximized()) {
++        if ((process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd') && !w.isMaximized()) {
+           const maximize = once(w, 'maximize');
+           w.show();
+           w.maximize();
+@@ -5071,7 +5071,7 @@ describe('BrowserWindow module', () => {
+         expect(test.nodeTimers).to.equal(true);
+         expect(test.nodeUrl).to.equal(true);
+ 
+-        if (process.platform === 'linux' && test.osSandbox) {
++        if ((process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') && test.osSandbox) {
+           expect(test.creationTime).to.be.null('creation time');
+           expect(test.systemMemoryInfo).to.be.null('system memory info');
+         } else {
+@@ -5587,7 +5587,7 @@ describe('BrowserWindow module', () => {
+     });
+   });
+ 
+-  ifdescribe(process.platform !== 'linux')('max/minimize events', () => {
++  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('max/minimize events', () => {
+     afterEach(closeAllWindows);
+     it('emits an event when window is maximized', async () => {
+       const w = new BrowserWindow({ show: false });
+@@ -5863,7 +5863,7 @@ describe('BrowserWindow module', () => {
+     // TODO(zcbenz):
+     // This test does not run on Linux CI. See:
+     // https://github.com/electron/electron/issues/28699
+-    ifit(process.platform === 'linux' && !process.env.CI)(
++    ifit((process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') && !process.env.CI)(
+       'should bring a minimized maximized window back to maximized state',
+       async () => {
+         const w = new BrowserWindow({});
+@@ -5881,7 +5881,7 @@ describe('BrowserWindow module', () => {
+       }
+     );
+ 
+-    ifit(process.platform !== 'linux')('should not break fullscreen state', async () => {
++    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('should not break fullscreen state', async () => {
+       const w = new BrowserWindow({ show: false });
+       w.show();
+ 
+@@ -5904,7 +5904,7 @@ describe('BrowserWindow module', () => {
+   });
+ 
+   // TODO(dsanders11): Enable once maximize event works on Linux again on CI
+-  ifdescribe(process.platform !== 'linux')('BrowserWindow.maximize()', () => {
++  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('BrowserWindow.maximize()', () => {
+     afterEach(closeAllWindows);
+     it('should show the window if it is not currently shown', async () => {
+       const w = new BrowserWindow({ show: false });
+@@ -5941,7 +5941,7 @@ describe('BrowserWindow module', () => {
+ 
+     // TODO(dsanders11): Enable once minimize event works on Linux again.
+     //                   See https://github.com/electron/electron/issues/28699
+-    ifit(process.platform !== 'linux')('should not restore a minimized window', async () => {
++    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('should not restore a minimized window', async () => {
+       const w = new BrowserWindow();
+       const minimize = once(w, 'minimize');
+       w.minimize();
+@@ -6456,7 +6456,7 @@ describe('BrowserWindow module', () => {
+       });
+ 
+       // On Linux there is no "resizable" property of a window.
+-      ifit(process.platform !== 'linux')('does affect maximizability when disabled and enabled', () => {
++      ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('does affect maximizability when disabled and enabled', () => {
+         const w = new BrowserWindow({ show: false });
+         expect(w.resizable).to.be.true('resizable');
+ 
+@@ -6697,7 +6697,7 @@ describe('BrowserWindow module', () => {
+     });
+   });
+ 
+-  ifdescribe(process.platform !== 'linux')('window states (excluding Linux)', () => {
++  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('window states (excluding Linux)', () => {
+     // Not implemented on Linux.
+     afterEach(closeAllWindows);
+ 
+@@ -8060,7 +8060,7 @@ describe('BrowserWindow module', () => {
+   describe('"transparent" option', { tags: ['serial'] }, () => {
+     afterEach(closeAllWindows);
+ 
+-    ifit(process.platform !== 'linux')(
++    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')(
+       'correctly returns isMaximized() when the window is maximized then minimized',
+       async () => {
+         const w = new BrowserWindow({
+diff --git a/electron/spec/api-clipboard.spec.ts b/electron/spec/api-clipboard.spec.ts
+index f46f8c190b..760ad38933 100644
+--- a/electron/spec/api-clipboard.spec.ts
++++ b/electron/spec/api-clipboard.spec.ts
+@@ -54,7 +54,7 @@ ifdescribe(process.platform !== 'win32' || process.arch !== 'arm64')('clipboard
+     });
+   });
+ 
+-  ifdescribe(process.platform !== 'linux')('clipboard.readBookmark', () => {
++  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('clipboard.readBookmark', () => {
+     it('returns title and url', () => {
+       clipboard.writeBookmark('a title', 'https://electronjs.org/');
+ 
+@@ -73,7 +73,7 @@ ifdescribe(process.platform !== 'win32' || process.arch !== 'arm64')('clipboard
+   });
+ 
+   describe('clipboard.read()', () => {
+-    ifit(process.platform !== 'linux')('does not crash when reading various custom clipboard types', () => {
++    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('does not crash when reading various custom clipboard types', () => {
+       const type = process.platform === 'darwin' ? 'NSFilenamesPboardType' : 'FileNameW';
+ 
+       expect(() => {
+@@ -114,7 +114,7 @@ ifdescribe(process.platform !== 'win32' || process.arch !== 'arm64')('clipboard
+       const readImage = clipboard.readImage();
+       expect(readImage.toDataURL()).to.equal(i.toDataURL());
+ 
+-      if (process.platform !== 'linux') {
++      if (process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd') {
+         if (process.platform !== 'win32') {
+           expect(clipboard.readBookmark()).to.deep.equal(bookmark);
+         } else {
+diff --git a/electron/spec/api-content-tracing.spec.ts b/electron/spec/api-content-tracing.spec.ts
+index fdbf6975a7..38cff03c0a 100644
+--- a/electron/spec/api-content-tracing.spec.ts
++++ b/electron/spec/api-content-tracing.spec.ts
+@@ -23,7 +23,7 @@ const isCI = !!process.env.CI;
+ const fixturesPath = path.resolve(import.meta.dirname, 'fixtures');
+ 
+ // FIXME: The tests are skipped on linux arm/arm64
+-ifdescribe(!['arm', 'arm64'].includes(process.arch) || process.platform !== 'linux')('contentTracing', () => {
++ifdescribe(!['arm', 'arm64'].includes(process.arch) || (process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd'))('contentTracing', () => {
+   const record = async (
+     options: TraceConfig | TraceCategoriesAndOptions,
+     outputFilePath: string | undefined,
+@@ -114,7 +114,7 @@ ifdescribe(!['arm', 'arm64'].includes(process.arch) || process.platform !== 'lin
+     });
+   });
+ 
+-  ifdescribe(process.platform !== 'linux')('stopRecording', function () {
++  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('stopRecording', function () {
+     if (process.platform === 'win32' && process.arch === 'arm64') {
+       // WOA needs more time
+       this.timeout(10e3);
+diff --git a/electron/spec/api-crash-reporter.spec.ts b/electron/spec/api-crash-reporter.spec.ts
+index 5486d3889b..e9b087616c 100644
+--- a/electron/spec/api-crash-reporter.spec.ts
++++ b/electron/spec/api-crash-reporter.spec.ts
+@@ -14,7 +14,7 @@ import { setTimeout } from 'node:timers/promises';
+ import { ifdescribe, ifit, defer, startRemoteControlApp, repeatedly, listen } from './lib/spec-helpers.ts';
+ 
+ const isWindowsOnArm = process.platform === 'win32' && process.arch === 'arm64';
+-const isLinuxOnArm = process.platform === 'linux' && process.arch.includes('arm');
++const isLinuxOnArm = ((process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') && process.arch.includes('arm'));
+ 
+ type CrashInfo = {
+   prod: string;
+@@ -54,7 +54,7 @@ function checkCrash(expectedProcessType: string, fields: CrashInfo) {
+ 
+   // TODO(nornagon): minidumps are sometimes (not always) turning up empty on
+   // 32-bit Linux.  Figure out why.
+-  if (!(process.platform === 'linux' && process.arch === 'ia32')) {
++  if (!((process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') && process.arch === 'ia32')) {
+     expect(fields.upload_file_minidump.length).to.be.greaterThan(0);
+   }
+ }
+@@ -193,7 +193,7 @@ ifdescribe(!isLinuxOnArm && !process.mas && !process.env.DISABLE_CRASH_REPORTER_
+ 
+       // Ensures that passing in crashpadHandlerPID flag for Linx child processes
+       // does not affect child process args.
+-      ifit(process.platform === 'linux')('ensure linux child process args are not modified', async () => {
++      ifit(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('ensure linux child process args are not modified', async () => {
+         const { port, waitForCrash } = await startServer();
+         let exitCode: number | null = null;
+         const appPath = path.join(import.meta.dirname, 'fixtures', 'apps', 'crash');
+@@ -660,7 +660,7 @@ ifdescribe(!isLinuxOnArm && !process.mas && !process.env.DISABLE_CRASH_REPORTER_
+       }
+ 
+       const processList =
+-        process.platform === 'linux'
++        (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')
+           ? ['main', 'renderer', 'sandboxed-renderer']
+           : ['main', 'renderer', 'sandboxed-renderer', 'node'];
+       for (const crashingProcess of processList) {
+@@ -677,7 +677,7 @@ ifdescribe(!isLinuxOnArm && !process.mas && !process.env.DISABLE_CRASH_REPORTER_
+               return app.getPath('crashDumps');
+             });
+             let reportsDir = crashesDir;
+-            if (process.platform === 'darwin' || process.platform === 'linux') {
++            if (process.platform === 'darwin' || process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+               reportsDir = path.join(crashesDir, 'completed');
+             } else if (process.platform === 'win32') {
+               reportsDir = path.join(crashesDir, 'reports');
+@@ -705,7 +705,7 @@ ifdescribe(!isLinuxOnArm && !process.mas && !process.env.DISABLE_CRASH_REPORTER_
+             expect(remoteCrashesDir).to.equal(crashesDir);
+ 
+             let reportsDir = crashesDir;
+-            if (process.platform === 'darwin' || process.platform === 'linux') {
++            if (process.platform === 'darwin' || process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+               reportsDir = path.join(crashesDir, 'completed');
+             } else if (process.platform === 'win32') {
+               reportsDir = path.join(crashesDir, 'reports');
+diff --git a/electron/spec/api-desktop-capturer.spec.ts b/electron/spec/api-desktop-capturer.spec.ts
+index 32b44c7683..f9408a3aa9 100644
+--- a/electron/spec/api-desktop-capturer.spec.ts
++++ b/electron/spec/api-desktop-capturer.spec.ts
+@@ -9,7 +9,7 @@ import { ifdescribe, ifit } from './lib/spec-helpers.ts';
+ import { closeAllWindows } from './lib/window-helpers.ts';
+ 
+ function getSourceTypes(): ('window' | 'screen')[] {
+-  if (process.platform === 'linux') {
++  if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+     return ['screen'];
+   }
+   return ['window', 'screen'];
+@@ -35,7 +35,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
+   });
+ 
+   // Linux doesn't return any window sources.
+-  ifit(process.platform !== 'linux')('responds to subsequent calls of different options', async () => {
++  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('responds to subsequent calls of different options', async () => {
+     const promise1 = desktopCapturer.getSources({ types: ['window'] });
+     await expect(promise1).to.eventually.be.fulfilled();
+ 
+@@ -44,7 +44,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
+   });
+ 
+   // Linux doesn't return any window sources.
+-  ifit(process.platform !== 'linux')('returns an empty display_id for window sources', async () => {
++  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('returns an empty display_id for window sources', async () => {
+     const w2 = new BrowserWindow({ width: 200, height: 200 });
+     await w2.loadURL('about:blank');
+ 
+@@ -56,7 +56,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
+     }
+   });
+ 
+-  ifit(process.platform !== 'linux')('returns display_ids matching the Screen API', async () => {
++  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('returns display_ids matching the Screen API', async () => {
+     const displays = screen.getAllDisplays();
+     const sources = await desktopCapturer.getSources({ types: ['screen'] });
+     expect(sources).to.be.an('array').of.length(displays.length);
+@@ -103,7 +103,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
+   });
+ 
+   // Linux doesn't return any window sources.
+-  ifit(process.platform !== 'linux')('getMediaSourceId should match DesktopCapturerSource.id', async function () {
++  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('getMediaSourceId should match DesktopCapturerSource.id', async function () {
+     const w2 = new BrowserWindow({ show: false, width: 100, height: 100, webPreferences: { contextIsolation: false } });
+     const wShown = once(w2, 'show');
+     const wFocused = once(w2, 'focus');
+@@ -127,7 +127,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
+   });
+ 
+   // Linux doesn't return any window sources.
+-  ifit(process.platform !== 'linux')('getSources should not incorrectly duplicate window_id', async function () {
++  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('getSources should not incorrectly duplicate window_id', async function () {
+     const w2 = new BrowserWindow({ show: false, width: 100, height: 100, webPreferences: { contextIsolation: false } });
+     const wShown = once(w2, 'show');
+     const wFocused = once(w2, 'focus');
+@@ -173,7 +173,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
+   });
+ 
+   // Linux doesn't return any window sources.
+-  ifit(process.platform !== 'linux')('moveAbove should move the window at the requested place', async function () {
++  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('moveAbove should move the window at the requested place', async function () {
+     // DesktopCapturer.getSources() is guaranteed to return in the correct
+     // z-order from foreground to background.
+     const MAX_WIN = 4;
+@@ -259,7 +259,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
+   });
+ 
+   // Linux doesn't return any window sources.
+-  ifdescribe(process.platform !== 'linux')('fetchWindowIcons', function () {
++  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('fetchWindowIcons', function () {
+     // Tests are sequentially dependent
+     this.bail(true);
+     let w: BrowserWindow;
+diff --git a/electron/spec/api-dialog.spec.ts b/electron/spec/api-dialog.spec.ts
+index cbe5f2bf5c..9d91c3acae 100644
+--- a/electron/spec/api-dialog.spec.ts
++++ b/electron/spec/api-dialog.spec.ts
+@@ -1046,7 +1046,7 @@ describe('dialog module', () => {
+   // FileChooser that script/dbus_mock.py hosts on the fake session bus. The
+   // mock records each request and auto-cancels the dialog.
+   ifdescribe(
+-    process.platform === 'linux' &&
++    (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') &&
+       process.arch !== 'ia32' &&
+       !process.arch.startsWith('arm') &&
+       !!process.env.DBUS_SESSION_BUS_ADDRESS
+diff --git a/electron/spec/api-media-handler.spec.ts b/electron/spec/api-media-handler.spec.ts
+index 127e9eae3d..32ac3069a2 100644
+--- a/electron/spec/api-media-handler.spec.ts
++++ b/electron/spec/api-media-handler.spec.ts
+@@ -64,7 +64,7 @@ describe('setDisplayMediaRequestHandler', () => {
+ 
+   // Process-level loopback audio capture (restrictOwnAudio / loopbackWithoutChrome)
+   // is not supported on Linux audio backends (PulseAudio / PipeWire).
+-  ifit(process.platform !== 'linux')(
++  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')(
+     'honors the restrictOwnAudio constraint when granted loopback audio',
+     async function () {
+       if ((await desktopCapturer.getSources({ types: ['screen'] })).length === 0) {
+diff --git a/electron/spec/api-menu.spec.ts b/electron/spec/api-menu.spec.ts
+index 05367c2be5..b0faadc94d 100644
+--- a/electron/spec/api-menu.spec.ts
++++ b/electron/spec/api-menu.spec.ts
+@@ -955,7 +955,7 @@ describe('Menu module', function () {
+     // https://github.com/electron/electron/issues/35724
+     // Maximizing window is enough to trigger the bug
+     // FIXME(dsanders11): Test always passes on CI, even pre-fix
+-    ifit(process.platform === 'linux' && !process.env.CI)('does not trigger issue #35724', (done) => {
++    ifit((process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') && !process.env.CI)('does not trigger issue #35724', (done) => {
+       const showAndCloseMenu = async () => {
+         await setTimeout(1000);
+         menu.popup({ window: w, x: 50, y: 50 });
+diff --git a/electron/spec/api-native-image.spec.ts b/electron/spec/api-native-image.spec.ts
+index 99794a100e..834b677caa 100644
+--- a/electron/spec/api-native-image.spec.ts
++++ b/electron/spec/api-native-image.spec.ts
+@@ -570,7 +570,7 @@ describe('nativeImage module', () => {
+     });
+   });
+ 
+-  ifdescribe(process.platform !== 'linux')('createThumbnailFromPath(path, size)', () => {
++  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('createThumbnailFromPath(path, size)', () => {
+     useRemoteContext({ webPreferences: { contextIsolation: false, nodeIntegration: true } });
+ 
+     it('throws when invalid size is passed', async () => {
+diff --git a/electron/spec/api-net-log.spec.ts b/electron/spec/api-net-log.spec.ts
+index b30d9edc0f..2509c00e4c 100644
+--- a/electron/spec/api-net-log.spec.ts
++++ b/electron/spec/api-net-log.spec.ts
+@@ -129,7 +129,7 @@ describe('netLog module', () => {
+     ).to.be.true('uuid present in dump');
+   });
+ 
+-  ifit(process.platform !== 'linux')(
++  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')(
+     'should begin and end logging automatically when --log-net-log is passed',
+     async () => {
+       const appProcess = ChildProcess.spawn(process.execPath, [appPath], {
+@@ -144,7 +144,7 @@ describe('netLog module', () => {
+     }
+   );
+ 
+-  ifit(process.platform !== 'linux')(
++  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')(
+     'should begin and end logging automatically when --log-net-log is passed, and behave correctly when .startLogging() and .stopLogging() is called',
+     async () => {
+       const appProcess = ChildProcess.spawn(process.execPath, [appPath], {
+@@ -162,7 +162,7 @@ describe('netLog module', () => {
+     }
+   );
+ 
+-  ifit(process.platform !== 'linux')(
++  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')(
+     'should end logging automatically when only .startLogging() is called',
+     async () => {
+       const appProcess = ChildProcess.spawn(process.execPath, [appPath], {
+diff --git a/electron/spec/api-notification-dbus.spec.ts b/electron/spec/api-notification-dbus.spec.ts
+index 4b77c6a053..f365b577d0 100644
+--- a/electron/spec/api-notification-dbus.spec.ts
++++ b/electron/spec/api-notification-dbus.spec.ts
+@@ -24,7 +24,7 @@ const require = createRequire(import.meta.url);
+ const fixturesPath = path.join(import.meta.dirname, 'fixtures');
+ 
+ const skip =
+-  process.platform !== 'linux' ||
++  (process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd') ||
+   process.arch === 'ia32' ||
+   process.arch.indexOf('arm') === 0 ||
+   !process.env.DBUS_SESSION_BUS_ADDRESS;
+diff --git a/electron/spec/api-power-monitor.spec.ts b/electron/spec/api-power-monitor.spec.ts
+index 176beed0b6..0a6688fd35 100644
+--- a/electron/spec/api-power-monitor.spec.ts
++++ b/electron/spec/api-power-monitor.spec.ts
+@@ -21,7 +21,7 @@ const require = createRequire(import.meta.url);
+ describe('powerMonitor', { tags: ['serial'] }, () => {
+   let logindMock: any, dbusMockPowerMonitor: any, getCalls: any, emitSignal: any, reset: any;
+ 
+-  ifdescribe(process.platform === 'linux' && process.env.DBUS_SYSTEM_BUS_ADDRESS != null)(
++  ifdescribe((process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') && process.env.DBUS_SYSTEM_BUS_ADDRESS != null)(
+     'when powerMonitor module is loaded with dbus mock',
+     () => {
+       before(async () => {
+diff --git a/electron/spec/api-process.spec.ts b/electron/spec/api-process.spec.ts
+index 0b9bea2b02..48c82d880b 100644
+--- a/electron/spec/api-process.spec.ts
++++ b/electron/spec/api-process.spec.ts
+@@ -43,7 +43,7 @@ describe('process module', () => {
+       it('resolves promise successfully with valid data', async () => {
+         const memoryInfo = await invoke(() => process.getProcessMemoryInfo());
+         expect(memoryInfo).to.be.an('object');
+-        if (process.platform === 'linux' || process.platform === 'win32') {
++        if (process.platform === 'linux' || process.platform === 'win32' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+           expect(memoryInfo.residentSet).to.be.a('number').greaterThan(0);
+         }
+         expect(memoryInfo.private).to.be.a('number').greaterThan(0);
+@@ -57,7 +57,7 @@ describe('process module', () => {
+         const systemMemoryInfo = await invoke(() => process.getSystemMemoryInfo());
+         expect(systemMemoryInfo.free).to.be.a('number');
+         expect(systemMemoryInfo.total).to.be.a('number');
+-        if (process.platform === 'linux') {
++        if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+           expect(systemMemoryInfo.available).to.be.a('number').greaterThan(0);
+         }
+       });
+@@ -136,7 +136,7 @@ describe('process module', () => {
+     generateSpecs((fn, ...args) => fn(...args));
+   });
+ 
+-  ifdescribe(process.platform === 'linux')('process.env', () => {
++  ifdescribe(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('process.env', () => {
+     it('can add variables while another thread reads the environment', async () => {
+       const fixture = path.join(import.meta.dirname, 'fixtures', 'api', 'environ-write-race.js');
+       const child = cp.spawn(process.execPath, [fixture], { stdio: ['ignore', 'pipe', 'inherit'] });
+diff --git a/electron/spec/api-safe-storage.spec.ts b/electron/spec/api-safe-storage.spec.ts
+index 7233b6af54..63211b8c8a 100644
+--- a/electron/spec/api-safe-storage.spec.ts
++++ b/electron/spec/api-safe-storage.spec.ts
+@@ -15,7 +15,7 @@ chai.use(chaiAsPromised);
+ 
+ describe('safeStorage module', () => {
+   before(() => {
+-    if (process.platform === 'linux') {
++    if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+       safeStorage.setUsePlainTextEncryption(true);
+     }
+   });
+@@ -33,7 +33,7 @@ describe('safeStorage module', () => {
+     });
+   });
+ 
+-  ifdescribe(process.platform === 'linux')('SafeStorage.getSelectedStorageBackend()', () => {
++  ifdescribe(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('SafeStorage.getSelectedStorageBackend()', () => {
+     it('should return a valid backend', () => {
+       expect(safeStorage.getSelectedStorageBackend()).to.equal('basic_text');
+     });
+diff --git a/electron/spec/api-screen.spec.ts b/electron/spec/api-screen.spec.ts
+index a3b0aadffb..9705a21f58 100644
+--- a/electron/spec/api-screen.spec.ts
++++ b/electron/spec/api-screen.spec.ts
+@@ -95,7 +95,7 @@ describe('screen module', { tags: ['serial'] }, () => {
+ 
+       const { size } = display!;
+ 
+-      if (process.platform === 'linux') {
++      if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+         expect(size).to.have.property('width').that.is.a('number');
+         expect(size).to.have.property('height').that.is.a('number');
+       } else {
+@@ -109,7 +109,7 @@ describe('screen module', { tags: ['serial'] }, () => {
+ 
+       const { workAreaSize } = display!;
+ 
+-      if (process.platform === 'linux') {
++      if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+         expect(workAreaSize).to.have.property('width').that.is.a('number');
+         expect(workAreaSize).to.have.property('height').that.is.a('number');
+       } else {
+@@ -125,7 +125,7 @@ describe('screen module', { tags: ['serial'] }, () => {
+       expect(bounds).to.have.property('x').that.is.a('number');
+       expect(bounds).to.have.property('y').that.is.a('number');
+ 
+-      if (process.platform === 'linux') {
++      if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+         expect(bounds).to.have.property('width').that.is.a('number');
+         expect(bounds).to.have.property('height').that.is.a('number');
+       } else {
+diff --git a/electron/spec/api-shell.spec.ts b/electron/spec/api-shell.spec.ts
+index 0f96ea1b2c..effef534b0 100644
+--- a/electron/spec/api-shell.spec.ts
++++ b/electron/spec/api-shell.spec.ts
+@@ -37,7 +37,7 @@ describe('shell module', () => {
+ 
+     afterEach(async () => {
+       // reset env vars to prevent side effects
+-      if (process.platform === 'linux') {
++      if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+         process.env.DE = envVars.de;
+         process.env.BROWSER = envVars.browser;
+         process.env.DISPLAY = envVars.display;
+@@ -57,6 +57,16 @@ describe('shell module', () => {
+         process.env.DE = 'generic';
+         process.env.DISPLAY = '';
+         requestReceived = Promise.resolve();
++      } else if (process.platform === 'freebsd') {
++        process.env.BROWSER = '/usr/bin/true';
++        process.env.DE = 'generic';
++        process.env.DISPLAY = '';
++        requestReceived = Promise.resolve();
++      } else if (process.platform === netbsd') {
++        process.env.BROWSER = '/usr/bin/true';
++        process.env.DE = 'generic';
++        process.env.DISPLAY = '';
++        requestReceived = Promise.resolve();
+       } else if (process.platform === 'darwin') {
+         // On the Mac CI machines, Safari tries to ask for a password to the
+         // code signing keychain we set up to test code signing (see
+diff --git a/electron/spec/api-subframe.spec.ts b/electron/spec/api-subframe.spec.ts
+index 9172bce7a8..c15f6c3cec 100644
+--- a/electron/spec/api-subframe.spec.ts
++++ b/electron/spec/api-subframe.spec.ts
+@@ -254,7 +254,7 @@ describe('subframe with non-standard schemes', () => {
+ });
+ 
+ // app.getAppMetrics() does not return sandbox information on Linux.
+-ifdescribe(process.platform !== 'linux')('cross-site frame sandboxing', () => {
++ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('cross-site frame sandboxing', () => {
+   let server: http.Server;
+   let crossSiteUrl: string;
+   let serverUrl: string;
+diff --git a/electron/spec/api-system-preferences.spec.ts b/electron/spec/api-system-preferences.spec.ts
+index f017da30e0..edc5379bca 100644
+--- a/electron/spec/api-system-preferences.spec.ts
++++ b/electron/spec/api-system-preferences.spec.ts
+@@ -5,8 +5,8 @@ import { expect } from 'chai';
+ import { ifdescribe, ifit } from './lib/spec-helpers.ts';
+ 
+ describe('systemPreferences module', () => {
+-  ifdescribe(['win32', 'linux'].includes(process.platform))('systemPreferences.getAccentColor', () => {
+-    ifit(process.platform === 'linux')('should return a string', () => {
++  ifdescribe(['win32', 'linux', 'freebsd', 'netbsd'].includes(process.platform))('systemPreferences.getAccentColor', () => {
++    ifit(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('should return a string', () => {
+       // Testing this properly (i.e. non-empty string) requires
+       // some tricky D-Bus mock setup.
+       const accentColor = systemPreferences.getAccentColor();
+diff --git a/electron/spec/api-tray.spec.ts b/electron/spec/api-tray.spec.ts
+index 828b797913..ca0c503ef2 100644
+--- a/electron/spec/api-tray.spec.ts
++++ b/electron/spec/api-tray.spec.ts
+@@ -32,13 +32,13 @@ describe('tray module', { tags: ['serial'] }, () => {
+       }).to.throw(/Failed to load image from path (.+)/);
+     });
+ 
+-    ifit(process.platform !== 'linux')('throws a descriptive error if an invalid guid is given', () => {
++    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('throws a descriptive error if an invalid guid is given', () => {
+       expect(() => {
+         tray = new Tray(nativeImage.createEmpty(), 'I am not a guid');
+       }).to.throw('Invalid GUID format');
+     });
+ 
+-    ifit(process.platform !== 'linux')('accepts a valid guid', () => {
++    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('accepts a valid guid', () => {
+       expect(() => {
+         tray = new Tray(nativeImage.createEmpty(), '0019A433-3526-48BA-A66C-676742C0FEFB');
+       }).to.not.throw();
+@@ -139,7 +139,7 @@ describe('tray module', { tags: ['serial'] }, () => {
+       tray.destroy();
+     });
+ 
+-    ifit(process.platform !== 'linux')('returns a bounds object', function () {
++    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('returns a bounds object', function () {
+       const bounds = tray.getBounds();
+       expect(bounds).to.be.an('object').and.to.have.all.keys('x', 'y', 'width', 'height');
+     });
+diff --git a/electron/spec/api-utility-process.spec.ts b/electron/spec/api-utility-process.spec.ts
+index 13bce22290..29c1305cc7 100644
+--- a/electron/spec/api-utility-process.spec.ts
++++ b/electron/spec/api-utility-process.spec.ts
+@@ -618,7 +618,7 @@ describe('utilityProcess module', () => {
+       expect(output).to.include(result);
+     });
+ 
+-    ifit(process.platform !== 'linux')('can access exposed main process modules from the utility process', async () => {
++    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('can access exposed main process modules from the utility process', async () => {
+       const message = 'Message from utility process';
+       const child = utilityProcess.fork(path.join(fixturesPath, 'expose-main-process-module.js'));
+       await once(child, 'spawn');
+@@ -655,7 +655,7 @@ describe('utilityProcess module', () => {
+       await closeWindow(w);
+     });
+ 
+-    ifit(process.platform === 'linux')('allows executing a setuid binary with child_process', async () => {
++    ifit(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('allows executing a setuid binary with child_process', async () => {
+       const child = utilityProcess.fork(path.join(fixturesPath, 'suid.js'));
+       await once(child, 'spawn');
+       const [data] = await once(child, 'message');
+diff --git a/electron/spec/api-web-contents.spec.ts b/electron/spec/api-web-contents.spec.ts
+index 11bd977ded..681ec2301c 100644
+--- a/electron/spec/api-web-contents.spec.ts
++++ b/electron/spec/api-web-contents.spec.ts
+@@ -1643,7 +1643,7 @@ describe('webContents module', () => {
+     // back to OpenFolder() which does a blocking DirectoryExists() on the UI
+     // thread (pre-existing behavior). Workspace-gating is covered by the test
+     // above.
+-    ifit(process.platform !== 'linux')(
++    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')(
+       'reveals paths under a registered workspace folder without executing them',
+       async () => {
+         const w = new BrowserWindow({ show: false });
+@@ -4301,7 +4301,7 @@ describe('webContents module', () => {
+     });
+ 
+     // TODO(codebytere): OOPIF printing is disabled on Linux at the moment due to crashes.
+-    ifit(process.platform !== 'linux')('can print cross-origin iframes', async () => {
++    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('can print cross-origin iframes', async () => {
+       server = http.createServer((_, res) => {
+         res.writeHead(200);
+         res.end(`
+diff --git a/electron/spec/chromium.spec.ts b/electron/spec/chromium.spec.ts
+index 679ecb2f9e..b173700cc9 100644
+--- a/electron/spec/chromium.spec.ts
++++ b/electron/spec/chromium.spec.ts
+@@ -608,15 +608,15 @@ describe('command line switches', () => {
+       testLocale('asdfkl', `${currentLocale}|${currentSystemLocale}|${currentPreferredLanguages}`));
+ 
+     const lcAll = String(process.env.LC_ALL);
+-    ifit(process.platform === 'linux')('current process has a valid LC_ALL env', async () => {
++    ifit(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('current process has a valid LC_ALL env', async () => {
+       // The LC_ALL env should not be set to DOM locale string.
+       expect(lcAll).to.not.equal(app.getLocale());
+     });
+-    ifit(process.platform === 'linux')('should not change LC_ALL', async () => testLocale('fr', lcAll, true));
+-    ifit(process.platform === 'linux')('should not change LC_ALL when setting invalid locale', async () =>
++    ifit(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('should not change LC_ALL', async () => testLocale('fr', lcAll, true));
++    ifit(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('should not change LC_ALL when setting invalid locale', async () =>
+       testLocale('asdfkl', lcAll, true)
+     );
+-    ifit(process.platform === 'linux')('should not change LC_ALL when --lang is not set', async () =>
++    ifit(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('should not change LC_ALL when --lang is not set', async () =>
+       testLocale('', lcAll, true)
+     );
+   });
+@@ -4259,12 +4259,12 @@ describe('font fallback', () => {
+       expect(fonts[0].familyName).to.equal('Arial');
+     } else if (process.platform === 'darwin') {
+       expect(fonts[0].familyName).to.equal('Helvetica');
+-    } else if (process.platform === 'linux') {
++    } else if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+       expect(fonts[0].familyName).to.equal('DejaVu Sans');
+     } // I think this depends on the distro? We don't specify a default.
+   });
+ 
+-  ifit(process.platform !== 'linux')(
++  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')(
+     'should fall back to Japanese font for sans-serif Japanese script',
+     async function () {
+       const html = `
+@@ -5010,7 +5010,7 @@ describe('paste execCommand', { tags: ['serial'] }, () => {
+   });
+ });
+ 
+-ifdescribe(process.platform !== 'linux' || app.isUnityRunning())('navigator.setAppBadge/clearAppBadge', () => {
++ifdescribe((process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd') || app.isUnityRunning())('navigator.setAppBadge/clearAppBadge', () => {
+   let w: BrowserWindow;
+ 
+   const expectedBadgeCount = 42;
+diff --git a/electron/spec/crash.spec.ts b/electron/spec/crash.spec.ts
+index 2a4b41d6c7..86ab82722a 100644
+--- a/electron/spec/crash.spec.ts
++++ b/electron/spec/crash.spec.ts
+@@ -53,7 +53,7 @@ const shouldRunCase = (crashCase: string) => {
+       if (process.platform === 'win32') {
+         return process.arch !== 'ia32';
+       } else {
+-        return process.platform !== 'linux' || (process.arch !== 'arm64' && process.arch !== 'arm');
++        return (process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd') || (process.arch !== 'arm64' && process.arch !== 'arm');
+       }
+     }
+     default: {
+diff --git a/electron/spec/desktop-name.spec.ts b/electron/spec/desktop-name.spec.ts
+index a702e39d01..5e9e78f74e 100644
+--- a/electron/spec/desktop-name.spec.ts
++++ b/electron/spec/desktop-name.spec.ts
+@@ -10,7 +10,7 @@ const { defaultDesktopName }: typeof import('../lib/browser/desktop-name.ts') =
+   '../lib/browser/desktop-name.ts'
+ );
+ 
+-ifdescribe(process.platform === 'linux')('defaultDesktopName', () => {
++ifdescribe(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('defaultDesktopName', () => {
+   it("derives an appropriate .desktop name from the app's human readable name", () => {
+     const fallback = `${path.basename(process.execPath)}.desktop`;
+     const cases: Array<[string | undefined, string]> = [
+diff --git a/electron/spec/fixtures/api/safe-storage/decrypt-app/main.js b/electron/spec/fixtures/api/safe-storage/decrypt-app/main.js
+index fe983e4d54..831d29b040 100644
+--- a/electron/spec/fixtures/api/safe-storage/decrypt-app/main.js
++++ b/electron/spec/fixtures/api/safe-storage/decrypt-app/main.js
+@@ -7,7 +7,7 @@ const pathToEncryptedString = path.resolve(__dirname, '..', 'encrypted.txt');
+ const readFile = fs.readFile;
+ 
+ app.whenReady().then(async () => {
+-  if (process.platform === 'linux') {
++  if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+     safeStorage.setUsePlainTextEncryption(true);
+   }
+   const encryptedString = await readFile(pathToEncryptedString);
+diff --git a/electron/spec/fixtures/api/safe-storage/encrypt-app/main.js b/electron/spec/fixtures/api/safe-storage/encrypt-app/main.js
+index 1bb90b65d3..b608eddb38 100644
+--- a/electron/spec/fixtures/api/safe-storage/encrypt-app/main.js
++++ b/electron/spec/fixtures/api/safe-storage/encrypt-app/main.js
+@@ -7,7 +7,7 @@ const pathToEncryptedString = path.resolve(__dirname, '..', 'encrypted.txt');
+ const writeFile = fs.writeFile;
+ 
+ app.whenReady().then(async () => {
+-  if (process.platform === 'linux') {
++  if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+     safeStorage.setUsePlainTextEncryption(true);
+   }
+   const encrypted = safeStorage.encryptString('plaintext');
+diff --git a/electron/spec/fixtures/native-addon/uv-dlopen/index.js b/electron/spec/fixtures/native-addon/uv-dlopen/index.js
+index c2761afc41..2ec5b0a573 100644
+--- a/electron/spec/fixtures/native-addon/uv-dlopen/index.js
++++ b/electron/spec/fixtures/native-addon/uv-dlopen/index.js
+@@ -4,7 +4,7 @@ const testLoadLibrary = require('./build/Release/test_module');
+ 
+ const lib = (() => {
+   switch (process.platform) {
+-    case 'linux':
++    case 'linux': case 'freebsd': case 'netbsd':
+       return path.resolve(__dirname, 'build/Release/foo.so');
+     case 'darwin':
+       return path.resolve(__dirname, 'build/Release/foo.dylib');
+diff --git a/electron/spec/lib/spec-helpers.ts b/electron/spec/lib/spec-helpers.ts
+index 8176ee4010..c0db35c6ed 100644
+--- a/electron/spec/lib/spec-helpers.ts
++++ b/electron/spec/lib/spec-helpers.ts
+@@ -29,7 +29,7 @@ export const ifit = (condition: boolean) => (condition ? it : addOnly<TestFuncti
+ export const ifdescribe = (condition: boolean) => (condition ? describe : addOnly<SuiteFunction>(describe.skip));
+ 
+ export const isWayland =
+-  process.platform === 'linux' &&
++  (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') &&
+   (process.env.XDG_SESSION_TYPE === 'wayland' ||
+     !!process.env.WAYLAND_DISPLAY ||
+     process.argv.includes('--ozone-platform=wayland'));
+diff --git a/electron/spec/node.spec.ts b/electron/spec/node.spec.ts
+index 406c5bff58..0f941e2965 100644
+--- a/electron/spec/node.spec.ts
++++ b/electron/spec/node.spec.ts
+@@ -221,7 +221,7 @@ describe('node feature', () => {
+     });
+ 
+     describe('child_process.exec', () => {
+-      ifit(process.platform === 'linux')('allows executing a setuid binary from non-sandboxed renderer', async () => {
++      ifit(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('allows executing a setuid binary from non-sandboxed renderer', async () => {
+         // Chrome uses prctl(2) to set the NO_NEW_PRIVILEGES flag on Linux (see
+         // https://github.com/torvalds/linux/blob/40fde647cc/Documentation/userspace-api/no_new_privs.rst).
+         // We disable this for unsandboxed processes, which the renderer tests
+diff --git a/electron/spec/spellchecker.spec.ts b/electron/spec/spellchecker.spec.ts
+index 1b221671f9..7abf879064 100644
+--- a/electron/spec/spellchecker.spec.ts
++++ b/electron/spec/spellchecker.spec.ts
+@@ -91,7 +91,7 @@ ifdescribe(features.isBuiltinSpellCheckerEnabled())('spellchecker', function ()
+       });
+ 
+       // Context menu test can not run on Windows or Linux (https://github.com/electron/electron/pull/48657 broke linux).
+-      const shouldRun = process.platform !== 'win32' && process.platform !== 'linux';
++      const shouldRun = process.platform !== 'win32' && process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd';
+ 
+       ifit(shouldRun)('should detect correctly spelled words as correct', async () => {
+         await w.webContents.executeJavaScript('document.body.querySelector("textarea").value = "typography"');
+diff --git a/electron/spec/visibility-state.spec.ts b/electron/spec/visibility-state.spec.ts
+index 0b701f3106..469e1eb441 100644
+--- a/electron/spec/visibility-state.spec.ts
++++ b/electron/spec/visibility-state.spec.ts
+@@ -19,7 +19,7 @@ import { closeAllWindows } from './lib/window-helpers.ts';
+ 
+ // visibilityState specs pass on linux with a real window manager but on CI
+ // the environment does not let these specs pass
+-ifdescribe(process.platform !== 'linux')('document.visibilityState', () => {
++ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('document.visibilityState', () => {
+   let w: BaseWindow & { webContents: WebContents };
+ 
+   before(() => {
+diff --git a/electron/spec/webview.spec.ts b/electron/spec/webview.spec.ts
+index 7ff4b03c3d..94485c1cb9 100644
+--- a/electron/spec/webview.spec.ts
++++ b/electron/spec/webview.spec.ts
+@@ -617,7 +617,7 @@ describe('<webview> tag', function () {
+     });
+ 
+     // FIXME(zcbenz): Fullscreen events do not work on Linux.
+-    ifit(process.platform !== 'linux')('exiting fullscreen should unfullscreen window', async () => {
++    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('exiting fullscreen should unfullscreen window', async () => {
+       const [w, webview] = await loadWebViewWindow();
+       const enterFullScreen = once(w, 'enter-full-screen');
+       await webview.executeJavaScript('document.getElementById("div").requestFullscreen()', true);
+diff --git a/net/dns/dns_config_service_posix.cc b/net/dns/dns_config_service_posix.cc
+index 1c4f4bb4a8..69d948ff24 100644
+--- a/net/dns/dns_config_service_posix.cc
++++ b/net/dns/dns_config_service_posix.cc
+@@ -146,6 +146,7 @@ class DnsConfigServicePosix::Watcher : public DnsConfigService::Watcher {
+ #endif
+ 
+     bool success = true;
++#if !IS_MAS_BUILD()
+     if (!config_watcher_.Watch(base::BindRepeating(&Watcher::OnConfigChanged,
+                                                    base::Unretained(this)))) {
+       LOG(ERROR) << "DNS config watch failed to start.";
+diff --git a/rollup/rust/bindings_napi/Cargo.toml b/rollup/rust/bindings_napi/Cargo.toml
+index dc6c178f95..cde5a46726 100644
+--- a/rollup/rust/bindings_napi/Cargo.toml
++++ b/rollup/rust/bindings_napi/Cargo.toml
+@@ -15,7 +15,7 @@ napi-derive = "3.5.5"
+ parse_ast = { path = "../parse_ast" }
+ xxhash = { path = "../xxhash" }
+ 
+-[target.'cfg(not(any(target_os = "linux", target_os = "freebsd")))'.dependencies]
++[target.'cfg(not(any(target_os = "linux", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd")))'.dependencies]
+ mimalloc-safe = { version = "0.1.58" }
+ 
+ # Readable version of the target specifier
+@@ -33,7 +33,7 @@ mimalloc-safe = { version = "0.1.58" }
+ # 		)
+ # 	)
+ # )
+-[target.'cfg(any(all(target_os = "linux", not(target_arch = "loongarch64"), not(all(target_arch = "riscv64", target_env = "musl")), not(target_env = "ohos")), all(target_os = "freebsd", not(target_arch = "aarch64"))))'.dependencies]
++[target.'cfg(any(all(target_os = "linux", not(target_arch = "loongarch64"), not(all(target_arch = "riscv64", target_env = "musl")), not(target_env = "ohos")), all(target_os = "openbsd", not(target_arch = "aarch64")), all(target_os = "freebsd", not(target_arch = "aarch64")), all(target_os = "netbsd", not(target_arch = "aarch64"))))'.dependencies]
+ mimalloc-safe = { version = "0.1.58", features = ["local_dynamic_tls"] }
+ 
+ # Disable architecture specific optimizations on aarch64 platforms
+diff --git a/rollup/rust/bindings_napi/src/lib.rs b/rollup/rust/bindings_napi/src/lib.rs
+index dde2281861..7c00c1f638 100644
+--- a/rollup/rust/bindings_napi/src/lib.rs
++++ b/rollup/rust/bindings_napi/src/lib.rs
+@@ -8,6 +8,8 @@ use std::mem;
+   not(all(target_os = "linux", target_arch = "riscv64", target_env = "musl")),
+   not(all(target_os = "linux", target_env = "ohos")),
+   not(all(target_os = "freebsd", target_arch = "aarch64")),
++  not(all(target_os = "openbsd", target_arch = "aarch64")),
++  not(all(target_os = "netbsd", target_arch = "aarch64")),
+   not(debug_assertions)
+ ))]
+ #[global_allocator]
+diff --git a/third_party/electron_node/deps/cares/unofficial.gni b/third_party/electron_node/deps/cares/unofficial.gni
+index e02d7f4251..a834a0c1cf 100644
+--- a/third_party/electron_node/deps/cares/unofficial.gni
++++ b/third_party/electron_node/deps/cares/unofficial.gni
+@@ -44,10 +44,14 @@ template("cares_gn_build") {
+     ]
+     if (is_win) {
+       include_dirs += [ "config/win32" ]
+-    } else if (is_linux) {
++    } else if (is_linux && !is_bsd) {
+       include_dirs += [ "config/linux" ]
+     } else if (is_mac) {
+       include_dirs += [ "config/darwin" ]
++    } else if (is_freebsd) {
++      include_dirs += [ "config/freebsd" ]
++    } else if (is_netbsd) {
++      include_dirs += [ "config/netbsd" ]
+     }
+ 
+     if (is_win) {
+@@ -58,12 +62,18 @@ template("cares_gn_build") {
+     }
+ 
+     sources = gypi_values.cares_sources_common
+-    if (is_linux) {
++    if (is_linux && !is_bsd) {
+       sources += [ "config/linux/ares_config.h" ]
+     }
+     if (is_mac) {
+       sources += gypi_values.cares_sources_mac
+     }
++    if (is_freebsd) {
++      sources += [ "config/freebsd/ares_config.h" ]
++    }
++    if (is_netbsd) {
++      sources += [ "config/netbsd/ares_config.h" ]
++    }
+ 
+     if (is_clang) {
+       if (is_win) {
+diff --git a/third_party/electron_node/deps/histogram/unofficial.gni b/third_party/electron_node/deps/histogram/unofficial.gni
+index 1173ab298a..3df744631c 100644
+--- a/third_party/electron_node/deps/histogram/unofficial.gni
++++ b/third_party/electron_node/deps/histogram/unofficial.gni
+@@ -25,7 +25,7 @@ template("histogram_gn_build") {
+         "-Wno-unused-function",
+       ]
+     }
+-    if (is_linux) {
++    if (is_linux && !is_bsd) {
+       libs = [ "atomic" ]
+     }
+   }
+diff --git a/third_party/electron_node/deps/openssl/unofficial.gni b/third_party/electron_node/deps/openssl/unofficial.gni
+index 2a82d7d448..e9d558f64f 100644
+--- a/third_party/electron_node/deps/openssl/unofficial.gni
++++ b/third_party/electron_node/deps/openssl/unofficial.gni
+@@ -71,7 +71,7 @@ template("openssl_gn_build") {
+     }
+     if (is_win) {
+       libs = [ "crypt32.lib" ]
+-    } else if (is_linux) {
++    } else if (is_linux && !is_bsd) {
+       libs = [ "atomic" ]
+     }
+ 
+diff --git a/third_party/electron_node/deps/uv/src/unix/pipe.c b/third_party/electron_node/deps/uv/src/unix/pipe.c
+index eb03a47ccc..3cbc287fdd 100644
+--- a/third_party/electron_node/deps/uv/src/unix/pipe.c
++++ b/third_party/electron_node/deps/uv/src/unix/pipe.c
+@@ -208,9 +208,13 @@ int uv_pipe_open(uv_pipe_t* handle, uv_file fd) {
+   if (mode == -1)
+     return UV__ERR(errno); /* according to docs, must be EBADF */
+ 
++  /* If ioctl(FIONBIO) reports ENOTTY, try fcntl(F_GETFL) + fcntl(F_SETFL).
++   * Workaround for e.g. kqueue fds not supporting ioctls.
++   */
+   err = uv__nonblock(fd, 1);
+-  if (err)
+-    return err;
++  if (err == UV_ENOTTY)
++    if (uv__nonblock == uv__nonblock_ioctl)
++      err = uv__nonblock_fcntl(fd, 1);
+ 
+ #if defined(__APPLE__)
+   err = uv__stream_try_select((uv_stream_t*) handle, &fd);
+diff --git a/third_party/electron_node/deps/uv/unofficial.gni b/third_party/electron_node/deps/uv/unofficial.gni
+index 0944d6ddd2..b1ffe2c664 100644
+--- a/third_party/electron_node/deps/uv/unofficial.gni
++++ b/third_party/electron_node/deps/uv/unofficial.gni
+@@ -27,7 +27,7 @@ template("uv_gn_build") {
+         "_FILE_OFFSET_BITS=64",
+       ]
+     }
+-    if (is_linux) {
++    if (is_linux && !is_bsd) {
+       defines += [
+         "_POSIX_C_SOURCE=200112",
+         "_GNU_SOURCE",
+@@ -105,12 +105,30 @@ template("uv_gn_build") {
+       sources += gypi_values.uv_sources_posix +
+                  [ "src/unix/proctitle.c" ]
+     }
+-    if (is_linux) {
++    if (is_linux && !is_bsd) {
+       sources += gypi_values.uv_sources_linux
+     }
+     if (is_apple) {
+       sources += gypi_values.uv_sources_apple +
+                  gypi_values.uv_sources_bsd_common
+     }
++    if (is_freebsd) {
++      sources += gypi_values.uv_sources_bsd_common + [
++        "src/unix/freebsd.c",
++        "src/unix/random-getrandom.c",
++        "src/unix/posix-hrtime.c",
++        "src/unix/bsd-proctitle.c",
++      ]
++      sources -= [ "src/unix/proctitle.c" ]
++    }
++    if (is_netbsd) {
++      sources += gypi_values.uv_sources_bsd_common + [
++        "src/unix/netbsd.c",
++        "src/unix/random-getrandom.c",
++        "src/unix/posix-hrtime.c",
++        "src/unix/bsd-proctitle.c",
++      ]
++      sources -= [ "src/unix/proctitle.c" ]
++    }
+   }
+ }
+diff --git a/ui/gfx/font_util.cc b/ui/gfx/font_util.cc
+index 13dcfa03fe..8100ac3a24 100644
+--- a/ui/gfx/font_util.cc
++++ b/ui/gfx/font_util.cc
+@@ -26,8 +26,11 @@ void InitializeFonts() {
+   // the long delay the user would have seen on first rendering.
+ 
+ #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_BSD)
+-  // Early initialize FontConfig.
+-  InitializeGlobalFontConfigAsync();
++  // Ensures the config is created on this thread. It's generally safe to send
++  // concurrent match requests to fontconfig, but it's unsafe to send match
++  // requests concurrently to fontconfig initialization.
++  FcConfig* config = GetGlobalFontConfig();
++  DCHECK(config);
+ #endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
+ 
+ #if BUILDFLAG(IS_WIN)
+diff --git a/ui/gtk/gtk_compat.cc b/ui/gtk/gtk_compat.cc
+index 877889e3c2..f005a0bc98 100644
+--- a/ui/gtk/gtk_compat.cc
++++ b/ui/gtk/gtk_compat.cc
+@@ -82,15 +82,6 @@ void* GetLibGio() {
+   return libgio;
+ }
+ 
+-void* GetLibGdkPixbuf() {
+-#if BUILDFLAG(IS_BSD)
+-  static void* libgdk_pixbuf = DlOpen("libgdk_pixbuf-2.0.so");
+-#else
+-  static void* libgdk_pixbuf = DlOpen("libgdk_pixbuf-2.0.so.0");
+-#endif
+-  return libgdk_pixbuf;
+-}
+-
+ void* GetLibGdk3() {
+ #if BUILDFLAG(IS_BSD)
+   static void* libgdk3 = DlOpen("libgdk-3.so");
