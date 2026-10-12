@@ -6,7 +6,7 @@
 _startdir=$(pwd)
 . "$_startdir/kaiju.conf"
 
-_rollup_ver="4.60.4"
+#_rollup_ver="4.60.4"
 #_esbuild_ver="0.25.9"
 
 # func
@@ -54,11 +54,11 @@ if [ ! -f "$tools_workdir/chromium-${c_ver}-download_done" ]; then
     sed -n 's|sha256 *\(.*\)|\1|p' "$tools_workdir/chromium-${c_ver}.tar.xz.hashes" | sha256 -c || die checksum
 
     # Extra sources
-    if [ ! -f "$distfiles/rollup-rollup-v${_rollup_ver}.tar.gz" ]; then
-        curl -L "https://github.com/rollup/rollup/archive/v${_rollup_ver}.tar.gz" \
-             -o "$distfiles/rollup-rollup-v${_rollup_ver}.tar.gz" \
-             || die "curl rollup"
-    fi
+#    if [ ! -f "$distfiles/rollup-rollup-v${_rollup_ver}.tar.gz" ]; then
+#        curl -L "https://github.com/rollup/rollup/archive/v${_rollup_ver}.tar.gz" \
+#             -o "$distfiles/rollup-rollup-v${_rollup_ver}.tar.gz" \
+#             || die "curl rollup"
+#    fi
 #    if [ ! -f "$distfiles/evanw-esbuild-v${_esbuild_ver}.tar.gz" ]; then
 #        curl -L "https://github.com/evanw/esbuild/archive/v${_esbuild_ver}.tar.gz" \
 #             -o "$distfiles/evanw-esbuild-v${_esbuild_ver}.tar.gz" \
@@ -84,8 +84,8 @@ if [ ! -f "$tools_workdir/chromium-${c_ver}-extract_done" ]; then
     sed -i'' 's/third_party\/\*/third_partyXXX\/\*/g' "chromium-${c_ver}/third_party/devtools-frontend/src/.gitignore"
 
     # Extra sources
-    mkdir "chromium-${c_ver}/rollup" || die
-    tar -xzf "$distfiles/rollup-rollup-v${_rollup_ver}.tar.gz" --strip-components=1 -C "chromium-${c_ver}/rollup" || die "extract rollup"
+#    mkdir "chromium-${c_ver}/rollup" || die
+#    tar -xzf "$distfiles/rollup-rollup-v${_rollup_ver}.tar.gz" --strip-components=1 -C "chromium-${c_ver}/rollup" || die "extract rollup"
 #    mkdir "chromium-${c_ver}/esbuild" || die
 #    tar -xzf "$distfiles/evanw-esbuild-v${_esbuild_ver}.tar.gz" --strip-components=1 -C "chromium-${c_ver}/esbuild" || die "extract esbuild"
 
