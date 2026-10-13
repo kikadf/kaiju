@@ -109,6 +109,18 @@ index bdcf3d87eb..c2ba5a28e2 100644
    // On Linux we could not access clipboard in renderer process.
    for (const method of Object.keys(originalClipboard) as (keyof Electron.Clipboard)[]) {
      clipboard[method] = makeRemoteMethod(method);
+diff --git a/electron/node_modules/@sentry/cli/scripts/install.js b/electron/node_modules/@sentry/cli/scripts/install.js
+index 0728957daf..8a49011a25 100644
+--- a/electron/node_modules/@sentry/cli/scripts/install.js
++++ b/electron/node_modules/@sentry/cli/scripts/install.js
+@@ -79,6 +79,7 @@ function getDownloadUrl(platform, arch) {
+       return `${releasesUrl}-Windows-${archString}.exe`;
+     case 'linux':
+     case 'freebsd':
++    case 'netbsd':
+       return `${releasesUrl}-Linux-${archString}`;
+     default:
+       return null;
 diff --git a/electron/script/lib/config.py b/electron/script/lib/config.py
 index a3ec073358..9731db0d7c 100644
 --- a/electron/script/lib/config.py
@@ -1391,3 +1403,16 @@ index 5ef9d2105e..b1ffe2c664 100644
 +    }
    }
  }
+diff --git a/third_party/electron_node/tools/generate_config_gypi.py b/third_party/electron_node/tools/generate_config_gypi.py
+index 436767e633..4e56ec129b 100755
+--- a/third_party/electron_node/tools/generate_config_gypi.py
++++ b/third_party/electron_node/tools/generate_config_gypi.py
+@@ -19,7 +19,7 @@ import getnapibuildversion
+ 
+ # Regex used for parsing results of "gn args".
+ GN_RE = re.compile(r'(\w+)\s+=\s+(.*?)$', re.MULTILINE)
+-GN = 'gn.bat' if sys.platform == 'win32' else 'gn'
++GN = 'gn.bat' if sys.platform == 'win32' else '@WRKSRC@/out/Release/gn'
+ 
+ def bool_to_number(v):
+   return 1 if v else 0

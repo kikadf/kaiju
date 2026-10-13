@@ -95,18 +95,6 @@ if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-extract_done" ]; then
     echo "Extract distfiles to electron${_e_main}-netbsd-${e_ver}..."
     mkdir -p "electron${_e_main}-netbsd-${e_ver}" || die
     tar -xJf "$distfiles/chromium-${_c_ver}-pkgsrc.tar.xz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}" || die "extract chromium"
-    echo "*.rej" >> "electron${_e_main}-netbsd-${e_ver}/.gitignore"
-    echo "*.rej.*" >> "electron${_e_main}-netbsd-${e_ver}/.gitignore"
-    echo "*.orig" >> "electron${_e_main}-netbsd-${e_ver}/.gitignore"
-    echo "*.gitignore" >> "electron${_e_main}-netbsd-${e_ver}/.gitignore"
-    echo "/electron/.ecache" >> "electron${_e_main}-netbsd-${e_ver}/.gitignore"
-    sed -i'' 's/swiftshader/swiftshaderXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/.gitignore"
-    sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/vulkan-deps/.gitignore"
-    sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/.gitignore"
-    sed -i'' 's/vulkan-loader/vulkan-loadersXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/.gitignore"
-    sed -i'' 's/vulkan-loader/vulkan-loadersXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/vulkan-deps/.gitignore"
-    sed -i'' 's/dawn_commit_hash/dawn_commit_hashXXX/g' "electron${_e_main}-netbsd-${e_ver}/gpu/webgpu/.gitignore"
-    sed -i'' 's/third_party\/\*/third_partyXXX\/\*/g' "electron${_e_main}-netbsd-${e_ver}/third_party/devtools-frontend/src/.gitignore"
     mkdir "electron${_e_main}-netbsd-${e_ver}/electron" || die
     tar -xzf "$distfiles/electron${_e_main}-${e_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/electron" || die "extract electron"
     mkdir "electron${_e_main}-netbsd-${e_ver}/third_party/electron_node" || die
@@ -123,13 +111,6 @@ if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-extract_done" ]; then
     tar -xzf "$distfiles/EngFlow-reclient-configs-${_eng_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/third_party/engflow-reclient-configs" || die "extract engflow"
     mkdir "electron${_e_main}-netbsd-${e_ver}/rollup" || die
     tar -xzf "$distfiles/rollup-rollup-v${_rollup_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/rollup" || die "extract rollup"
-    sed -i'' 's/electron/electronXXX/g' "electron${_e_main}-netbsd-${e_ver}/.gitignore"
-    sed -i'' 's/electron_node/electron_nodeXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/.gitignore"
-    sed -i'' 's/engflow-reclient-configs/engflow-reclient-configsXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/.gitignore"
-    sed -i'' 's/nan/nanXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/.gitignore"
-    sed -i'' 's/squirrel.mac/squirrel.macXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/.gitignore"
-    sed -i'' 's/vendor/vendorXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac/.gitignore"
-    sed -i'' 's/nacl/naclXXX/g' "electron${_e_main}-netbsd-${e_ver}/buildtools/reclient_cfgs/.gitignore"
 
     cd "$_startdir" || die
     touch "$tools_workdir/electron${_e_main}-${e_ver}-extract_done"
@@ -151,6 +132,25 @@ fi
 
 # init git repo
 if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-init_done" ]; then
+    cd "$tools_workdir"
+    echo "*.rej" >> "electron${_e_main}-netbsd-${e_ver}/.gitignore"
+    echo "*.rej.*" >> "electron${_e_main}-netbsd-${e_ver}/.gitignore"
+    echo "*.orig" >> "electron${_e_main}-netbsd-${e_ver}/.gitignore"
+    echo "*.gitignore" >> "electron${_e_main}-netbsd-${e_ver}/.gitignore"
+    echo "/electron/.ecache" >> "electron${_e_main}-netbsd-${e_ver}/.gitignore"
+    sed -i'' 's/swiftshader/swiftshaderXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/.gitignore"
+    sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/vulkan-deps/.gitignore"
+    sed -i'' 's/vulkan-validation-layers/vulkan-validation-layersXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/.gitignore"
+    sed -i'' 's/vulkan-loader/vulkan-loadersXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/.gitignore"
+    sed -i'' 's/vulkan-loader/vulkan-loadersXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/vulkan-deps/.gitignore"
+    sed -i'' 's/dawn_commit_hash/dawn_commit_hashXXX/g' "electron${_e_main}-netbsd-${e_ver}/gpu/webgpu/.gitignore"
+    sed -i'' 's/third_party\/\*/third_partyXXX\/\*/g' "electron${_e_main}-netbsd-${e_ver}/third_party/devtools-frontend/src/.gitignore"
+    sed -i'' 's/node_modules/node_modulesXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/electron_node/.gitignore"
+    sed -i'' 's/node_modules/node_modulesXXX/g' "electron${_e_main}-netbsd-${e_ver}/electron/.gitignore"
+    sed -i'' 's/engflow-reclient-configs/engflow-reclient-configsXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/.gitignore"
+    sed -i'' 's/vendor/vendorXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac/.gitignore"
+    sed -i'' 's/nacl/naclXXX/g' "electron${_e_main}-netbsd-${e_ver}/buildtools/reclient_cfgs/.gitignore"
+
     cd "$tools_workdir/electron${_e_main}-netbsd-${e_ver}"
     git init || die
     git add . || die
@@ -177,6 +177,11 @@ if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-electronpatches_done" ]; t
     done
 
     cd "$_bd" || die
+    sed -i'' 's/electron/electronXXX/g' ".gitignore"
+    sed -i'' 's/electron_node/electron_nodeXXX/g' "third_party/.gitignore"
+    sed -i'' 's/squirrel.mac/squirrel.macXXX/g' "third_party/.gitignore"
+    sed -i'' 's/nan/nanXXX/g' "third_party/.gitignore"
+
     git add .
     git commit -m "Apply Electron patchset"
 
