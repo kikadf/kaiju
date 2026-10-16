@@ -822,7 +822,7 @@ index d294d237a3..729a3ea3e6 100644
    }
  
 diff --git a/chrome/browser/about_flags.cc b/chrome/browser/about_flags.cc
-index 5d341dd810..ac4448b23b 100644
+index 106b45ffa3..b6687ddad2 100644
 --- a/chrome/browser/about_flags.cc
 +++ b/chrome/browser/about_flags.cc
 @@ -994,6 +994,8 @@ const FeatureEntry::FeatureParam kAudioBackendPulseAudio[] = {
@@ -857,10 +857,10 @@ index ca2bb8f703..83709e7f2e 100644
      info->os = extensions::api::runtime::PlatformOs::kAndroid;
    } else {
 diff --git a/chrome/browser/flag_descriptions.h b/chrome/browser/flag_descriptions.h
-index a602b278bf..94c58fbd7d 100644
+index 0f8026d3f6..8d38e9fc4f 100644
 --- a/chrome/browser/flag_descriptions.h
 +++ b/chrome/browser/flag_descriptions.h
-@@ -8940,6 +8940,8 @@ inline constexpr char kAudioBackendName[] =
+@@ -8946,6 +8946,8 @@ inline constexpr char kAudioBackendName[] =
  inline constexpr char kAudioBackendDescription[] =
  #if BUILDFLAG(IS_OPENBSD)
      "Select the desired audio backend to use. The default is sndio.";
@@ -914,7 +914,7 @@ index f55fbb9ab3..ff4f80da39 100644
  }
  
 diff --git a/chrome/updater/ipc/ipc_security_linux.cc b/chrome/updater/ipc/ipc_security_linux.cc
-index 0e88fa8da9..1dd8195f01 100644
+index d270fb9a47..9e745c2553 100644
 --- a/chrome/updater/ipc/ipc_security_linux.cc
 +++ b/chrome/updater/ipc/ipc_security_linux.cc
 @@ -16,7 +16,11 @@ namespace updater {
@@ -1058,6 +1058,19 @@ index 28f8ae9e2f..57537f799e 100755
      'chrome.win7': ['win'],
  }
  
+diff --git a/components/soda/soda_util.cc b/components/soda/soda_util.cc
+index 90ce2d63d8..8f94b0b2be 100644
+--- a/components/soda/soda_util.cc
++++ b/components/soda/soda_util.cc
+@@ -23,7 +23,7 @@
+ #include "base/win/windows_version.h"
+ #endif
+ 
+-#if (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC)) && defined(ARCH_CPU_X86_FAMILY)
++#if (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_BSD)) && defined(ARCH_CPU_X86_FAMILY)
+ #include "base/cpu.h"
+ #endif
+ 
 diff --git a/components/sync/base/sync_util.cc b/components/sync/base/sync_util.cc
 index 89ffbb65f9..0097b46adf 100644
 --- a/components/sync/base/sync_util.cc
@@ -1098,7 +1111,7 @@ index e35f2db520..275b2b9fb4 100644
  #error "unknown os"
  #endif
 diff --git a/content/test/BUILD.gn b/content/test/BUILD.gn
-index 830f84198c..bf5da51d7e 100644
+index de99ad761f..c9c49aafad 100644
 --- a/content/test/BUILD.gn
 +++ b/content/test/BUILD.gn
 @@ -1832,7 +1832,7 @@ test("content_browsertests") {

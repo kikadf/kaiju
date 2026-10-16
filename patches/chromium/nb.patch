@@ -5173,7 +5173,7 @@ index e04e7afbbb..729a3ea3e6 100644
    }
  
 diff --git a/cc/base/features.cc b/cc/base/features.cc
-index 3d161dbcba..63b959f8fc 100644
+index 0b31eb9813..2241ba40c8 100644
 --- a/cc/base/features.cc
 +++ b/cc/base/features.cc
 @@ -46,7 +46,7 @@ const base::FeatureParam<int> kDeferImplInvalidationFrames{
@@ -5372,7 +5372,7 @@ index c027a43eb3..3d9e9c8f6b 100644
          *base::CommandLine::ForCurrentProcess());
  #endif
 diff --git a/chrome/browser/about_flags.cc b/chrome/browser/about_flags.cc
-index 9029a80c8d..ac4448b23b 100644
+index ba175a0e37..b6687ddad2 100644
 --- a/chrome/browser/about_flags.cc
 +++ b/chrome/browser/about_flags.cc
 @@ -358,13 +358,13 @@
@@ -8705,10 +8705,10 @@ index c53238661c..60c7b72ee1 100644
  // called, the decision to show the dialog or not will be made by Chrome based
  // on a number of factors (such as install type, whether it's a Chrome-branded
 diff --git a/chrome/browser/flag_descriptions.h b/chrome/browser/flag_descriptions.h
-index 8269cebf3e..94c58fbd7d 100644
+index 9cacf518b0..8d38e9fc4f 100644
 --- a/chrome/browser/flag_descriptions.h
 +++ b/chrome/browser/flag_descriptions.h
-@@ -8934,6 +8934,20 @@ inline constexpr char kAntivirusTelemetryForDownloadsDescription[] =
+@@ -8940,6 +8940,20 @@ inline constexpr char kAntivirusTelemetryForDownloadsDescription[] =
      "Enables antivirus product info to be included in Safe Browsing download "
      "pings.";
  
@@ -8800,7 +8800,7 @@ index 5fe8646741..0568c21040 100644
  #elif BUILDFLAG(IS_CHROMEOS)
    return mojom::Platform::kChromeOS;
 diff --git a/chrome/browser/glic/public/features.cc b/chrome/browser/glic/public/features.cc
-index bb0dd261f2..1ceb949589 100644
+index 1174817417..fd0fca6e42 100644
 --- a/chrome/browser/glic/public/features.cc
 +++ b/chrome/browser/glic/public/features.cc
 @@ -95,7 +95,7 @@ BASE_FEATURE(kGlicCreateTabAdjacent, base::FEATURE_ENABLED_BY_DEFAULT);
@@ -12241,10 +12241,10 @@ index 1a68ca9232..0f64613239 100644
          {ui::VKEY_N, ui::EF_SHIFT_DOWN | ui::EF_ALT_DOWN, IDC_NEW_SPLIT_TAB}));
  #elif BUILDFLAG(IS_CHROMEOS)
 diff --git a/chrome/browser/ui/actions/chrome_action_id.h b/chrome/browser/ui/actions/chrome_action_id.h
-index fb916f9989..e73cc7808d 100644
+index b9c8319367..78cfa56655 100644
 --- a/chrome/browser/ui/actions/chrome_action_id.h
 +++ b/chrome/browser/ui/actions/chrome_action_id.h
-@@ -459,7 +459,7 @@
+@@ -460,7 +460,7 @@
    E(kActionVisitDesktopOfLruUser3, IDC_VISIT_DESKTOP_OF_LRU_USER_3) \
    E(kActionVisitDesktopOfLruUser4, IDC_VISIT_DESKTOP_OF_LRU_USER_4) \
    E(kActionVisitDesktopOfLruUser5, IDC_VISIT_DESKTOP_OF_LRU_USER_5)
@@ -12351,7 +12351,7 @@ index 8121f9b9bc..db3622834c 100644
        scoped_observation_{this};
  #endif  // BUILDFLAG(IS_LINUX)
 diff --git a/chrome/browser/ui/browser_actions.cc b/chrome/browser/ui/browser_actions.cc
-index 83b50c9d04..c5d9e65e70 100644
+index 280e663b72..bd10035149 100644
 --- a/chrome/browser/ui/browser_actions.cc
 +++ b/chrome/browser/ui/browser_actions.cc
 @@ -246,7 +246,7 @@
@@ -12363,7 +12363,7 @@ index 83b50c9d04..c5d9e65e70 100644
  #include "chrome/common/pref_names.h"
  #include "components/prefs/pref_service.h"
  #endif
-@@ -2624,7 +2624,7 @@ void BrowserActions::InitializeToolbarAndMiscActions() {
+@@ -2619,7 +2619,7 @@ void BrowserActions::InitializeToolbarAndMiscActions() {
            .Build());
  #endif  // BUILDFLAG(IS_CHROMEOS)
  
@@ -12372,7 +12372,7 @@ index 83b50c9d04..c5d9e65e70 100644
    root_action_item_->AddChild(
        actions::ActionItem::Builder(
            base::BindRepeating(
-@@ -2784,7 +2784,7 @@ void BrowserActions::InitializeToolbarAndMiscActions() {
+@@ -2779,7 +2779,7 @@ void BrowserActions::InitializeToolbarAndMiscActions() {
            .SetAccelerator(GetAcceleratorForCommandId(IDC_EXIT))
            .Build());
  
@@ -12381,7 +12381,7 @@ index 83b50c9d04..c5d9e65e70 100644
    root_action_item_->AddChild(
        actions::ActionItem::Builder(
            base::BindRepeating(
-@@ -3734,7 +3734,7 @@ void BrowserActions::InitializeToolbarAndMiscActions() {
+@@ -3729,7 +3729,7 @@ void BrowserActions::InitializeToolbarAndMiscActions() {
                [](BrowserWindowInterface* bwi, actions::ActionItem* item,
                   actions::ActionInvocationContext context) {
                  base::RecordAction(base::UserMetricsAction("CreateShortcut"));
@@ -12390,7 +12390,7 @@ index 83b50c9d04..c5d9e65e70 100644
                  chrome::CreateDesktopShortcutForActiveWebContents(bwi);
  #else
                  web_app::CreateWebAppFromCurrentWebContents(
-@@ -4651,7 +4651,7 @@ void BrowserActions::InitializeToolbarAndMiscActions() {
+@@ -4667,7 +4667,7 @@ void BrowserActions::InitializeToolbarAndMiscActions() {
  #endif
  
  #if BUILDFLAG(GOOGLE_CHROME_BRANDING) && \
@@ -15840,6 +15840,28 @@ index 23230fb0bf..b358eec464 100644
    PrefChangeRegistrar browser_pref_change_registrar_;
  #endif
    PrefChangeRegistrar pref_change_registrar_;
+diff --git a/chrome/browser/ui/webui/side_panel/read_anything/read_anything_untrusted_page_handler.cc b/chrome/browser/ui/webui/side_panel/read_anything/read_anything_untrusted_page_handler.cc
+index e65278d73f..bd9d5af036 100644
+--- a/chrome/browser/ui/webui/side_panel/read_anything/read_anything_untrusted_page_handler.cc
++++ b/chrome/browser/ui/webui/side_panel/read_anything/read_anything_untrusted_page_handler.cc
+@@ -189,7 +189,7 @@ constexpr int PDF_LOAD_DELAY_MS = 1000;
+ // Prefix definition for logging.
+ constexpr char kReadAnythingPrefix[] = "Read Anything";
+ 
+-#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ // chrome://whats-new renders its content in a single https://www.google.com
+ // child frame (see the frame-src CSP in WhatsNewUI). Reading mode distills that
+ // frame directly.
+@@ -298,7 +298,7 @@ bool IsSameOriginSubframe(content::RenderFrameHost* rfh,
+ // chrome://whats-new only exists on Windows, Mac and Linux.
+ bool IsWhatsNewEmbeddedContentFrame(content::RenderFrameHost* rfh,
+                                     content::RenderFrameHost* main_frame) {
+-#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   return rfh->GetParent() == main_frame &&
+          main_frame->GetLastCommittedOrigin().IsSameOriginWith(
+              GURL(chrome::kChromeUIWhatsNewURL)) &&
 diff --git a/chrome/browser/ui/webui/signin/profile_picker_handler.cc b/chrome/browser/ui/webui/signin/profile_picker_handler.cc
 index 7911eeac15..37778e081f 100644
 --- a/chrome/browser/ui/webui/signin/profile_picker_handler.cc
@@ -17207,7 +17229,7 @@ index c458e4f24d..f0e444254d 100644
  #elif BUILDFLAG(IS_WIN)
    base::win::SecurityDescriptor sd = GetAdminDaclSecurityDescriptor();
 diff --git a/chrome/renderer/chrome_content_renderer_client.cc b/chrome/renderer/chrome_content_renderer_client.cc
-index 3b030af0de..cdc33c7843 100644
+index 6c42a31de5..02c43a22d6 100644
 --- a/chrome/renderer/chrome_content_renderer_client.cc
 +++ b/chrome/renderer/chrome_content_renderer_client.cc
 @@ -190,7 +190,7 @@
@@ -17219,7 +17241,7 @@ index 3b030af0de..cdc33c7843 100644
  #include "components/webapps/isolated_web_apps/scheme.h"
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) ||
          // BUILDFLAG(IS_CHROMEOS)
-@@ -459,7 +459,7 @@ void ChromeContentRendererClient::RenderThreadStarted() {
+@@ -468,7 +468,7 @@ void ChromeContentRendererClient::RenderThreadStarted() {
    WebSecurityPolicy::RegisterURLSchemeAsExtension(
        WebString::FromAscii(extensions::kExtensionScheme));
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -17228,7 +17250,7 @@ index 3b030af0de..cdc33c7843 100644
    WebSecurityPolicy::RegisterURLSchemeAsIsolatedApp(
        WebString::FromAscii(webapps::kIsolatedAppScheme));
  #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) ||
-@@ -524,7 +524,7 @@ void ChromeContentRendererClient::RenderThreadStarted() {
+@@ -533,7 +533,7 @@ void ChromeContentRendererClient::RenderThreadStarted() {
        WebString::FromAscii(chrome::kChromeSearchScheme));
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -17237,7 +17259,7 @@ index 3b030af0de..cdc33c7843 100644
    // IWAs can be enabled by either the feature flag or by enterprise
    // policy. In either case the kEnableIsolatedWebAppsInRenderer flag is passed
    // to the renderer process.
-@@ -579,7 +579,7 @@ void ChromeContentRendererClient::RenderThreadStarted() {
+@@ -588,7 +588,7 @@ void ChromeContentRendererClient::RenderThreadStarted() {
    WebSecurityPolicy::RegisterURLSchemeAsDisplayIsolated(dom_distiller_scheme);
  
  #if BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || \
@@ -17457,7 +17479,7 @@ index 5a90e9dadd..f0db374c8e 100644
    // to load an external library. This should be done when the configurator is
    // created.
 diff --git a/chrome/updater/ipc/ipc_security_linux.cc b/chrome/updater/ipc/ipc_security_linux.cc
-index 0e88fa8da9..1dd8195f01 100644
+index d270fb9a47..9e745c2553 100644
 --- a/chrome/updater/ipc/ipc_security_linux.cc
 +++ b/chrome/updater/ipc/ipc_security_linux.cc
 @@ -16,7 +16,11 @@ namespace updater {
@@ -19336,10 +19358,10 @@ index dbdad3bdc6..4d4e7b03d9 100644
    // The process of the peer. Only valid if `include_peer_process_info` is true
    // in EndpointOptions.
 diff --git a/components/named_mojo_ipc_server/endpoint_options.h b/components/named_mojo_ipc_server/endpoint_options.h
-index b6f44ebc48..a88e7fdc7a 100644
+index 17d6428bbd..85051ffee8 100644
 --- a/components/named_mojo_ipc_server/endpoint_options.h
 +++ b/components/named_mojo_ipc_server/endpoint_options.h
-@@ -65,7 +65,7 @@ struct EndpointOptions {
+@@ -77,7 +77,7 @@ struct EndpointOptions {
    std::wstring security_descriptor;
  #endif
  
@@ -19687,7 +19709,7 @@ index 4a531f8a8b..0627259e0b 100644
  BASE_DECLARE_FEATURE(kRestartToGainAccessToKeychain);
  #endif  // BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
 diff --git a/components/password_manager/core/browser/password_autofill_manager.cc b/components/password_manager/core/browser/password_autofill_manager.cc
-index 58663f64c9..9156ef0487 100644
+index a01365e8f6..ea939f05d8 100644
 --- a/components/password_manager/core/browser/password_autofill_manager.cc
 +++ b/components/password_manager/core/browser/password_autofill_manager.cc
 @@ -409,7 +409,7 @@ void PasswordAutofillManager::DidAcceptSuggestion(
@@ -19708,7 +19730,7 @@ index 58663f64c9..9156ef0487 100644
          cross_domain_confirmation_controller_ =
              password_client_->ShowCrossDomainConfirmationPopup(
                  last_popup_open_args_.element_bounds,
-@@ -729,7 +729,7 @@ void PasswordAutofillManager::DidNavigateMainFrame() {
+@@ -737,7 +737,7 @@ void PasswordAutofillManager::DidNavigateFrame() {
    manual_fallback_metrics_recorder_ =
        std::make_unique<PasswordManualFallbackMetricsRecorder>();
  #if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN) || BUILDFLAG(IS_CHROMEOS) || \
@@ -19718,10 +19740,10 @@ index 58663f64c9..9156ef0487 100644
  #endif
    wait_for_passkeys_timer_.Stop();
 diff --git a/components/password_manager/core/browser/password_autofill_manager.h b/components/password_manager/core/browser/password_autofill_manager.h
-index 14c03d2280..a461d033ae 100644
+index 91223d3644..0c842858d4 100644
 --- a/components/password_manager/core/browser/password_autofill_manager.h
 +++ b/components/password_manager/core/browser/password_autofill_manager.h
-@@ -303,7 +303,7 @@ class PasswordAutofillManager : public autofill::AutofillSuggestionDelegate,
+@@ -306,7 +306,7 @@ class PasswordAutofillManager : public autofill::AutofillSuggestionDelegate,
  
    // Stores the controller of warning popup UI on cross domain filling.
  #if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN) || BUILDFLAG(IS_CHROMEOS) || \
@@ -19766,7 +19788,7 @@ index 3602205e9c..6ec1ddae88 100644
            form_fetcher_->GetProfileStoreBackendError())) {
      client_->NotifyKeychainError();
 diff --git a/components/password_manager/core/browser/password_manager.cc b/components/password_manager/core/browser/password_manager.cc
-index 1f9a93b892..0e75e3ee8d 100644
+index b737c7dd23..6a2449a532 100644
 --- a/components/password_manager/core/browser/password_manager.cc
 +++ b/components/password_manager/core/browser/password_manager.cc
 @@ -615,12 +615,12 @@ void PasswordManager::RegisterProfilePrefs(
@@ -20996,9 +21018,18 @@ index d0f538e918..ed78d16bdb 100644
    // Aloha FeedbackKit. For Android, this is implemented by GMS Core.
    signin::Tribool can_submit_feedback() const;
 diff --git a/components/soda/soda_util.cc b/components/soda/soda_util.cc
-index 5d638bb606..c1d798a032 100644
+index d7790736c6..8f94b0b2be 100644
 --- a/components/soda/soda_util.cc
 +++ b/components/soda/soda_util.cc
+@@ -23,7 +23,7 @@
+ #include "base/win/windows_version.h"
+ #endif
+ 
+-#if (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC)) && defined(ARCH_CPU_X86_FAMILY)
++#if (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_BSD)) && defined(ARCH_CPU_X86_FAMILY)
+ #include "base/cpu.h"
+ #endif
+ 
 @@ -39,7 +39,7 @@ bool IsSupportedChromeOS() {
  }
  #endif  // BUILDFLAG(IS_CHROMEOS)
@@ -21008,7 +21039,7 @@ index 5d638bb606..c1d798a032 100644
  bool IsSupportedLinux() {
  #if defined(ARCH_CPU_X86_FAMILY)
    // Check if the CPU has the required instruction set to run the Speech
-@@ -91,7 +91,7 @@ bool IsOnDeviceSpeechRecognitionSupported() {
+@@ -85,7 +85,7 @@ bool IsOnDeviceSpeechRecognitionSupported() {
    // support Gemini Nano.
  #if BUILDFLAG(IS_CHROMEOS)
    return IsSupportedChromeOS();
@@ -24344,7 +24375,7 @@ index e28be1d5a9..51dd93a66c 100644
      // supported.
      if (GpuDataManagerImpl::GetInstance()->IsGpuMemoryBufferNV12Supported())
 diff --git a/content/browser/renderer_host/navigation_transitions/navigation_entry_screenshot.cc b/content/browser/renderer_host/navigation_transitions/navigation_entry_screenshot.cc
-index 3ab0871f12..983dbf7a97 100644
+index 9986618c9b..f396567d5d 100644
 --- a/content/browser/renderer_host/navigation_transitions/navigation_entry_screenshot.cc
 +++ b/content/browser/renderer_host/navigation_transitions/navigation_entry_screenshot.cc
 @@ -71,7 +71,7 @@ void CompressNavigationScreenshotOnWorkerThread(
@@ -25258,7 +25289,7 @@ index 986ccc4601..55fc2ca661 100644
        deps += [ "//media/gpu/v4l2" ]
      }
 diff --git a/content/common/features.cc b/content/common/features.cc
-index 7ac35b5a84..791cb73adb 100644
+index d90ed1b2e2..357db10393 100644
 --- a/content/common/features.cc
 +++ b/content/common/features.cc
 @@ -233,7 +233,7 @@ BASE_FEATURE(kKillOnUnexpectedOriginHeader, base::FEATURE_ENABLED_BY_DEFAULT);
@@ -25299,7 +25330,7 @@ index 7ac35b5a84..791cb73adb 100644
    return base::FeatureList::IsEnabled(features::kFontDataServiceLinux);
  #elif BUILDFLAG(IS_CHROMEOS)
    return base::FeatureList::IsEnabled(features::kFontDataServiceChromeOS);
-@@ -845,7 +845,7 @@ BASE_FEATURE(kStrictHighRankProcessLRU, base::FEATURE_ENABLED_BY_DEFAULT);
+@@ -849,7 +849,7 @@ BASE_FEATURE(kStrictHighRankProcessLRU, base::FEATURE_ENABLED_BY_DEFAULT);
  // is handled at a different level and not through the interpretation of scroll
  // events.
  BASE_FEATURE(kTouchpadOverscrollHistoryNavigation,
@@ -25309,7 +25340,7 @@ index 7ac35b5a84..791cb73adb 100644
  #else
               base::FEATURE_DISABLED_BY_DEFAULT
 diff --git a/content/common/features.h b/content/common/features.h
-index 9af94040d9..b42fc20996 100644
+index 360a758171..9dac9ffda8 100644
 --- a/content/common/features.h
 +++ b/content/common/features.h
 @@ -90,7 +90,7 @@ CONTENT_EXPORT BASE_DECLARE_FEATURE(kEarlyTopAppForSandboxedRenderer);
@@ -26028,7 +26059,7 @@ index e56b2ab391..97747f0f6b 100644
      binders->Add<content::mojom::SandboxStatusService>(
          base::BindRepeating(
 diff --git a/content/test/BUILD.gn b/content/test/BUILD.gn
-index 830f84198c..bf5da51d7e 100644
+index de99ad761f..c9c49aafad 100644
 --- a/content/test/BUILD.gn
 +++ b/content/test/BUILD.gn
 @@ -1832,7 +1832,7 @@ test("content_browsertests") {
@@ -48970,7 +49001,7 @@ index 8c01e0ab6b..baf5b095db 100644
  DesktopWindowTreeHost* DesktopWindowTreeHost::Create(
      internal::NativeWidgetDelegate* native_widget_delegate,
 diff --git a/ui/views/widget/widget.cc b/ui/views/widget/widget.cc
-index 8bae166f9d..e0c8780c23 100644
+index 35d5b656d9..4b45d99c51 100644
 --- a/ui/views/widget/widget.cc
 +++ b/ui/views/widget/widget.cc
 @@ -75,7 +75,7 @@
@@ -48982,7 +49013,7 @@ index 8bae166f9d..e0c8780c23 100644
  #include "ui/linux/linux_ui.h"
  #endif
  
-@@ -2848,7 +2848,7 @@ const ui::NativeTheme* Widget::GetNativeTheme() const {
+@@ -2853,7 +2853,7 @@ const ui::NativeTheme* Widget::GetNativeTheme() const {
      return parent_->GetNativeTheme();
    }
  
