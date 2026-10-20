@@ -24,6 +24,7 @@ getver() {
 _e_main=${e_ver%%.*}
 _c_ver=$(getver 2)
 _node_ver=$(getver 3)
+_node_mainver=${_node_ver%%.*}
 _nan_ver=$(getver 4)
 _sq_ver=$(getver 5)
 _ro_ver=$(getver 6)
@@ -70,11 +71,11 @@ if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-download_done" ]; then
               -o "$distfiles/Mantle-Mantle-${_m_ver}.tar.gz" \
               || die "curl Mantle"
     fi
-    if [ ! -f "$distfiles/EngFlow-reclient-configs-${_eng_ver}.tar.gz" ]; then
-         curl -L "https://github.com/EngFlow/reclient-configs/archive/${_eng_ver}.tar.gz" \
-              -o "$distfiles/EngFlow-reclient-configs-${_eng_ver}.tar.gz" \
-              || die "curl reclient-configs"
-    fi
+#    if [ ! -f "$distfiles/EngFlow-reclient-configs-${_eng_ver}.tar.gz" ]; then
+#         curl -L "https://github.com/EngFlow/reclient-configs/archive/${_eng_ver}.tar.gz" \
+#              -o "$distfiles/EngFlow-reclient-configs-${_eng_ver}.tar.gz" \
+#              || die "curl reclient-configs"
+#    fi
     if [ ! -f "$distfiles/electron${_e_main}-${e_ver}.tar.gz" ]; then
          curl -L "https://github.com/electron/electron/archive/v${e_ver}.tar.gz" \
               -o "$distfiles/electron${_e_main}-${e_ver}.tar.gz" \
@@ -107,8 +108,8 @@ if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-extract_done" ]; then
     tar -xzf "$distfiles/ReactiveCocoa-ReactiveObjC-${_ro_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac/vendor/ReactiveObjC" || die "extract ReactiveObjC"
     mkdir "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac/vendor/Mantle" || die
     tar -xzf "$distfiles/Mantle-Mantle-${_m_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac/vendor/Mantle" || die "extract mantle"
-    mkdir "electron${_e_main}-netbsd-${e_ver}/third_party/engflow-reclient-configs" || die
-    tar -xzf "$distfiles/EngFlow-reclient-configs-${_eng_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/third_party/engflow-reclient-configs" || die "extract engflow"
+#    mkdir "electron${_e_main}-netbsd-${e_ver}/third_party/engflow-reclient-configs" || die
+#    tar -xzf "$distfiles/EngFlow-reclient-configs-${_eng_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/third_party/engflow-reclient-configs" || die "extract engflow"
     mkdir "electron${_e_main}-netbsd-${e_ver}/rollup" || die
     tar -xzf "$distfiles/rollup-rollup-v${_rollup_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/rollup" || die "extract rollup"
 
@@ -146,6 +147,7 @@ if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-init_done" ]; then
     sed -i'' 's/dawn_commit_hash/dawn_commit_hashXXX/g' "electron${_e_main}-netbsd-${e_ver}/gpu/webgpu/.gitignore"
     sed -i'' 's/third_party\/\*/third_partyXXX\/\*/g' "electron${_e_main}-netbsd-${e_ver}/third_party/devtools-frontend/src/.gitignore"
     sed -i'' 's/node_modules/node_modulesXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/electron_node/.gitignore"
+    echo 'deps/v8/**/*.orig' >> "electron${_e_main}-netbsd-${e_ver}/third_party/electron_node/.gitignore"
     sed -i'' 's/node_modules/node_modulesXXX/g' "electron${_e_main}-netbsd-${e_ver}/electron/.gitignore"
     sed -i'' 's/engflow-reclient-configs/engflow-reclient-configsXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/.gitignore"
     sed -i'' 's/vendor/vendorXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac/.gitignore"
@@ -224,6 +226,50 @@ if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-fixelectronpatches_done" ]
 
     cd "$_startdir" || die
     touch "$tools_workdir/electron${_e_main}-${e_ver}-fixelectronpatches_done"
+fi
+
+# Apply pkgsrc nodejs patches
+if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-pkgsrcpatches_done" ]; then
+    cd "$tools_workdir" || die
+    fetch_pkgsrc
+    if [ -d "pkgsrc-kaiju/lang/nodejs${_node_mainver}/patches" ]; then
+        p_dir="${tools_workdir}/pkgsrc-kaiju/lang/nodejs${_node_mainver}/patches"
+    else
+        echo "Error: not found pkgsrc(-kaiju) tree"
+        exit 1
+    fi
+
+    cd "electron${_e_main}-netbsd-${e_ver}/third_party/electron_node" || die
+    for _patch in "$p_dir"/patch-* ; do
+        if [ -e "$_patch" ]; then
+            patch -Np0 -i "$_patch"
+        fi
+    done
+
+    git add . || die
+    git commit -m "Apply pkgsrc's nodejs${_node_mainver} patches" || die
+    cd "$_startdir" || die
+    touch "$tools_workdir/electron${_e_main}-${e_ver}-pkgsrcpatches_done"
+fi
+
+# Fix pkgsrc nodejs patches
+if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-fixpkgsrcpatches_done" ]; then
+    cd "$tools_workdir/electron${_e_main}-netbsd-${e_ver}" || die
+
+    if find . -type f -name "*.rej" -exit 1; then
+        git add .
+        git commit -m "Fix pkgsrc's nodejs patchset"
+    else
+        echo "ERROR: pkgsrc nodejs${_e_main} patches failed:"
+        find . -type f -name "*.rej"
+        echo "Fix manually and run:"
+        echo "\$ cd ../.."
+        echo "\$ ./update_vanilla_electron.sh ${e_ver}"
+        exit 1
+    fi
+
+    cd "$_startdir" || die
+    touch "$tools_workdir/electron${_e_main}-${e_ver}-fixpkgsrcpatches_done"
 fi
 
 # Apply FreeBSD patchset

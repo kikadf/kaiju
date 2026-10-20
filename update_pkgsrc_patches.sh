@@ -131,8 +131,8 @@ for _patch in patches/patch-*; do
         # shellcheck disable=SC3003
         sed -i'' \
             -e $'3i\\\n* Part of patchset to build electron on NetBSD\n' \
-            -e $'3i\\\n* Based on OpenBSD\'s chromium patches, and\n' \
-            -e $'3i\\\n  FreeBSD\'s electron patches\n' \
+            -e $'3i\\\n* Based on OpenBSD\'s chromium patches, \n' \
+            -e $'3i\\\n  FreeBSD\'s electron patches, and pkgsrc\'s nodejs patches\n' \
             -e $'3i\\\n\n' \
             "$_patch" || die sed
     fi

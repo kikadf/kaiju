@@ -221,6 +221,19 @@ index 1ba949fdc2..32a5ae7074 100644
  
  // Checks if `path` should be blocked by the `rules`.
  // The BlockType of the nearest ancestor of a path to check is what
+diff --git a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
+index 956e285889..129cebd795 100644
+--- a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
++++ b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
+@@ -603,7 +603,7 @@ class ChromeFileSystemAccessPermissionContext
+             FILE_PATH_LITERAL("Library/Mobile Documents/com~apple~CloudDocs"),
+             BlockType::kDontBlockChildren),
+   #endif
+-  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID)
++  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_BSD)
+         // On Linux also block access to devices via /dev.
+         BlockPath::CreateAbsolute(FILE_PATH_LITERAL("/dev"),
+                                   BlockType::kBlockAllChildren),
 diff --git a/chrome/browser/process_singleton_posix.cc b/chrome/browser/process_singleton_posix.cc
 index f0694f2777..675f4f4f1d 100644
 --- a/chrome/browser/process_singleton_posix.cc
@@ -265,7 +278,7 @@ index c188cd72bc..d0a99a2d21 100644
  #if !BUILDFLAG(IS_BSD)
      DCHECK(GetZygoteForLaunch());
 diff --git a/electron/BUILD.gn b/electron/BUILD.gn
-index d48b822377..689c934811 100644
+index 515228b340..0b9f946a47 100644
 --- a/electron/BUILD.gn
 +++ b/electron/BUILD.gn
 @@ -629,7 +629,7 @@ source_set("electron_lib") {
@@ -277,7 +290,7 @@ index d48b822377..689c934811 100644
      deps += [
        "//components/crash/core/app",
        "//components/crash/core/browser",
-@@ -743,6 +743,12 @@ source_set("electron_lib") {
+@@ -736,6 +736,12 @@ source_set("electron_lib") {
        cflags_objcc = [ "-fobjc-weak" ]
      }
    }
@@ -290,7 +303,7 @@ index d48b822377..689c934811 100644
    if (is_linux) {
      libs = [ "xshmfence" ]
      deps += [
-@@ -1555,7 +1561,7 @@ if (is_mac) {
+@@ -1548,7 +1554,7 @@ if (is_mac) {
      } else if (is_linux) {
        sources = [
          "shell/app/electron_main_linux.cc",
@@ -299,7 +312,7 @@ index d48b822377..689c934811 100644
          "shell/app/uv_stdio_fix.cc",
          "shell/app/uv_stdio_fix.h",
        ]
-@@ -1567,7 +1573,7 @@ if (is_mac) {
+@@ -1560,7 +1566,7 @@ if (is_mac) {
        ":electron_lib",
        ":electron_win32_resources",
        ":packed_resources",
@@ -308,7 +321,7 @@ index d48b822377..689c934811 100644
        "//content:sandbox_helper_win",
        "//electron/buildflags",
        "//third_party/electron_node:libnode",
-@@ -1594,7 +1600,7 @@ if (is_mac) {
+@@ -1587,7 +1593,7 @@ if (is_mac) {
        public_deps = [ "//tools/v8_context_snapshot" ]
      }
  
@@ -317,7 +330,7 @@ index d48b822377..689c934811 100644
        data_deps += [ "//components/crash/core/app:chrome_crashpad_handler" ]
      }
  
-@@ -1661,7 +1667,7 @@ if (is_mac) {
+@@ -1654,7 +1660,7 @@ if (is_mac) {
          configs += [ "//build/config/gcc:rpath_for_built_shared_libraries" ]
        }
  
@@ -326,7 +339,7 @@ index d48b822377..689c934811 100644
          deps += [ "//sandbox/linux:chrome_sandbox" ]
        }
      }
-@@ -1782,7 +1788,9 @@ dist_zip("electron_dist_zip") {
+@@ -1775,7 +1781,9 @@ dist_zip("electron_dist_zip") {
        ]
      }
  
@@ -458,6 +471,18 @@ index 3b53f410da..c2ba5a28e2 100644
    // On Linux we could not access clipboard in renderer process.
    for (const method of Object.keys(originalClipboard) as (keyof Electron.Clipboard)[]) {
      clipboard[method] = makeRemoteMethod(method);
+diff --git a/electron/lib/renderer/security-warnings.ts b/electron/lib/renderer/security-warnings.ts
+index 42b69d1e6c..6717efdbfc 100644
+--- a/electron/lib/renderer/security-warnings.ts
++++ b/electron/lib/renderer/security-warnings.ts
+@@ -25,6 +25,7 @@ const shouldLogSecurityWarnings = function (): boolean {
+       shouldLog = execPath.endsWith('MacOS/Electron') || execPath.includes('Electron.app/Contents/Frameworks/');
+       break;
+     case 'freebsd':
++    case 'netbsd':
+     case 'linux':
+       shouldLog = execPath.endsWith('/electron');
+       break;
 diff --git a/electron/node_modules/@sentry/cli/scripts/install.js b/electron/node_modules/@sentry/cli/scripts/install.js
 index 0728957daf..8a49011a25 100644
 --- a/electron/node_modules/@sentry/cli/scripts/install.js
@@ -470,6 +495,18 @@ index 0728957daf..8a49011a25 100644
        return `${releasesUrl}-Linux-${archString}`;
      default:
        return null;
+diff --git a/electron/npm/install.js b/electron/npm/install.js
+index 1d0f70202c..e172dd4dee 100755
+--- a/electron/npm/install.js
++++ b/electron/npm/install.js
+@@ -107,6 +107,7 @@ function getPlatformPath() {
+     case 'darwin':
+       return 'Electron.app/Contents/MacOS/Electron';
+     case 'freebsd':
++    case 'netbsd':
+     case 'openbsd':
+     case 'linux':
+       return 'electron';
 diff --git a/electron/script/lib/config.py b/electron/script/lib/config.py
 index d2076fbd94..9731db0d7c 100644
 --- a/electron/script/lib/config.py
@@ -513,10 +550,10 @@ index a3ca206ff3..fa217ed2db 100644
        if (!fs.existsSync(nssDb)) {
          fs.mkdirSync(nssDb, { recursive: true });
 diff --git a/electron/script/spec-runner.js b/electron/script/spec-runner.js
-index bd2dd09237..b8f4a2bba3 100755
+index 10409425a2..92aab541c7 100755
 --- a/electron/script/spec-runner.js
 +++ b/electron/script/spec-runner.js
-@@ -586,7 +586,7 @@ function toVitestInvocation(exe, specDir, runnerArgs) {
+@@ -584,7 +584,7 @@ function toVitestInvocation(exe, specDir, runnerArgs) {
    };
    let command = process.execPath;
    let commandArgs = vitestArgs;
@@ -525,7 +562,7 @@ index bd2dd09237..b8f4a2bba3 100755
      // The mock D-Bus services are started once around the whole run; every
      // Electron worker inherits the bus addresses from the CLI's environment.
      commandArgs = [path.resolve(__dirname, 'dbus_mock.py'), command, ...commandArgs];
-@@ -689,7 +689,7 @@ async function installSpecModules(dir) {
+@@ -687,7 +687,7 @@ async function installSpecModules(dir) {
      process.exit(1);
    }
  
@@ -534,7 +571,7 @@ index bd2dd09237..b8f4a2bba3 100755
      const { status: rebuildStatus } = childProcess.spawnSync('npm', ['rebuild', 'abstract-socket'], {
        env,
        cwd: dir,
-@@ -767,7 +767,7 @@ async function installSpecModules(dir) {
+@@ -765,7 +765,7 @@ async function installSpecModules(dir) {
  // the same GCC that rejects the headers, so nothing on that host can build
  // the fixtures.
  function getNativeAddonToolchainEnv() {
@@ -655,7 +692,7 @@ index dea6ede197..b6af574732 100644
    auto env = base::Environment::Create();
    base::nix::ExtractXdgActivationTokenFromEnv(*env);
 diff --git a/electron/shell/app/node_main.cc b/electron/shell/app/node_main.cc
-index 714b673a6d..8c33a0e7ea 100644
+index 6230de1cb5..717d7c1632 100644
 --- a/electron/shell/app/node_main.cc
 +++ b/electron/shell/app/node_main.cc
 @@ -54,7 +54,7 @@
@@ -684,7 +721,7 @@ index 714b673a6d..8c33a0e7ea 100644
    electron::crash_keys::GetCrashKeys(&keys);
  #endif
    return gin::ConvertToV8(isolate, keys);
-@@ -329,7 +329,7 @@ int NodeMain() {
+@@ -323,7 +323,7 @@ int NodeMain() {
        // Setup process.crashReporter in child node processes
        auto reporter = gin_helper::Dictionary::CreateEmpty(isolate);
        reporter.SetMethod("getParameters", &GetParameters);
@@ -1256,7 +1293,7 @@ index 924955227d..5e4a086f13 100644
    // Tell the application to open a file.
    bool OpenFile(const std::string& file_path);
 diff --git a/electron/shell/browser/browser_linux.cc b/electron/shell/browser/browser_linux.cc
-index ee39626a88..063d7ad095 100644
+index 44f5c4ef3b..c8e6006837 100644
 --- a/electron/shell/browser/browser_linux.cc
 +++ b/electron/shell/browser/browser_linux.cc
 @@ -9,7 +9,7 @@
@@ -1268,7 +1305,7 @@ index ee39626a88..063d7ad095 100644
  #include <gio/gdesktopappinfo.h>
  #include <gio/gio.h>
  #include <gtk/gtk.h>
-@@ -37,7 +37,7 @@
+@@ -38,7 +38,7 @@
  #include "ui/gtk/gtk_compat.h"  // nogncheck
  #include "ui/gtk/gtk_util.h"    // nogncheck
  
@@ -1642,10 +1679,10 @@ index 3980d7a1c5..e4311321cd 100644
      SetClosable(val);
  #endif
 diff --git a/electron/shell/browser/native_window_views.cc b/electron/shell/browser/native_window_views.cc
-index d23c9ce8e4..6c8a82e236 100644
+index 5330abc515..707b6586ac 100644
 --- a/electron/shell/browser/native_window_views.cc
 +++ b/electron/shell/browser/native_window_views.cc
-@@ -57,7 +57,7 @@
+@@ -58,7 +58,7 @@
  #include "ui/views/window/non_client_view.h"
  #include "ui/wm/core/window_util.h"
  
@@ -1654,7 +1691,7 @@ index d23c9ce8e4..6c8a82e236 100644
  #include "base/notimplemented.h"
  #include "shell/browser/browser.h"
  #include "shell/browser/linux/unity_service.h"
-@@ -294,7 +294,7 @@ NativeWindowViews::NativeWindowViews(const int32_t base_window_id,
+@@ -295,7 +295,7 @@ NativeWindowViews::NativeWindowViews(const int32_t base_window_id,
    // If a client frame, we need to draw our own shadows.
    if (transparent() || has_client_frame())
      params.opacity = InitParams::WindowOpacity::kTranslucent;
@@ -1663,7 +1700,7 @@ index d23c9ce8e4..6c8a82e236 100644
    // Resize handles and shadows on frameless windows need translucent insets.
    if (!has_frame())
      params.opacity = InitParams::WindowOpacity::kTranslucent;
-@@ -313,7 +313,7 @@ NativeWindowViews::NativeWindowViews(const int32_t base_window_id,
+@@ -314,7 +314,7 @@ NativeWindowViews::NativeWindowViews(const int32_t base_window_id,
      params.parent = parent->GetNativeWindow();
  
    params.native_widget = new ElectronDesktopNativeWidgetAura{this, widget()};
@@ -1672,7 +1709,7 @@ index d23c9ce8e4..6c8a82e236 100644
    // Set the WM_CLASS and XDG App ID to the same value
    // for best compatibility with both X11 and Wayland.
    const auto app_id = platform_util::GetXdgAppId();
-@@ -343,7 +343,7 @@ NativeWindowViews::NativeWindowViews(const int32_t base_window_id,
+@@ -344,7 +344,7 @@ NativeWindowViews::NativeWindowViews(const int32_t base_window_id,
    std::string window_type;
    options.Get(options::kType, &window_type);
  
@@ -1681,7 +1718,7 @@ index d23c9ce8e4..6c8a82e236 100644
    // Set _GTK_THEME_VARIANT to dark if we have "dark-theme" option set.
    if (options.ValueOrDefault(options::kDarkTheme, false))
      SetGTKDarkThemeEnabled(true);
-@@ -415,7 +415,7 @@ NativeWindowViews::NativeWindowViews(const int32_t base_window_id,
+@@ -416,7 +416,7 @@ NativeWindowViews::NativeWindowViews(const int32_t base_window_id,
    ::SetWindowLong(GetAcceleratedWidget(), GWL_EXSTYLE, ex_style);
  #endif
  
@@ -1690,7 +1727,7 @@ index d23c9ce8e4..6c8a82e236 100644
    options.Get(options::kRoundedCorners, &rounded_corner_);
  #endif
  
-@@ -535,7 +535,7 @@ void NativeWindowViews::SetTitleBarOverlay(
+@@ -536,7 +536,7 @@ void NativeWindowViews::SetTitleBarOverlay(
      auto* fv = widget()->non_client_view()->frame_view();
      if (auto* frameless = views::AsViewClass<FramelessView>(fv)) {
        frameless->InvalidateCaptionButtons();
@@ -1699,7 +1736,7 @@ index d23c9ce8e4..6c8a82e236 100644
      } else if (auto* fvl = views::AsViewClass<views::FrameViewLinux>(fv)) {
        fvl->InvalidateLayout();
        fvl->SchedulePaint();
-@@ -545,7 +545,7 @@ void NativeWindowViews::SetTitleBarOverlay(
+@@ -546,7 +546,7 @@ void NativeWindowViews::SetTitleBarOverlay(
  }
  
  void NativeWindowViews::SetGTKDarkThemeEnabled(bool use_dark_theme) {
@@ -1708,7 +1745,7 @@ index d23c9ce8e4..6c8a82e236 100644
    if (x11_util::IsX11()) {
      const std::string color = use_dark_theme ? "dark" : "light";
      auto* connection = x11::Connection::Get();
-@@ -611,7 +611,7 @@ void NativeWindowViews::Show() {
+@@ -612,7 +612,7 @@ void NativeWindowViews::Show() {
  
    NotifyWindowShow();
  
@@ -1717,7 +1754,7 @@ index d23c9ce8e4..6c8a82e236 100644
    if (global_menu_bar_)
      global_menu_bar_->OnWindowMapped();
  
-@@ -627,7 +627,7 @@ void NativeWindowViews::ShowInactive() {
+@@ -628,7 +628,7 @@ void NativeWindowViews::ShowInactive() {
  
    NotifyWindowShow();
  
@@ -1726,7 +1763,7 @@ index d23c9ce8e4..6c8a82e236 100644
    if (global_menu_bar_)
      global_menu_bar_->OnWindowMapped();
  
-@@ -646,7 +646,7 @@ void NativeWindowViews::Hide() {
+@@ -647,7 +647,7 @@ void NativeWindowViews::Hide() {
  
    NotifyWindowHide();
  
@@ -1735,7 +1772,7 @@ index d23c9ce8e4..6c8a82e236 100644
    if (global_menu_bar_)
      global_menu_bar_->OnWindowUnmapped();
  #endif
-@@ -677,7 +677,7 @@ bool NativeWindowViews::IsVisible() const {
+@@ -678,7 +678,7 @@ bool NativeWindowViews::IsVisible() const {
  bool NativeWindowViews::IsEnabled() const {
  #if BUILDFLAG(IS_WIN)
    return ::IsWindowEnabled(GetAcceleratedWidget());
@@ -1744,7 +1781,7 @@ index d23c9ce8e4..6c8a82e236 100644
    return !enable_event_listening_;
  #endif
  }
-@@ -894,7 +894,7 @@ void NativeWindowViews::SetBounds(const gfx::Rect& bounds, bool animate) {
+@@ -895,7 +895,7 @@ void NativeWindowViews::SetBounds(const gfx::Rect& bounds, bool animate) {
    }
  #endif
  
@@ -1753,7 +1790,7 @@ index d23c9ce8e4..6c8a82e236 100644
    // On Linux and Windows the minimum and maximum size should be updated with
    // window size when window is not resizable.
    if (!CanResize()) {
-@@ -949,7 +949,7 @@ void NativeWindowViews::SetContentSizeConstraints(
+@@ -950,7 +950,7 @@ void NativeWindowViews::SetContentSizeConstraints(
    // of this to determine whether native widget has initialized.
    if (widget() && widget()->widget_delegate())
      widget()->OnSizeConstraintsChanged();
@@ -1762,7 +1799,7 @@ index d23c9ce8e4..6c8a82e236 100644
    if (resizable_)
      old_size_constraints_ = GetSizeConstraints();
  #endif
-@@ -1169,7 +1169,7 @@ bool NativeWindowViews::IsClosable() const {
+@@ -1170,7 +1170,7 @@ bool NativeWindowViews::IsClosable() const {
      return false;
    }
    return !(info.fState & MFS_DISABLED);
@@ -1771,7 +1808,7 @@ index d23c9ce8e4..6c8a82e236 100644
    return true;
  #endif
  }
-@@ -1309,7 +1309,7 @@ void NativeWindowViews::SetBackgroundColor(SkColor background_color) {
+@@ -1310,7 +1310,7 @@ void NativeWindowViews::SetBackgroundColor(SkColor background_color) {
    InvalidateRect(GetAcceleratedWidget(), nullptr, 1);
  #endif
  
@@ -1780,7 +1817,7 @@ index d23c9ce8e4..6c8a82e236 100644
    // Widget and root view need to be transparent for CSD to draw shadow regions
    // and custom edges and corners. The web contents view will still be
    // painted with the true background color, which is cached in state.
-@@ -1332,7 +1332,7 @@ void NativeWindowViews::SetHasShadow(bool has_shadow) {
+@@ -1333,7 +1333,7 @@ void NativeWindowViews::SetHasShadow(bool has_shadow) {
    // so we no longer call wm::SetShadowElevation and similar to avoid
    // artifacts. https://github.com/electron/electron/issues/51456.
  
@@ -1789,7 +1826,7 @@ index d23c9ce8e4..6c8a82e236 100644
    auto* efvl = views::AsViewClass<ElectronFrameViewLinux>(
        widget()->non_client_view()->frame_view());
    if (efvl) {
-@@ -1456,7 +1456,7 @@ bool NativeWindowViews::IsFocusable() const {
+@@ -1457,7 +1457,7 @@ bool NativeWindowViews::IsFocusable() const {
  }
  
  void NativeWindowViews::SetMenu(ElectronMenuModel* menu_model) {
@@ -1798,7 +1835,7 @@ index d23c9ce8e4..6c8a82e236 100644
    // Remove global menu bar.
    if (global_menu_bar_ && menu_model == nullptr) {
      global_menu_bar_.reset();
-@@ -1512,7 +1512,7 @@ void NativeWindowViews::SetMenu(ElectronMenuModel* menu_model) {
+@@ -1513,7 +1513,7 @@ void NativeWindowViews::SetMenu(ElectronMenuModel* menu_model) {
  void NativeWindowViews::SetParentWindow(NativeWindow* parent) {
    NativeWindow::SetParentWindow(parent);
  
@@ -1807,7 +1844,7 @@ index d23c9ce8e4..6c8a82e236 100644
    if (x11_util::IsX11()) {
      auto* connection = x11::Connection::Get();
      connection->SetProperty(
-@@ -1566,7 +1566,7 @@ gfx::Insets NativeWindowViews::GetRestoredFrameBorderInsets() const {
+@@ -1567,7 +1567,7 @@ gfx::Insets NativeWindowViews::GetRestoredFrameBorderInsets() const {
    if (auto* frameless = views::AsViewClass<FramelessView>(frame_view))
      return frameless->RestoredFrameBorderInsets();
  
@@ -1816,7 +1853,7 @@ index d23c9ce8e4..6c8a82e236 100644
    if (auto* fvl = views::AsViewClass<views::FrameViewLinux>(frame_view))
      return fvl->GetRestoredFrameBorderInsets();
  #endif
-@@ -1578,7 +1578,7 @@ void NativeWindowViews::SetProgressBar(double progress,
+@@ -1579,7 +1579,7 @@ void NativeWindowViews::SetProgressBar(double progress,
                                         NativeWindow::ProgressState state) {
  #if BUILDFLAG(IS_WIN)
    taskbar_host_.SetProgressBar(GetAcceleratedWidget(), progress, state);
@@ -1825,7 +1862,7 @@ index d23c9ce8e4..6c8a82e236 100644
    if (unity::IsRunning()) {
      unity::SetProgressFraction(progress);
    }
-@@ -1704,7 +1704,7 @@ content::DesktopMediaID NativeWindowViews::GetDesktopMediaID() const {
+@@ -1705,7 +1705,7 @@ content::DesktopMediaID NativeWindowViews::GetDesktopMediaID() const {
  #if BUILDFLAG(IS_WIN)
    window_handle =
        reinterpret_cast<content::DesktopMediaID::Id>(accelerated_widget);
@@ -1834,7 +1871,7 @@ index d23c9ce8e4..6c8a82e236 100644
    window_handle = static_cast<uint32_t>(accelerated_widget);
  #endif
    aura::WindowTreeHost* const host =
-@@ -1834,7 +1834,7 @@ void NativeWindowViews::SetIcon(HICON window_icon, HICON app_icon) {
+@@ -1835,7 +1835,7 @@ void NativeWindowViews::SetIcon(HICON window_icon, HICON app_icon) {
    SendMessage(hwnd, WM_SETICON, ICON_BIG,
                reinterpret_cast<LPARAM>(app_icon_.get()));
  }
@@ -1843,7 +1880,7 @@ index d23c9ce8e4..6c8a82e236 100644
  void NativeWindowViews::SetIcon(const gfx::ImageSkia& icon) {
    auto* tree_host = views::DesktopWindowTreeHostLinux::GetHostForWidget(
        GetAcceleratedWidget());
-@@ -1955,7 +1955,7 @@ bool NativeWindowViews::CanMaximize() const {
+@@ -1956,7 +1956,7 @@ bool NativeWindowViews::CanMaximize() const {
  bool NativeWindowViews::CanMinimize() const {
  #if BUILDFLAG(IS_WIN)
    return minimizable_;
@@ -1852,7 +1889,7 @@ index d23c9ce8e4..6c8a82e236 100644
    return true;
  #endif
  }
-@@ -2002,7 +2002,7 @@ std::unique_ptr<views::FrameView> NativeWindowViews::CreateFrameView(
+@@ -2008,7 +2008,7 @@ std::unique_ptr<views::FrameView> NativeWindowViews::CreateFrameView(
  #endif
  }
  
@@ -1861,7 +1898,7 @@ index d23c9ce8e4..6c8a82e236 100644
  views::FrameViewLinux* NativeWindowViews::GetFrameViewLinux() const {
    auto* ncv = widget()->non_client_view();
    if (!ncv)
-@@ -2021,7 +2021,7 @@ void NativeWindowViews::HandleKeyboardEvent(
+@@ -2027,7 +2027,7 @@ void NativeWindowViews::HandleKeyboardEvent(
    if (widget_destroyed_)
      return;
  
@@ -1870,7 +1907,7 @@ index d23c9ce8e4..6c8a82e236 100644
    if (event.windows_key_code == ui::VKEY_BROWSER_BACK)
      NotifyWindowExecuteAppCommand(kBrowserBackward);
    else if (event.windows_key_code == ui::VKEY_BROWSER_FORWARD)
-@@ -2040,7 +2040,7 @@ void NativeWindowViews::OnMouseEvent(ui::MouseEvent* event) {
+@@ -2046,7 +2046,7 @@ void NativeWindowViews::OnMouseEvent(ui::MouseEvent* event) {
    // Alt+Click should not toggle menu bar.
    root_view_.ResetAltState();
  
@@ -2138,28 +2175,28 @@ index 2b97b0906f..823c979e4e 100644
  #endif
    std::unique_ptr<views::FrameView> CreateDefaultFrameView(
 diff --git a/electron/shell/browser/ui/views/menu_bar.cc b/electron/shell/browser/ui/views/menu_bar.cc
-index 0f09312b6b..f4ce38c5bc 100644
+index 1f37cac0a8..bddeec9167 100644
 --- a/electron/shell/browser/ui/views/menu_bar.cc
 +++ b/electron/shell/browser/ui/views/menu_bar.cc
-@@ -14,7 +14,7 @@
+@@ -16,7 +16,7 @@
  #include "ui/views/background.h"
  #include "ui/views/layout/box_layout.h"
  
 -#if BUILDFLAG(IS_LINUX)
 +#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include "shell/browser/ui/gtk_util.h"
  #include "ui/gtk/gtk_util.h"  // nogncheck
  #endif
- 
-@@ -215,7 +215,7 @@ void MenuBar::ViewHierarchyChanged(
+@@ -218,7 +218,7 @@ void MenuBar::ViewHierarchyChanged(
  
  void MenuBar::RefreshColorCache(const ui::NativeTheme* theme) {
    if (theme) {
 -#if BUILDFLAG(IS_LINUX)
 +#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
-     background_color_ = gtk::GetBgColor("GtkMenuBar#menubar");
-     enabled_color_ =
-         gtk::GetFgColor("GtkMenuBar#menubar GtkMenuItem#menuitem GtkLabel");
-@@ -241,7 +241,7 @@ void MenuBar::RebuildChildren() {
+     if (gtk_util::IsGtkAvailable()) {
+       background_color_ = gtk::GetBgColor("GtkMenuBar#menubar");
+       enabled_color_ =
+@@ -254,7 +254,7 @@ void MenuBar::RebuildChildren() {
  }
  
  void MenuBar::UpdateViewColors() {
@@ -2168,7 +2205,7 @@ index 0f09312b6b..f4ce38c5bc 100644
    // set menubar background color
    SetBackground(views::CreateSolidBackground(background_color_));
  #endif
-@@ -249,7 +249,7 @@ void MenuBar::UpdateViewColors() {
+@@ -262,7 +262,7 @@ void MenuBar::UpdateViewColors() {
    // set child colors
    if (menu_model_ == nullptr)
      return;
@@ -2441,7 +2478,7 @@ index df4957af84..893ecabc4b 100644
  struct Converter<unsigned long> {  // NOLINT(runtime/int)
    static v8::Local<v8::Value> ToV8(v8::Isolate* isolate,
 diff --git a/electron/shell/common/node_bindings.cc b/electron/shell/common/node_bindings.cc
-index ebdd29647e..9892180afe 100644
+index 2596aa0c35..e0653f827f 100644
 --- a/electron/shell/common/node_bindings.cc
 +++ b/electron/shell/common/node_bindings.cc
 @@ -57,7 +57,7 @@
@@ -2647,10 +2684,10 @@ index e28ae6c8b7..6ae2563be6 100644
    electron::crash_keys::SetCrashKey("electron.v8-fatal.location", location);
  #endif
 diff --git a/electron/spec/api-app.spec.ts b/electron/spec/api-app.spec.ts
-index bb71f983ba..12350d9c11 100644
+index c2f85afaaa..9e1f5f5a00 100644
 --- a/electron/spec/api-app.spec.ts
 +++ b/electron/spec/api-app.spec.ts
-@@ -127,7 +127,7 @@ describe('app module', () => {
+@@ -131,7 +131,7 @@ describe('app module', () => {
      });
    });
  
@@ -2659,21 +2696,21 @@ index bb71f983ba..12350d9c11 100644
      it('sets the desktop name to the CHROME_DESKTOP environment variable', () => {
        const original = process.env.CHROME_DESKTOP;
        defer(() => {
-@@ -156,11 +156,11 @@ describe('app module', () => {
+@@ -160,11 +160,11 @@ describe('app module', () => {
    });
  
    describe('app.getPreferredSystemLanguages()', () => {
 -    ifit(process.platform !== 'linux')('should not be empty', () => {
 +    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('should not be empty', () => {
-       expect(app.getPreferredSystemLanguages().length).to.not.equal(0);
+       expect(app.getPreferredSystemLanguages().length).not.toBe(0);
      });
  
 -    ifit(process.platform === 'linux')('should be empty or contain C entry', () => {
 +    ifit(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('should be empty or contain C entry', () => {
        const languages = app.getPreferredSystemLanguages();
        if (languages.length) {
-         expect(languages).to.not.include('C');
-@@ -202,7 +202,7 @@ describe('app module', () => {
+         expect(languages).not.toContain('C');
+@@ -206,7 +206,7 @@ describe('app module', () => {
      });
    });
  
@@ -2682,16 +2719,25 @@ index bb71f983ba..12350d9c11 100644
      'when a D-Bus bus goes away',
      () => {
        it('exits cleanly instead of crashing', async () => {
-@@ -293,7 +293,7 @@ describe('app module', () => {
+@@ -300,7 +300,7 @@ describe('app module', () => {
+     // A missing display makes toolkit initialisation fail before the main loop
+     // runs; that early return must still tear the JS environment down cleanly.
+     // Skipped under ASan for the same reason as the test above.
+-    ifit(process.platform === 'linux' && !process.env.IS_ASAN)(
++    ifit((process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') && !process.env.IS_ASAN)(
+       'exits with code 1 when no display is available',
+       async () => {
+         const appPath = path.join(fixturesPath, 'api', 'no-display');
+@@ -321,7 +321,7 @@ describe('app module', () => {
        }
-     });
+     );
  
--    ifit(['darwin', 'linux'].includes(process.platform))('exits gracefully', async function () {
-+    ifit(['darwin', 'linux', 'freebsd', 'netbsd'].includes(process.platform))('exits gracefully', async function () {
+-    ifit(['darwin', 'linux'].includes(process.platform))('exits gracefully', async () => {
++    ifit(['darwin', 'linux', 'freebsd', 'netbsd'].includes(process.platform))('exits gracefully', async () => {
        const electronPath = process.execPath;
        const appPath = path.join(fixturesPath, 'api', 'singleton');
        appProcess = cp.spawn(electronPath, [appPath]);
-@@ -491,7 +491,7 @@ describe('app module', () => {
+@@ -554,7 +554,7 @@ describe('app module', () => {
    });
  
    // GitHub Actions macOS-13 runners used for x64 seem to have a problem with this test.
@@ -2700,7 +2746,7 @@ index bb71f983ba..12350d9c11 100644
      const tempFiles = [
        path.join(fixturesPath, 'foo.txt'),
        path.join(fixturesPath, 'bar.txt'),
-@@ -620,7 +620,7 @@ describe('app module', () => {
+@@ -691,7 +691,7 @@ describe('app module', () => {
    //   let w = null
  
    //   before(function () {
@@ -2709,7 +2755,7 @@ index bb71f983ba..12350d9c11 100644
    //       this.skip()
    //     }
    //   })
-@@ -733,7 +733,7 @@ describe('app module', () => {
+@@ -804,7 +804,7 @@ describe('app module', () => {
  
    describe('app.badgeCount', () => {
      const platformIsNotSupported =
@@ -2718,16 +2764,16 @@ index bb71f983ba..12350d9c11 100644
  
      const expectedBadgeCount = 42;
  
-@@ -780,7 +780,7 @@ describe('app module', () => {
+@@ -851,7 +851,7 @@ describe('app module', () => {
    });
  
    ifdescribe(
 -    process.platform !== 'linux' && !process.mas && (process.platform !== 'darwin' || process.arch === 'arm64')
 +    process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd' && !process.mas && (process.platform !== 'darwin' || process.arch === 'arm64')
-   )('app.get/setLoginItemSettings API', function () {
+   )('app.get/setLoginItemSettings API', () => {
      const isMac = process.platform === 'darwin';
      const isWin = process.platform === 'win32';
-@@ -1207,7 +1207,7 @@ describe('app module', () => {
+@@ -1278,7 +1278,7 @@ describe('app module', () => {
      });
    });
  
@@ -2736,7 +2782,7 @@ index bb71f983ba..12350d9c11 100644
      // These tests toggle a process-wide AXMode. Turn it back off so the rest of
      // the suite doesn't run with renderer accessibility enabled.
      afterEach(() => {
-@@ -1483,7 +1483,7 @@ describe('app module', () => {
+@@ -1561,7 +1561,7 @@ describe('app module', () => {
      });
    });
  
@@ -2744,18 +2790,18 @@ index bb71f983ba..12350d9c11 100644
 +  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('select-client-certificate event', () => {
      let w: BrowserWindow;
  
-     before(function () {
-@@ -1626,7 +1626,7 @@ describe('app module', () => {
+     beforeAll(() => {
+@@ -1707,7 +1707,7 @@ describe('app module', () => {
  
    describe('getApplicationNameForProtocol()', () => {
      // TODO: Linux CI doesn't have registered http & https handlers
 -    ifit(!(process.env.CI && process.platform === 'linux') && !isWayland)(
 +    ifit(!(process.env.CI && (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')) && !isWayland)(
        'returns application names for common protocols',
-       function () {
+       () => {
          // We can't expect particular app names here, but these protocols should
-@@ -1643,7 +1643,7 @@ describe('app module', () => {
-       expect(app.getApplicationNameForProtocol('bogus-protocol://')).to.equal('');
+@@ -1724,7 +1724,7 @@ describe('app module', () => {
+       expect(app.getApplicationNameForProtocol('bogus-protocol://')).toBe('');
      });
  
 -    ifdescribe(process.platform === 'linux')('on Linux with mocked XDG dirs', () => {
@@ -2763,35 +2809,35 @@ index bb71f983ba..12350d9c11 100644
        const desktopFileId = 'mock-browser.desktop';
        const mockDisplayName = 'Mock Browser';
        const mockScheme = 'mockproto';
-@@ -1693,7 +1693,7 @@ describe('app module', () => {
+@@ -1774,7 +1774,7 @@ describe('app module', () => {
      let xdgBinDir: string;
  
-     before(() => {
+     beforeAll(() => {
 -      if (process.platform !== 'linux') {
 +      if (process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd') {
          return;
        }
  
-@@ -1710,7 +1710,7 @@ describe('app module', () => {
+@@ -1791,7 +1791,7 @@ describe('app module', () => {
      });
  
-     after(() => {
+     afterAll(() => {
 -      if (process.platform === 'linux') {
 +      if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
          fs.rmSync(xdgDir, { recursive: true, force: true });
        }
      });
-@@ -1722,7 +1722,7 @@ describe('app module', () => {
+@@ -1803,7 +1803,7 @@ describe('app module', () => {
      });
  
-     it('returns resolved promise with appPath, displayName and icon', async function () {
+     it('returns resolved promise with appPath, displayName and icon', async () => {
 -      if (process.platform === 'linux') {
 +      if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
          const appInfo = await spawnProtocolInfoWithXdgMock(`${mockScheme}://`, xdgDataHome, xdgConfigHome);
-         expect(appInfo.name).to.equal(mockDisplayName);
-         expect(appInfo.path).to.equal('/usr/bin/true');
-@@ -1736,7 +1736,7 @@ describe('app module', () => {
-       expect(appInfo.icon).not.to.be.undefined();
+         expect(appInfo.name).toBe(mockDisplayName);
+         expect(appInfo.path).toBe('/usr/bin/true');
+@@ -1817,7 +1817,7 @@ describe('app module', () => {
+       expect(appInfo.icon).not.toBeUndefined();
      });
  
 -    ifit(process.platform === 'linux')('resolves an executable name via PATH', async () => {
@@ -2799,7 +2845,7 @@ index bb71f983ba..12350d9c11 100644
        const pathLookupExecutable = 'mock-browser';
        const pathLookupExecutablePath = path.join(xdgBinDir, pathLookupExecutable);
        const pathLookupDisplayName = 'Mock Browser PATH';
-@@ -1770,7 +1770,7 @@ describe('app module', () => {
+@@ -1851,7 +1851,7 @@ describe('app module', () => {
      });
    });
  
@@ -2808,7 +2854,7 @@ index bb71f983ba..12350d9c11 100644
      const protocol = 'electron-test-linux';
      const desktopFileId = 'electron-test.desktop';
      const protocolMimeType = `x-scheme-handler/${protocol}`;
-@@ -1887,7 +1887,7 @@ describe('app module', () => {
+@@ -1968,7 +1968,7 @@ describe('app module', () => {
    });
  
    // FIXME Get these specs running on Linux CI
@@ -2817,16 +2863,16 @@ index bb71f983ba..12350d9c11 100644
      const iconPath = path.join(import.meta.dirname, 'fixtures/assets/icon.ico');
      const sizes = {
        small: 16,
-@@ -1969,7 +1969,7 @@ describe('app module', () => {
-           expect(entry.memory).to.have.property('privateBytes').that.is.greaterThan(0);
+@@ -2057,7 +2057,7 @@ describe('app module', () => {
+           expect(entry.memory.privateBytes).toBeGreaterThan(0);
          }
  
 -        if (process.platform !== 'linux') {
 +        if (process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd') {
-           expect(entry.sandboxed).to.be.a('boolean');
+           expect(entry.sandboxed).toBeTypeOf('boolean');
          }
  
-@@ -1986,7 +1986,7 @@ describe('app module', () => {
+@@ -2074,7 +2074,7 @@ describe('app module', () => {
      });
    });
  
@@ -2835,7 +2881,7 @@ index bb71f983ba..12350d9c11 100644
      const fixture = path.join(fixturesPath, 'apps', 'gdk-backend');
      const run = async (env: NodeJS.ProcessEnv) => {
        const child = cp.spawn(process.execPath, [fixture], { env, stdio: ['ignore', 'pipe', 'ignore'] });
-@@ -2063,7 +2063,7 @@ describe('app module', () => {
+@@ -2156,7 +2156,7 @@ describe('app module', () => {
  
      it('succeeds with complete GPUInfo', async () => {
        const completeInfo = await getGPUInfo('complete');
@@ -2844,7 +2890,7 @@ index bb71f983ba..12350d9c11 100644
          // For linux and macOS complete info is same as basic info
          await verifyBasicGPUInfo(completeInfo);
          const basicInfo = await getGPUInfo('basic');
-@@ -2087,7 +2087,7 @@ describe('app module', () => {
+@@ -2179,7 +2179,7 @@ describe('app module', () => {
      });
    });
  
@@ -2854,7 +2900,7 @@ index bb71f983ba..12350d9c11 100644
      () => {
        let appProcess: cp.ChildProcess = null as any;
 diff --git a/electron/spec/api-browser-window-ignore-mouse-events.spec.ts b/electron/spec/api-browser-window-ignore-mouse-events.spec.ts
-index 1baadc7337..e8f5504cd4 100644
+index 08896d5999..7d9bfbaa38 100644
 --- a/electron/spec/api-browser-window-ignore-mouse-events.spec.ts
 +++ b/electron/spec/api-browser-window-ignore-mouse-events.spec.ts
 @@ -41,11 +41,11 @@ type PageEvent = { type: string; x?: number; y?: number };
@@ -2872,11 +2918,11 @@ index 1baadc7337..e8f5504cd4 100644
  // #target turns orange while hovered. Element.matches(':hover') is not usable
  // here: it stays false while the (never focused) window is inactive even
 diff --git a/electron/spec/api-browser-window.spec.ts b/electron/spec/api-browser-window.spec.ts
-index f01e0ca05f..765f3a0424 100755
+index 98a57dfb79..ba1e549f0e 100755
 --- a/electron/spec/api-browser-window.spec.ts
 +++ b/electron/spec/api-browser-window.spec.ts
 @@ -105,7 +105,7 @@ describe('BrowserWindow module', () => {
-       }).not.to.throw();
+       }).not.toThrow();
      });
  
 -    ifit(process.platform === 'linux')('does not crash when setting large window icons', async () => {
@@ -2893,7 +2939,7 @@ index f01e0ca05f..765f3a0424 100755
      afterEach(closeAllWindows);
      it('can set content protection', async () => {
        const w = new BrowserWindow({ show: false });
-@@ -1397,7 +1397,7 @@ describe('BrowserWindow module', () => {
+@@ -1406,7 +1406,7 @@ describe('BrowserWindow module', () => {
  
      describe('BrowserWindow.minimize()', () => {
        // TODO(codebytere): Enable for Linux once maximize/minimize events work in CI.
@@ -2902,7 +2948,7 @@ index f01e0ca05f..765f3a0424 100755
          const minimize = once(w, 'minimize');
          w.minimize();
          await minimize;
-@@ -1414,7 +1414,7 @@ describe('BrowserWindow module', () => {
+@@ -1423,7 +1423,7 @@ describe('BrowserWindow module', () => {
        });
  
        // TODO(dsanders11): Enable for Linux once CI plays nice with these kinds of tests
@@ -2911,7 +2957,7 @@ index f01e0ca05f..765f3a0424 100755
          const maximize = once(w, 'maximize');
          const shown = once(w, 'show');
          w.maximize();
-@@ -1511,7 +1511,7 @@ describe('BrowserWindow module', () => {
+@@ -1520,7 +1520,7 @@ describe('BrowserWindow module', () => {
          }
        );
  
@@ -2920,8 +2966,8 @@ index f01e0ca05f..765f3a0424 100755
          const w1 = new BrowserWindow({ show: false });
          const w2 = new BrowserWindow({ show: false });
          const w3 = new BrowserWindow({ show: false });
-@@ -1616,7 +1616,7 @@ describe('BrowserWindow module', () => {
-         expect(w.isFocused()).to.equal(false);
+@@ -1625,7 +1625,7 @@ describe('BrowserWindow module', () => {
+         expect(w.isFocused()).toBe(false);
        });
  
 -      ifit(process.platform !== 'linux')('transfers focus status to the next window', async () => {
@@ -2929,7 +2975,7 @@ index f01e0ca05f..765f3a0424 100755
          const w1 = new BrowserWindow({ show: false });
          const w2 = new BrowserWindow({ show: false });
          const w3 = new BrowserWindow({ show: false });
-@@ -2170,7 +2170,7 @@ describe('BrowserWindow module', () => {
+@@ -2179,7 +2179,7 @@ describe('BrowserWindow module', () => {
          });
        });
  
@@ -2938,7 +2984,7 @@ index f01e0ca05f..765f3a0424 100755
          it('checks normal bounds when maximized', async () => {
            const bounds = w.getBounds();
            const maximize = once(w, 'maximize');
-@@ -2388,7 +2388,7 @@ describe('BrowserWindow module', () => {
+@@ -2398,7 +2398,7 @@ describe('BrowserWindow module', () => {
          });
        });
  
@@ -2947,7 +2993,7 @@ index f01e0ca05f..765f3a0424 100755
          it('checks normal bounds when minimized', async () => {
            const bounds = w.getBounds();
            const minimize = once(w, 'minimize');
-@@ -3497,7 +3497,7 @@ describe('BrowserWindow module', () => {
+@@ -3507,7 +3507,7 @@ describe('BrowserWindow module', () => {
    describe('BrowserWindow.setOpacity(opacity)', () => {
      afterEach(closeAllWindows);
  
@@ -2955,8 +3001,8 @@ index f01e0ca05f..765f3a0424 100755
 +    ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('Windows and Mac', () => {
        it('make window with initial opacity', () => {
          const w = new BrowserWindow({ show: false, opacity: 0.5 });
-         expect(w.getOpacity()).to.equal(0.5);
-@@ -3523,7 +3523,7 @@ describe('BrowserWindow module', () => {
+         expect(w.getOpacity()).toBe(0.5);
+@@ -3533,7 +3533,7 @@ describe('BrowserWindow module', () => {
        });
      });
  
@@ -2965,8 +3011,8 @@ index f01e0ca05f..765f3a0424 100755
        it('sets 1 regardless of parameter', () => {
          const w = new BrowserWindow({ show: false });
          w.setOpacity(0);
-@@ -3753,7 +3753,7 @@ describe('BrowserWindow module', () => {
-       expect(overlayRectPreMax.height).to.equal(size);
+@@ -3763,7 +3763,7 @@ describe('BrowserWindow module', () => {
+       expect(overlayRectPreMax.height).toBe(size);
  
        // 'maximize' event is not emitted on Linux in CI.
 -      if (process.platform !== 'linux' && !w.isMaximized()) {
@@ -2974,8 +3020,8 @@ index f01e0ca05f..765f3a0424 100755
          const maximize = once(w, 'maximize');
          w.show();
          w.maximize();
-@@ -3883,7 +3883,7 @@ describe('BrowserWindow module', () => {
-         expect(preMaxHeight).to.equal(size);
+@@ -3885,7 +3885,7 @@ describe('BrowserWindow module', () => {
+         expect(preMaxHeight).toBe(size);
  
          // 'maximize' event is not emitted on Linux in CI.
 -        if (process.platform !== 'linux' && !w.isMaximized()) {
@@ -2983,16 +3029,16 @@ index f01e0ca05f..765f3a0424 100755
            const maximize = once(w, 'maximize');
            w.show();
            w.maximize();
-@@ -5071,7 +5071,7 @@ describe('BrowserWindow module', () => {
-         expect(test.nodeTimers).to.equal(true);
-         expect(test.nodeUrl).to.equal(true);
+@@ -5084,7 +5084,7 @@ describe('BrowserWindow module', () => {
+         expect(test.nodeTimers).toBe(true);
+         expect(test.nodeUrl).toBe(true);
  
 -        if (process.platform === 'linux' && test.osSandbox) {
 +        if ((process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') && test.osSandbox) {
-           expect(test.creationTime).to.be.null('creation time');
-           expect(test.systemMemoryInfo).to.be.null('system memory info');
+           expect(test.creationTime, 'creation time').toBeNull();
+           expect(test.systemMemoryInfo, 'system memory info').toBeNull();
          } else {
-@@ -5587,7 +5587,7 @@ describe('BrowserWindow module', () => {
+@@ -5602,7 +5602,7 @@ describe('BrowserWindow module', () => {
      });
    });
  
@@ -3001,7 +3047,7 @@ index f01e0ca05f..765f3a0424 100755
      afterEach(closeAllWindows);
      it('emits an event when window is maximized', async () => {
        const w = new BrowserWindow({ show: false });
-@@ -5863,7 +5863,7 @@ describe('BrowserWindow module', () => {
+@@ -5878,7 +5878,7 @@ describe('BrowserWindow module', () => {
      // TODO(zcbenz):
      // This test does not run on Linux CI. See:
      // https://github.com/electron/electron/issues/28699
@@ -3010,16 +3056,16 @@ index f01e0ca05f..765f3a0424 100755
        'should bring a minimized maximized window back to maximized state',
        async () => {
          const w = new BrowserWindow({});
-@@ -5881,7 +5881,7 @@ describe('BrowserWindow module', () => {
+@@ -5896,7 +5896,7 @@ describe('BrowserWindow module', () => {
        }
      );
  
--    ifit(process.platform !== 'linux')('should not break fullscreen state', async () => {
-+    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('should not break fullscreen state', async () => {
+-    ifit(process.platform !== 'linux')('should not break fullscreen state', { tags: ['serial'] }, async () => {
++    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('should not break fullscreen state', { tags: ['serial'] }, async () => {
        const w = new BrowserWindow({ show: false });
        w.show();
  
-@@ -5904,7 +5904,7 @@ describe('BrowserWindow module', () => {
+@@ -5919,7 +5919,7 @@ describe('BrowserWindow module', () => {
    });
  
    // TODO(dsanders11): Enable once maximize event works on Linux again on CI
@@ -3028,7 +3074,7 @@ index f01e0ca05f..765f3a0424 100755
      afterEach(closeAllWindows);
      it('should show the window if it is not currently shown', async () => {
        const w = new BrowserWindow({ show: false });
-@@ -5941,7 +5941,7 @@ describe('BrowserWindow module', () => {
+@@ -5956,7 +5956,7 @@ describe('BrowserWindow module', () => {
  
      // TODO(dsanders11): Enable once minimize event works on Linux again.
      //                   See https://github.com/electron/electron/issues/28699
@@ -3037,16 +3083,16 @@ index f01e0ca05f..765f3a0424 100755
        const w = new BrowserWindow();
        const minimize = once(w, 'minimize');
        w.minimize();
-@@ -6456,7 +6456,7 @@ describe('BrowserWindow module', () => {
+@@ -6476,7 +6476,7 @@ describe('BrowserWindow module', () => {
        });
  
        // On Linux there is no "resizable" property of a window.
 -      ifit(process.platform !== 'linux')('does affect maximizability when disabled and enabled', () => {
 +      ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('does affect maximizability when disabled and enabled', () => {
          const w = new BrowserWindow({ show: false });
-         expect(w.resizable).to.be.true('resizable');
+         expect(w.resizable, 'resizable').toBe(true);
  
-@@ -6697,7 +6697,7 @@ describe('BrowserWindow module', () => {
+@@ -6717,7 +6717,7 @@ describe('BrowserWindow module', () => {
      });
    });
  
@@ -3055,7 +3101,7 @@ index f01e0ca05f..765f3a0424 100755
      // Not implemented on Linux.
      afterEach(closeAllWindows);
  
-@@ -8060,7 +8060,7 @@ describe('BrowserWindow module', () => {
+@@ -8084,7 +8084,7 @@ describe('BrowserWindow module', () => {
    describe('"transparent" option', { tags: ['serial'] }, () => {
      afterEach(closeAllWindows);
  
@@ -3065,7 +3111,7 @@ index f01e0ca05f..765f3a0424 100755
        async () => {
          const w = new BrowserWindow({
 diff --git a/electron/spec/api-clipboard.spec.ts b/electron/spec/api-clipboard.spec.ts
-index f46f8c190b..760ad38933 100644
+index 79db076bc0..68f42ffc1d 100644
 --- a/electron/spec/api-clipboard.spec.ts
 +++ b/electron/spec/api-clipboard.spec.ts
 @@ -54,7 +54,7 @@ ifdescribe(process.platform !== 'win32' || process.arch !== 'arm64')('clipboard
@@ -3088,15 +3134,15 @@ index f46f8c190b..760ad38933 100644
        expect(() => {
 @@ -114,7 +114,7 @@ ifdescribe(process.platform !== 'win32' || process.arch !== 'arm64')('clipboard
        const readImage = clipboard.readImage();
-       expect(readImage.toDataURL()).to.equal(i.toDataURL());
+       expect(readImage.toDataURL()).toBe(i.toDataURL());
  
 -      if (process.platform !== 'linux') {
 +      if (process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd') {
          if (process.platform !== 'win32') {
-           expect(clipboard.readBookmark()).to.deep.equal(bookmark);
+           expect(clipboard.readBookmark()).toEqual(bookmark);
          } else {
 diff --git a/electron/spec/api-content-tracing.spec.ts b/electron/spec/api-content-tracing.spec.ts
-index fdbf6975a7..38cff03c0a 100644
+index e894a7b174..b23574c9ce 100644
 --- a/electron/spec/api-content-tracing.spec.ts
 +++ b/electron/spec/api-content-tracing.spec.ts
 @@ -23,7 +23,7 @@ const isCI = !!process.env.CI;
@@ -3105,20 +3151,20 @@ index fdbf6975a7..38cff03c0a 100644
  // FIXME: The tests are skipped on linux arm/arm64
 -ifdescribe(!['arm', 'arm64'].includes(process.arch) || process.platform !== 'linux')('contentTracing', () => {
 +ifdescribe(!['arm', 'arm64'].includes(process.arch) || (process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd'))('contentTracing', () => {
-   const record = async (
+   let pendingRecording: Promise<string> | undefined;
+   const record = (
      options: TraceConfig | TraceCategoriesAndOptions,
-     outputFilePath: string | undefined,
-@@ -114,7 +114,7 @@ ifdescribe(!['arm', 'arm64'].includes(process.arch) || process.platform !== 'lin
+@@ -118,7 +118,7 @@ ifdescribe(!['arm', 'arm64'].includes(process.arch) || process.platform !== 'lin
      });
    });
  
--  ifdescribe(process.platform !== 'linux')('stopRecording', function () {
-+  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('stopRecording', function () {
-     if (process.platform === 'win32' && process.arch === 'arm64') {
-       // WOA needs more time
-       this.timeout(10e3);
+-  ifdescribe(process.platform !== 'linux')('stopRecording', { timeout: recordingTimeout }, () => {
++  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('stopRecording', { timeout: recordingTimeout }, () => {
+     // FIXME(samuelmaddock): this test regularly flakes
+     it.skip('does not crash on empty string', async () => {
+       const options = {
 diff --git a/electron/spec/api-crash-reporter.spec.ts b/electron/spec/api-crash-reporter.spec.ts
-index 5486d3889b..e9b087616c 100644
+index b29fe7cff2..ee98eca4dc 100644
 --- a/electron/spec/api-crash-reporter.spec.ts
 +++ b/electron/spec/api-crash-reporter.spec.ts
 @@ -14,7 +14,7 @@ import { setTimeout } from 'node:timers/promises';
@@ -3136,47 +3182,47 @@ index 5486d3889b..e9b087616c 100644
    // 32-bit Linux.  Figure out why.
 -  if (!(process.platform === 'linux' && process.arch === 'ia32')) {
 +  if (!((process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') && process.arch === 'ia32')) {
-     expect(fields.upload_file_minidump.length).to.be.greaterThan(0);
+     expect(fields.upload_file_minidump.length).toBeGreaterThan(0);
    }
  }
-@@ -193,7 +193,7 @@ ifdescribe(!isLinuxOnArm && !process.mas && !process.env.DISABLE_CRASH_REPORTER_
+@@ -191,7 +191,7 @@ ifdescribe(!isLinuxOnArm && !process.mas && !process.env.DISABLE_CRASH_REPORTER_
  
-       // Ensures that passing in crashpadHandlerPID flag for Linx child processes
-       // does not affect child process args.
--      ifit(process.platform === 'linux')('ensure linux child process args are not modified', async () => {
-+      ifit(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('ensure linux child process args are not modified', async () => {
-         const { port, waitForCrash } = await startServer();
-         let exitCode: number | null = null;
-         const appPath = path.join(import.meta.dirname, 'fixtures', 'apps', 'crash');
-@@ -660,7 +660,7 @@ ifdescribe(!isLinuxOnArm && !process.mas && !process.env.DISABLE_CRASH_REPORTER_
-       }
+     // Ensures that passing in crashpadHandlerPID flag for Linx child processes
+     // does not affect child process args.
+-    ifit(process.platform === 'linux')('ensure linux child process args are not modified', async () => {
++    ifit(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('ensure linux child process args are not modified', async () => {
+       const { port, waitForCrash } = await startServer();
+       let exitCode: number | null = null;
+       const appPath = path.join(import.meta.dirname, 'fixtures', 'apps', 'crash');
+@@ -653,7 +653,7 @@ ifdescribe(!isLinuxOnArm && !process.mas && !process.env.DISABLE_CRASH_REPORTER_
+     }
  
-       const processList =
--        process.platform === 'linux'
-+        (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')
-           ? ['main', 'renderer', 'sandboxed-renderer']
-           : ['main', 'renderer', 'sandboxed-renderer', 'node'];
-       for (const crashingProcess of processList) {
-@@ -677,7 +677,7 @@ ifdescribe(!isLinuxOnArm && !process.mas && !process.env.DISABLE_CRASH_REPORTER_
-               return app.getPath('crashDumps');
-             });
-             let reportsDir = crashesDir;
--            if (process.platform === 'darwin' || process.platform === 'linux') {
-+            if (process.platform === 'darwin' || process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
-               reportsDir = path.join(crashesDir, 'completed');
-             } else if (process.platform === 'win32') {
-               reportsDir = path.join(crashesDir, 'reports');
-@@ -705,7 +705,7 @@ ifdescribe(!isLinuxOnArm && !process.mas && !process.env.DISABLE_CRASH_REPORTER_
-             expect(remoteCrashesDir).to.equal(crashesDir);
+     const processList =
+-      process.platform === 'linux'
++      process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd'
+         ? ['main', 'renderer', 'sandboxed-renderer']
+         : ['main', 'renderer', 'sandboxed-renderer', 'node'];
+     for (const crashingProcess of processList) {
+@@ -670,7 +670,7 @@ ifdescribe(!isLinuxOnArm && !process.mas && !process.env.DISABLE_CRASH_REPORTER_
+             return app.getPath('crashDumps');
+           });
+           let reportsDir = crashesDir;
+-          if (process.platform === 'darwin' || process.platform === 'linux') {
++          if (process.platform === 'darwin' || process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+             reportsDir = path.join(crashesDir, 'completed');
+           } else if (process.platform === 'win32') {
+             reportsDir = path.join(crashesDir, 'reports');
+@@ -698,7 +698,7 @@ ifdescribe(!isLinuxOnArm && !process.mas && !process.env.DISABLE_CRASH_REPORTER_
+           expect(remoteCrashesDir).toBe(crashesDir);
  
-             let reportsDir = crashesDir;
--            if (process.platform === 'darwin' || process.platform === 'linux') {
-+            if (process.platform === 'darwin' || process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
-               reportsDir = path.join(crashesDir, 'completed');
-             } else if (process.platform === 'win32') {
-               reportsDir = path.join(crashesDir, 'reports');
+           let reportsDir = crashesDir;
+-          if (process.platform === 'darwin' || process.platform === 'linux') {
++          if (process.platform === 'darwin' || process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+             reportsDir = path.join(crashesDir, 'completed');
+           } else if (process.platform === 'win32') {
+             reportsDir = path.join(crashesDir, 'reports');
 diff --git a/electron/spec/api-desktop-capturer.spec.ts b/electron/spec/api-desktop-capturer.spec.ts
-index 32b44c7683..f9408a3aa9 100644
+index a386697ee3..d3a6f4038b 100644
 --- a/electron/spec/api-desktop-capturer.spec.ts
 +++ b/electron/spec/api-desktop-capturer.spec.ts
 @@ -9,7 +9,7 @@ import { ifdescribe, ifit } from './lib/spec-helpers.ts';
@@ -3188,16 +3234,16 @@ index 32b44c7683..f9408a3aa9 100644
      return ['screen'];
    }
    return ['window', 'screen'];
-@@ -35,7 +35,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
+@@ -38,7 +38,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
    });
  
    // Linux doesn't return any window sources.
 -  ifit(process.platform !== 'linux')('responds to subsequent calls of different options', async () => {
 +  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('responds to subsequent calls of different options', async () => {
      const promise1 = desktopCapturer.getSources({ types: ['window'] });
-     await expect(promise1).to.eventually.be.fulfilled();
+     await promise1;
  
-@@ -44,7 +44,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
+@@ -47,7 +47,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
    });
  
    // Linux doesn't return any window sources.
@@ -3206,7 +3252,7 @@ index 32b44c7683..f9408a3aa9 100644
      const w2 = new BrowserWindow({ width: 200, height: 200 });
      await w2.loadURL('about:blank');
  
-@@ -56,7 +56,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
+@@ -61,7 +61,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
      }
    });
  
@@ -3214,45 +3260,45 @@ index 32b44c7683..f9408a3aa9 100644
 +  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('returns display_ids matching the Screen API', async () => {
      const displays = screen.getAllDisplays();
      const sources = await desktopCapturer.getSources({ types: ['screen'] });
-     expect(sources).to.be.an('array').of.length(displays.length);
-@@ -103,7 +103,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
+     expect(sources).toBeInstanceOf(Array);
+@@ -111,7 +111,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
    });
  
    // Linux doesn't return any window sources.
--  ifit(process.platform !== 'linux')('getMediaSourceId should match DesktopCapturerSource.id', async function () {
-+  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('getMediaSourceId should match DesktopCapturerSource.id', async function () {
+-  ifit(process.platform !== 'linux')('getMediaSourceId should match DesktopCapturerSource.id', async () => {
++  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('getMediaSourceId should match DesktopCapturerSource.id', async () => {
      const w2 = new BrowserWindow({ show: false, width: 100, height: 100, webPreferences: { contextIsolation: false } });
      const wShown = once(w2, 'show');
      const wFocused = once(w2, 'focus');
-@@ -127,7 +127,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
+@@ -136,7 +136,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
    });
  
    // Linux doesn't return any window sources.
--  ifit(process.platform !== 'linux')('getSources should not incorrectly duplicate window_id', async function () {
-+  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('getSources should not incorrectly duplicate window_id', async function () {
+-  ifit(process.platform !== 'linux')('getSources should not incorrectly duplicate window_id', async () => {
++  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('getSources should not incorrectly duplicate window_id', async () => {
      const w2 = new BrowserWindow({ show: false, width: 100, height: 100, webPreferences: { contextIsolation: false } });
      const wShown = once(w2, 'show');
      const wFocused = once(w2, 'focus');
-@@ -173,7 +173,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
+@@ -184,7 +184,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
    });
  
    // Linux doesn't return any window sources.
--  ifit(process.platform !== 'linux')('moveAbove should move the window at the requested place', async function () {
-+  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('moveAbove should move the window at the requested place', async function () {
+-  ifit(process.platform !== 'linux')('moveAbove should move the window at the requested place', async () => {
++  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('moveAbove should move the window at the requested place', async () => {
      // DesktopCapturer.getSources() is guaranteed to return in the correct
      // z-order from foreground to background.
      const MAX_WIN = 4;
-@@ -259,7 +259,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
-   });
+@@ -272,7 +272,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
  
    // Linux doesn't return any window sources.
--  ifdescribe(process.platform !== 'linux')('fetchWindowIcons', function () {
-+  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('fetchWindowIcons', function () {
-     // Tests are sequentially dependent
-     this.bail(true);
+   // Tests are sequentially dependent.
+-  ifdescribe(process.platform !== 'linux')('fetchWindowIcons', () => {
++  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('fetchWindowIcons', () => {
      let w: BrowserWindow;
+     let testSource: Electron.DesktopCapturerSource | undefined;
+     let appIcon: Electron.NativeImage | undefined;
 diff --git a/electron/spec/api-dialog.spec.ts b/electron/spec/api-dialog.spec.ts
-index cbe5f2bf5c..9d91c3acae 100644
+index c160af8d98..03c9e3449c 100644
 --- a/electron/spec/api-dialog.spec.ts
 +++ b/electron/spec/api-dialog.spec.ts
 @@ -1046,7 +1046,7 @@ describe('dialog module', () => {
@@ -3265,7 +3311,7 @@ index cbe5f2bf5c..9d91c3acae 100644
        !process.arch.startsWith('arm') &&
        !!process.env.DBUS_SESSION_BUS_ADDRESS
 diff --git a/electron/spec/api-media-handler.spec.ts b/electron/spec/api-media-handler.spec.ts
-index 127e9eae3d..32ac3069a2 100644
+index d2b1b4964e..d37a3853be 100644
 --- a/electron/spec/api-media-handler.spec.ts
 +++ b/electron/spec/api-media-handler.spec.ts
 @@ -64,7 +64,7 @@ describe('setDisplayMediaRequestHandler', () => {
@@ -3275,26 +3321,26 @@ index 127e9eae3d..32ac3069a2 100644
 -  ifit(process.platform !== 'linux')(
 +  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')(
      'honors the restrictOwnAudio constraint when granted loopback audio',
-     async function () {
+     async (ctx) => {
        if ((await desktopCapturer.getSources({ types: ['screen'] })).length === 0) {
 diff --git a/electron/spec/api-menu.spec.ts b/electron/spec/api-menu.spec.ts
-index 05367c2be5..b0faadc94d 100644
+index 965261f87a..51cf1071d8 100644
 --- a/electron/spec/api-menu.spec.ts
 +++ b/electron/spec/api-menu.spec.ts
-@@ -955,7 +955,7 @@ describe('Menu module', function () {
+@@ -959,7 +959,7 @@ describe('Menu module', () => {
      // https://github.com/electron/electron/issues/35724
      // Maximizing window is enough to trigger the bug
      // FIXME(dsanders11): Test always passes on CI, even pre-fix
--    ifit(process.platform === 'linux' && !process.env.CI)('does not trigger issue #35724', (done) => {
-+    ifit((process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') && !process.env.CI)('does not trigger issue #35724', (done) => {
-       const showAndCloseMenu = async () => {
-         await setTimeout(1000);
-         menu.popup({ window: w, x: 50, y: 50 });
+-    ifit(process.platform === 'linux' && !process.env.CI)(
++    ifit((process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') && !process.env.CI)(
+       'does not trigger issue #35724',
+       () =>
+         new Promise<void>((resolve, reject) => {
 diff --git a/electron/spec/api-native-image.spec.ts b/electron/spec/api-native-image.spec.ts
-index 99794a100e..834b677caa 100644
+index 02f2114013..6b730e52c6 100644
 --- a/electron/spec/api-native-image.spec.ts
 +++ b/electron/spec/api-native-image.spec.ts
-@@ -570,7 +570,7 @@ describe('nativeImage module', () => {
+@@ -569,7 +569,7 @@ describe('nativeImage module', () => {
      });
    });
  
@@ -3304,11 +3350,11 @@ index 99794a100e..834b677caa 100644
  
      it('throws when invalid size is passed', async () => {
 diff --git a/electron/spec/api-net-log.spec.ts b/electron/spec/api-net-log.spec.ts
-index b30d9edc0f..2509c00e4c 100644
+index 196f755b66..9ffb340dc5 100644
 --- a/electron/spec/api-net-log.spec.ts
 +++ b/electron/spec/api-net-log.spec.ts
-@@ -129,7 +129,7 @@ describe('netLog module', () => {
-     ).to.be.true('uuid present in dump');
+@@ -137,7 +137,7 @@ describe('netLog module', () => {
+     ).toBe(true);
    });
  
 -  ifit(process.platform !== 'linux')(
@@ -3316,7 +3362,7 @@ index b30d9edc0f..2509c00e4c 100644
      'should begin and end logging automatically when --log-net-log is passed',
      async () => {
        const appProcess = ChildProcess.spawn(process.execPath, [appPath], {
-@@ -144,7 +144,7 @@ describe('netLog module', () => {
+@@ -152,7 +152,7 @@ describe('netLog module', () => {
      }
    );
  
@@ -3325,7 +3371,7 @@ index b30d9edc0f..2509c00e4c 100644
      'should begin and end logging automatically when --log-net-log is passed, and behave correctly when .startLogging() and .stopLogging() is called',
      async () => {
        const appProcess = ChildProcess.spawn(process.execPath, [appPath], {
-@@ -162,7 +162,7 @@ describe('netLog module', () => {
+@@ -170,7 +170,7 @@ describe('netLog module', () => {
      }
    );
  
@@ -3335,7 +3381,7 @@ index b30d9edc0f..2509c00e4c 100644
      async () => {
        const appProcess = ChildProcess.spawn(process.execPath, [appPath], {
 diff --git a/electron/spec/api-notification-dbus.spec.ts b/electron/spec/api-notification-dbus.spec.ts
-index 4b77c6a053..f365b577d0 100644
+index 108500ea3a..a636efe1c4 100644
 --- a/electron/spec/api-notification-dbus.spec.ts
 +++ b/electron/spec/api-notification-dbus.spec.ts
 @@ -24,7 +24,7 @@ const require = createRequire(import.meta.url);
@@ -3348,7 +3394,7 @@ index 4b77c6a053..f365b577d0 100644
    process.arch.indexOf('arm') === 0 ||
    !process.env.DBUS_SESSION_BUS_ADDRESS;
 diff --git a/electron/spec/api-power-monitor.spec.ts b/electron/spec/api-power-monitor.spec.ts
-index 176beed0b6..0a6688fd35 100644
+index 16ba8e2ef4..b62b02f358 100644
 --- a/electron/spec/api-power-monitor.spec.ts
 +++ b/electron/spec/api-power-monitor.spec.ts
 @@ -21,7 +21,7 @@ const require = createRequire(import.meta.url);
@@ -3359,30 +3405,30 @@ index 176beed0b6..0a6688fd35 100644
 +  ifdescribe((process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') && process.env.DBUS_SYSTEM_BUS_ADDRESS != null)(
      'when powerMonitor module is loaded with dbus mock',
      () => {
-       before(async () => {
+       beforeAll(async () => {
 diff --git a/electron/spec/api-process.spec.ts b/electron/spec/api-process.spec.ts
-index 0b9bea2b02..48c82d880b 100644
+index e8ffae7149..ceb9e48e6f 100644
 --- a/electron/spec/api-process.spec.ts
 +++ b/electron/spec/api-process.spec.ts
-@@ -43,7 +43,7 @@ describe('process module', () => {
+@@ -44,7 +44,7 @@ describe('process module', () => {
        it('resolves promise successfully with valid data', async () => {
          const memoryInfo = await invoke(() => process.getProcessMemoryInfo());
-         expect(memoryInfo).to.be.an('object');
+         expect(memoryInfo).toBeTypeOf('object');
 -        if (process.platform === 'linux' || process.platform === 'win32') {
 +        if (process.platform === 'linux' || process.platform === 'win32' || process.platform === 'freebsd' || process.platform === 'netbsd') {
-           expect(memoryInfo.residentSet).to.be.a('number').greaterThan(0);
+           expect(memoryInfo.residentSet).toBeTypeOf('number');
+           expect(memoryInfo.residentSet).toBeGreaterThan(0);
          }
-         expect(memoryInfo.private).to.be.a('number').greaterThan(0);
-@@ -57,7 +57,7 @@ describe('process module', () => {
+@@ -61,7 +61,7 @@ describe('process module', () => {
          const systemMemoryInfo = await invoke(() => process.getSystemMemoryInfo());
-         expect(systemMemoryInfo.free).to.be.a('number');
-         expect(systemMemoryInfo.total).to.be.a('number');
+         expect(systemMemoryInfo.free).toBeTypeOf('number');
+         expect(systemMemoryInfo.total).toBeTypeOf('number');
 -        if (process.platform === 'linux') {
 +        if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
-           expect(systemMemoryInfo.available).to.be.a('number').greaterThan(0);
+           expect(systemMemoryInfo.available).toBeTypeOf('number');
+           expect(systemMemoryInfo.available).toBeGreaterThan(0);
          }
-       });
-@@ -136,7 +136,7 @@ describe('process module', () => {
+@@ -141,7 +141,7 @@ describe('process module', () => {
      generateSpecs((fn, ...args) => fn(...args));
    });
  
@@ -3392,60 +3438,60 @@ index 0b9bea2b02..48c82d880b 100644
        const fixture = path.join(import.meta.dirname, 'fixtures', 'api', 'environ-write-race.js');
        const child = cp.spawn(process.execPath, [fixture], { stdio: ['ignore', 'pipe', 'inherit'] });
 diff --git a/electron/spec/api-safe-storage.spec.ts b/electron/spec/api-safe-storage.spec.ts
-index 7233b6af54..63211b8c8a 100644
+index d582f3ef1e..c5752fd731 100644
 --- a/electron/spec/api-safe-storage.spec.ts
 +++ b/electron/spec/api-safe-storage.spec.ts
-@@ -15,7 +15,7 @@ chai.use(chaiAsPromised);
+@@ -11,7 +11,7 @@ import { ifdescribe } from './lib/spec-helpers.ts';
  
  describe('safeStorage module', () => {
-   before(() => {
+   beforeAll(() => {
 -    if (process.platform === 'linux') {
 +    if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
        safeStorage.setUsePlainTextEncryption(true);
      }
    });
-@@ -33,7 +33,7 @@ describe('safeStorage module', () => {
+@@ -29,7 +29,7 @@ describe('safeStorage module', () => {
      });
    });
  
 -  ifdescribe(process.platform === 'linux')('SafeStorage.getSelectedStorageBackend()', () => {
 +  ifdescribe(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('SafeStorage.getSelectedStorageBackend()', () => {
      it('should return a valid backend', () => {
-       expect(safeStorage.getSelectedStorageBackend()).to.equal('basic_text');
+       expect(safeStorage.getSelectedStorageBackend()).toBe('basic_text');
      });
 diff --git a/electron/spec/api-screen.spec.ts b/electron/spec/api-screen.spec.ts
-index a3b0aadffb..9705a21f58 100644
+index 88a59f8eb0..fc3455fc6f 100644
 --- a/electron/spec/api-screen.spec.ts
 +++ b/electron/spec/api-screen.spec.ts
-@@ -95,7 +95,7 @@ describe('screen module', { tags: ['serial'] }, () => {
+@@ -97,7 +97,7 @@ describe('screen module', { tags: ['serial'] }, () => {
  
        const { size } = display!;
  
 -      if (process.platform === 'linux') {
 +      if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
-         expect(size).to.have.property('width').that.is.a('number');
-         expect(size).to.have.property('height').that.is.a('number');
+         expect(size).toHaveProperty('width', expect.any(Number));
+         expect(size).toHaveProperty('height', expect.any(Number));
        } else {
-@@ -109,7 +109,7 @@ describe('screen module', { tags: ['serial'] }, () => {
+@@ -113,7 +113,7 @@ describe('screen module', { tags: ['serial'] }, () => {
  
        const { workAreaSize } = display!;
  
 -      if (process.platform === 'linux') {
 +      if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
-         expect(workAreaSize).to.have.property('width').that.is.a('number');
-         expect(workAreaSize).to.have.property('height').that.is.a('number');
+         expect(workAreaSize).toHaveProperty('width', expect.any(Number));
+         expect(workAreaSize).toHaveProperty('height', expect.any(Number));
        } else {
-@@ -125,7 +125,7 @@ describe('screen module', { tags: ['serial'] }, () => {
-       expect(bounds).to.have.property('x').that.is.a('number');
-       expect(bounds).to.have.property('y').that.is.a('number');
+@@ -131,7 +131,7 @@ describe('screen module', { tags: ['serial'] }, () => {
+       expect(bounds).toHaveProperty('x', expect.any(Number));
+       expect(bounds).toHaveProperty('y', expect.any(Number));
  
 -      if (process.platform === 'linux') {
 +      if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
-         expect(bounds).to.have.property('width').that.is.a('number');
-         expect(bounds).to.have.property('height').that.is.a('number');
+         expect(bounds).toHaveProperty('width', expect.any(Number));
+         expect(bounds).toHaveProperty('height', expect.any(Number));
        } else {
 diff --git a/electron/spec/api-shell.spec.ts b/electron/spec/api-shell.spec.ts
-index 0f96ea1b2c..effef534b0 100644
+index 4c24833241..eb41057b95 100644
 --- a/electron/spec/api-shell.spec.ts
 +++ b/electron/spec/api-shell.spec.ts
 @@ -37,7 +37,7 @@ describe('shell module', () => {
@@ -3475,7 +3521,7 @@ index 0f96ea1b2c..effef534b0 100644
          // On the Mac CI machines, Safari tries to ask for a password to the
          // code signing keychain we set up to test code signing (see
 diff --git a/electron/spec/api-subframe.spec.ts b/electron/spec/api-subframe.spec.ts
-index 9172bce7a8..c15f6c3cec 100644
+index fa45f4e789..4da08b64ab 100644
 --- a/electron/spec/api-subframe.spec.ts
 +++ b/electron/spec/api-subframe.spec.ts
 @@ -254,7 +254,7 @@ describe('subframe with non-standard schemes', () => {
@@ -3488,10 +3534,10 @@ index 9172bce7a8..c15f6c3cec 100644
    let crossSiteUrl: string;
    let serverUrl: string;
 diff --git a/electron/spec/api-system-preferences.spec.ts b/electron/spec/api-system-preferences.spec.ts
-index f017da30e0..edc5379bca 100644
+index 9accac773e..bd397b2a87 100644
 --- a/electron/spec/api-system-preferences.spec.ts
 +++ b/electron/spec/api-system-preferences.spec.ts
-@@ -5,8 +5,8 @@ import { expect } from 'chai';
+@@ -5,8 +5,8 @@ import { describe, expect, it } from 'vitest';
  import { ifdescribe, ifit } from './lib/spec-helpers.ts';
  
  describe('systemPreferences module', () => {
@@ -3503,40 +3549,40 @@ index f017da30e0..edc5379bca 100644
        // some tricky D-Bus mock setup.
        const accentColor = systemPreferences.getAccentColor();
 diff --git a/electron/spec/api-tray.spec.ts b/electron/spec/api-tray.spec.ts
-index 828b797913..ca0c503ef2 100644
+index ceef549785..1460a736f7 100644
 --- a/electron/spec/api-tray.spec.ts
 +++ b/electron/spec/api-tray.spec.ts
 @@ -32,13 +32,13 @@ describe('tray module', { tags: ['serial'] }, () => {
-       }).to.throw(/Failed to load image from path (.+)/);
+       }).toThrow(/Failed to load image from path (.+)/);
      });
  
 -    ifit(process.platform !== 'linux')('throws a descriptive error if an invalid guid is given', () => {
 +    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('throws a descriptive error if an invalid guid is given', () => {
        expect(() => {
          tray = new Tray(nativeImage.createEmpty(), 'I am not a guid');
-       }).to.throw('Invalid GUID format');
+       }).toThrow('Invalid GUID format');
      });
  
 -    ifit(process.platform !== 'linux')('accepts a valid guid', () => {
 +    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('accepts a valid guid', () => {
        expect(() => {
          tray = new Tray(nativeImage.createEmpty(), '0019A433-3526-48BA-A66C-676742C0FEFB');
-       }).to.not.throw();
+       }).not.toThrow();
 @@ -139,7 +139,7 @@ describe('tray module', { tags: ['serial'] }, () => {
        tray.destroy();
      });
  
--    ifit(process.platform !== 'linux')('returns a bounds object', function () {
-+    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('returns a bounds object', function () {
+-    ifit(process.platform !== 'linux')('returns a bounds object', () => {
++    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('returns a bounds object', () => {
        const bounds = tray.getBounds();
-       expect(bounds).to.be.an('object').and.to.have.all.keys('x', 'y', 'width', 'height');
-     });
+       expect(bounds).toBeTypeOf('object');
+       expect(Object.keys(bounds).sort()).toEqual(['height', 'width', 'x', 'y']);
 diff --git a/electron/spec/api-utility-process.spec.ts b/electron/spec/api-utility-process.spec.ts
-index 13bce22290..29c1305cc7 100644
+index d73b51c8f5..56a0f92cc5 100644
 --- a/electron/spec/api-utility-process.spec.ts
 +++ b/electron/spec/api-utility-process.spec.ts
-@@ -618,7 +618,7 @@ describe('utilityProcess module', () => {
-       expect(output).to.include(result);
+@@ -638,7 +638,7 @@ describe('utilityProcess module', () => {
+       expect(output).toContain(result);
      });
  
 -    ifit(process.platform !== 'linux')('can access exposed main process modules from the utility process', async () => {
@@ -3544,7 +3590,7 @@ index 13bce22290..29c1305cc7 100644
        const message = 'Message from utility process';
        const child = utilityProcess.fork(path.join(fixturesPath, 'expose-main-process-module.js'));
        await once(child, 'spawn');
-@@ -655,7 +655,7 @@ describe('utilityProcess module', () => {
+@@ -675,7 +675,7 @@ describe('utilityProcess module', () => {
        await closeWindow(w);
      });
  
@@ -3554,19 +3600,19 @@ index 13bce22290..29c1305cc7 100644
        await once(child, 'spawn');
        const [data] = await once(child, 'message');
 diff --git a/electron/spec/api-web-contents.spec.ts b/electron/spec/api-web-contents.spec.ts
-index 11bd977ded..681ec2301c 100644
+index a848694ac6..692ffaf111 100644
 --- a/electron/spec/api-web-contents.spec.ts
 +++ b/electron/spec/api-web-contents.spec.ts
-@@ -1643,7 +1643,7 @@ describe('webContents module', () => {
+@@ -1631,7 +1631,7 @@ describe('webContents module', () => {
      // back to OpenFolder() which does a blocking DirectoryExists() on the UI
      // thread (pre-existing behavior). Workspace-gating is covered by the test
      // above.
 -    ifit(process.platform !== 'linux')(
 +    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')(
        'reveals paths under a registered workspace folder without executing them',
-       async () => {
-         const w = new BrowserWindow({ show: false });
-@@ -4301,7 +4301,7 @@ describe('webContents module', () => {
+       // Opens a real Finder/Explorer window, which takes focus and stays open.
+       { tags: ['serial'] },
+@@ -4309,7 +4309,7 @@ describe('webContents module', () => {
      });
  
      // TODO(codebytere): OOPIF printing is disabled on Linux at the moment due to crashes.
@@ -3576,17 +3622,17 @@ index 11bd977ded..681ec2301c 100644
          res.writeHead(200);
          res.end(`
 diff --git a/electron/spec/chromium.spec.ts b/electron/spec/chromium.spec.ts
-index 679ecb2f9e..b173700cc9 100644
+index 6750e3f400..c8cbe71eef 100644
 --- a/electron/spec/chromium.spec.ts
 +++ b/electron/spec/chromium.spec.ts
-@@ -608,15 +608,15 @@ describe('command line switches', () => {
+@@ -611,15 +611,15 @@ describe('command line switches', () => {
        testLocale('asdfkl', `${currentLocale}|${currentSystemLocale}|${currentPreferredLanguages}`));
  
      const lcAll = String(process.env.LC_ALL);
 -    ifit(process.platform === 'linux')('current process has a valid LC_ALL env', async () => {
 +    ifit(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('current process has a valid LC_ALL env', async () => {
        // The LC_ALL env should not be set to DOM locale string.
-       expect(lcAll).to.not.equal(app.getLocale());
+       expect(lcAll).not.toBe(app.getLocale());
      });
 -    ifit(process.platform === 'linux')('should not change LC_ALL', async () => testLocale('fr', lcAll, true));
 -    ifit(process.platform === 'linux')('should not change LC_ALL when setting invalid locale', async () =>
@@ -3599,22 +3645,22 @@ index 679ecb2f9e..b173700cc9 100644
        testLocale('', lcAll, true)
      );
    });
-@@ -4259,12 +4259,12 @@ describe('font fallback', () => {
-       expect(fonts[0].familyName).to.equal('Arial');
+@@ -4267,12 +4267,12 @@ describe('font fallback', () => {
+       expect(fonts[0].familyName).toBe('Arial');
      } else if (process.platform === 'darwin') {
-       expect(fonts[0].familyName).to.equal('Helvetica');
+       expect(fonts[0].familyName).toBe('Helvetica');
 -    } else if (process.platform === 'linux') {
 +    } else if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
-       expect(fonts[0].familyName).to.equal('DejaVu Sans');
+       expect(fonts[0].familyName).toBe('DejaVu Sans');
      } // I think this depends on the distro? We don't specify a default.
    });
  
--  ifit(process.platform !== 'linux')(
-+  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')(
-     'should fall back to Japanese font for sans-serif Japanese script',
-     async function () {
-       const html = `
-@@ -5010,7 +5010,7 @@ describe('paste execCommand', { tags: ['serial'] }, () => {
+-  ifit(process.platform !== 'linux')('should fall back to Japanese font for sans-serif Japanese script', async () => {
++  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('should fall back to Japanese font for sans-serif Japanese script', async () => {
+     const html = `
+     <html lang="ja-JP">
+       <head>
+@@ -5000,7 +5000,7 @@ describe('paste execCommand', { tags: ['serial'] }, () => {
    });
  });
  
@@ -3624,10 +3670,10 @@ index 679ecb2f9e..b173700cc9 100644
  
    const expectedBadgeCount = 42;
 diff --git a/electron/spec/crash.spec.ts b/electron/spec/crash.spec.ts
-index 2a4b41d6c7..86ab82722a 100644
+index 0dba387066..6913b8832d 100644
 --- a/electron/spec/crash.spec.ts
 +++ b/electron/spec/crash.spec.ts
-@@ -53,7 +53,7 @@ const shouldRunCase = (crashCase: string) => {
+@@ -54,7 +54,7 @@ const shouldRunCase = (crashCase: string) => {
        if (process.platform === 'win32') {
          return process.arch !== 'ia32';
        } else {
@@ -3637,7 +3683,7 @@ index 2a4b41d6c7..86ab82722a 100644
      }
      default: {
 diff --git a/electron/spec/desktop-name.spec.ts b/electron/spec/desktop-name.spec.ts
-index a702e39d01..5e9e78f74e 100644
+index 4c6942ba69..d2b4adbce8 100644
 --- a/electron/spec/desktop-name.spec.ts
 +++ b/electron/spec/desktop-name.spec.ts
 @@ -10,7 +10,7 @@ const { defaultDesktopName }: typeof import('../lib/browser/desktop-name.ts') =
@@ -3689,11 +3735,11 @@ index c2761afc41..2ec5b0a573 100644
      case 'darwin':
        return path.resolve(__dirname, 'build/Release/foo.dylib');
 diff --git a/electron/spec/lib/spec-helpers.ts b/electron/spec/lib/spec-helpers.ts
-index 8176ee4010..c0db35c6ed 100644
+index 7ca6b19058..a5d239f0b0 100644
 --- a/electron/spec/lib/spec-helpers.ts
 +++ b/electron/spec/lib/spec-helpers.ts
-@@ -29,7 +29,7 @@ export const ifit = (condition: boolean) => (condition ? it : addOnly<TestFuncti
- export const ifdescribe = (condition: boolean) => (condition ? describe : addOnly<SuiteFunction>(describe.skip));
+@@ -19,7 +19,7 @@ export const ifit = (condition: boolean) => (condition ? it : it.skip);
+ export const ifdescribe = (condition: boolean) => (condition ? describe : describe.skip);
  
  export const isWayland =
 -  process.platform === 'linux' &&
@@ -3702,10 +3748,10 @@ index 8176ee4010..c0db35c6ed 100644
      !!process.env.WAYLAND_DISPLAY ||
      process.argv.includes('--ozone-platform=wayland'));
 diff --git a/electron/spec/node.spec.ts b/electron/spec/node.spec.ts
-index 406c5bff58..0f941e2965 100644
+index fafe454a59..0f137aa72a 100644
 --- a/electron/spec/node.spec.ts
 +++ b/electron/spec/node.spec.ts
-@@ -221,7 +221,7 @@ describe('node feature', () => {
+@@ -224,7 +224,7 @@ describe('node feature', () => {
      });
  
      describe('child_process.exec', () => {
@@ -3715,11 +3761,11 @@ index 406c5bff58..0f941e2965 100644
          // https://github.com/torvalds/linux/blob/40fde647cc/Documentation/userspace-api/no_new_privs.rst).
          // We disable this for unsandboxed processes, which the renderer tests
 diff --git a/electron/spec/spellchecker.spec.ts b/electron/spec/spellchecker.spec.ts
-index 1b221671f9..7abf879064 100644
+index 163a718aba..6d2978044c 100644
 --- a/electron/spec/spellchecker.spec.ts
 +++ b/electron/spec/spellchecker.spec.ts
-@@ -91,7 +91,7 @@ ifdescribe(features.isBuiltinSpellCheckerEnabled())('spellchecker', function ()
-       });
+@@ -92,7 +92,7 @@ ifdescribe(features.isBuiltinSpellCheckerEnabled())('spellchecker', { timeout },
+       }, timeout);
  
        // Context menu test can not run on Windows or Linux (https://github.com/electron/electron/pull/48657 broke linux).
 -      const shouldRun = process.platform !== 'win32' && process.platform !== 'linux';
@@ -3728,7 +3774,7 @@ index 1b221671f9..7abf879064 100644
        ifit(shouldRun)('should detect correctly spelled words as correct', async () => {
          await w.webContents.executeJavaScript('document.body.querySelector("textarea").value = "typography"');
 diff --git a/electron/spec/visibility-state.spec.ts b/electron/spec/visibility-state.spec.ts
-index 0b701f3106..469e1eb441 100644
+index 71fb5cfdfd..7dbaf56f1b 100644
 --- a/electron/spec/visibility-state.spec.ts
 +++ b/electron/spec/visibility-state.spec.ts
 @@ -19,7 +19,7 @@ import { closeAllWindows } from './lib/window-helpers.ts';
@@ -3739,12 +3785,12 @@ index 0b701f3106..469e1eb441 100644
 +ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('document.visibilityState', () => {
    let w: BaseWindow & { webContents: WebContents };
  
-   before(() => {
+   beforeAll(() => {
 diff --git a/electron/spec/webview.spec.ts b/electron/spec/webview.spec.ts
-index 7ff4b03c3d..94485c1cb9 100644
+index 5338800b77..4f98ca9ad6 100644
 --- a/electron/spec/webview.spec.ts
 +++ b/electron/spec/webview.spec.ts
-@@ -617,7 +617,7 @@ describe('<webview> tag', function () {
+@@ -626,7 +626,7 @@ describe('<webview> tag', () => {
      });
  
      // FIXME(zcbenz): Fullscreen events do not work on Linux.
@@ -3800,59 +3846,115 @@ index dde2281861..7c00c1f638 100644
    not(debug_assertions)
  ))]
  #[global_allocator]
+diff --git a/third_party/electron_node/common.gypi b/third_party/electron_node/common.gypi
+index 85f20322ae..1d2183a657 100644
+--- a/third_party/electron_node/common.gypi
++++ b/third_party/electron_node/common.gypi
+@@ -602,11 +602,11 @@
+           'NOMINMAX',
+         ],
+       }],
+-      [ 'OS in "linux freebsd openbsd solaris aix os400 openharmony"', {
++      [ 'OS in "linux freebsd netbsd openbsd solaris aix os400 openharmony"', {
+         'cflags': [ '-pthread' ],
+         'ldflags': [ '-pthread' ],
+       }],
+-      [ 'OS in "linux freebsd openbsd solaris android aix os400 cloudabi openharmony"', {
++      [ 'OS in "linux freebsd netbsd openbsd solaris android aix os400 cloudabi openharmony"', {
+         'cflags': [ '-Wall', '-Wextra', '-Wno-unused-parameter', ],
+         'cflags_cc': [
+           '-fno-rtti',
+diff --git a/third_party/electron_node/deps/cares/cares.gyp b/third_party/electron_node/deps/cares/cares.gyp
+index fee055c079..5f1f2ca5fa 100644
+--- a/third_party/electron_node/deps/cares/cares.gyp
++++ b/third_party/electron_node/deps/cares/cares.gyp
+@@ -231,6 +231,10 @@
+           'include_dirs': [ 'config/freebsd' ],
+           'sources': [ 'config/freebsd/ares_config.h' ]
+         }],
++        [ 'OS=="netbsd"', {
++          'include_dirs': [ 'config/netbsd' ],
++          'sources': [ 'config/netbsd/ares_config.h' ]
++        }],
+         [ 'OS=="openbsd"', {
+           'include_dirs': [ 'config/openbsd' ],
+           'sources': [ 'config/openbsd/ares_config.h' ]
+diff --git a/third_party/electron_node/deps/cares/config/netbsd/ares_config.h b/third_party/electron_node/deps/cares/config/netbsd/ares_config.h
+index 4efcd2d1a5..06666e0c05 100644
+--- a/third_party/electron_node/deps/cares/config/netbsd/ares_config.h
++++ b/third_party/electron_node/deps/cares/config/netbsd/ares_config.h
+@@ -119,7 +119,7 @@
+ /* #undef HAVE_GETRANDOM */
+ 
+ /* Define to 1 if you have `getservbyport_r` */
+-#define HAVE_GETSERVBYPORT_R 1
++/*#define HAVE_GETSERVBYPORT_R 1*/
+ 
+ /* Define to 1 if you have `gettimeofday` */
+ #define HAVE_GETTIMEOFDAY 1
+@@ -580,4 +580,4 @@
+ /* #undef __MINGW_USE_VC2005_COMPAT */
+ 
+ /* Define as 'unsigned int' if <stddef.h> doesn't define. */
+-/* #undef size_t */
+\ No newline at end of file
++/* #undef size_t */
 diff --git a/third_party/electron_node/deps/cares/unofficial.gni b/third_party/electron_node/deps/cares/unofficial.gni
-index e02d7f4251..a834a0c1cf 100644
+index 364df1f312..72eda82753 100644
 --- a/third_party/electron_node/deps/cares/unofficial.gni
 +++ b/third_party/electron_node/deps/cares/unofficial.gni
-@@ -44,10 +44,14 @@ template("cares_gn_build") {
-     ]
-     if (is_win) {
-       include_dirs += [ "config/win32" ]
--    } else if (is_linux) {
-+    } else if (is_linux && !is_bsd) {
-       include_dirs += [ "config/linux" ]
-     } else if (is_mac) {
-       include_dirs += [ "config/darwin" ]
-+    } else if (is_freebsd) {
-+      include_dirs += [ "config/freebsd" ]
-+    } else if (is_netbsd) {
-+      include_dirs += [ "config/netbsd" ]
-     }
+@@ -60,6 +60,10 @@ template("cares_gn_build") {
+         include_dirs += [ "config/linux" ]
+       } else if (is_mac) {
+         include_dirs += [ "config/darwin" ]
++      } else if (is_freebsd) {
++        include_dirs += [ "config/freebsd" ]
++      } else if (is_netbsd) {
++        include_dirs += [ "config/netbsd" ]
+       }
  
-     if (is_win) {
-@@ -58,12 +62,18 @@ template("cares_gn_build") {
-     }
- 
-     sources = gypi_values.cares_sources_common
--    if (is_linux) {
-+    if (is_linux && !is_bsd) {
-       sources += [ "config/linux/ares_config.h" ]
-     }
-     if (is_mac) {
-       sources += gypi_values.cares_sources_mac
-     }
-+    if (is_freebsd) {
-+      sources += [ "config/freebsd/ares_config.h" ]
-+    }
-+    if (is_netbsd) {
-+      sources += [ "config/netbsd/ares_config.h" ]
-+    }
- 
-     if (is_clang) {
        if (is_win) {
+@@ -76,6 +80,12 @@ template("cares_gn_build") {
+       if (is_mac) {
+         sources += gypi_values.cares_sources_mac
+       }
++      if (is_freebsd) {
++        sources += [ "config/freebsd/ares_config.h" ]
++      }
++      if (is_netbsd) {
++        sources += [ "config/netbsd/ares_config.h" ]
++      }
+ 
+       if (is_clang) {
+         if (is_win) {
+diff --git a/third_party/electron_node/deps/histogram/src/hdr_histogram.c b/third_party/electron_node/deps/histogram/src/hdr_histogram.c
+index a34de2c1b2..027643dd14 100644
+--- a/third_party/electron_node/deps/histogram/src/hdr_histogram.c
++++ b/third_party/electron_node/deps/histogram/src/hdr_histogram.c
+@@ -36,8 +36,8 @@
+ 
+ /* Runtime-dispatched AVX2 path: keep the rest of this TU at the project's
+    baseline ISA so the shipped binary does not silently require AVX2. */
+-#if (defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)) \
+-    && (defined(__GNUC__) || defined(__clang__)) && !defined(__INTEL_COMPILER) && !defined(_MSC_VER)
++#if (defined(__x86_64__) || defined(_M_X64) || defined(_M_IX86)) \
++     && (defined(__GNUC__) || defined(__clang__)) && !defined(__INTEL_COMPILER) && !defined(_MSC_VER)
+ #  define HDR_HAS_AVX2_DISPATCH 1
+ #  include <immintrin.h>
+ #endif
 diff --git a/third_party/electron_node/deps/histogram/unofficial.gni b/third_party/electron_node/deps/histogram/unofficial.gni
-index 1173ab298a..3df744631c 100644
+index fd8c3a276b..c1840d619c 100644
 --- a/third_party/electron_node/deps/histogram/unofficial.gni
 +++ b/third_party/electron_node/deps/histogram/unofficial.gni
-@@ -25,7 +25,7 @@ template("histogram_gn_build") {
-         "-Wno-unused-function",
-       ]
+@@ -37,7 +37,7 @@ template("histogram_gn_build") {
+           "-Wno-unused-function",
+         ]
+       }
+-      if (is_linux) {
++      if (is_linux && !is_bsd) {
+         libs = [ "atomic" ]
+       }
      }
--    if (is_linux) {
-+    if (is_linux && !is_bsd) {
-       libs = [ "atomic" ]
-     }
-   }
 diff --git a/third_party/electron_node/deps/openssl/unofficial.gni b/third_party/electron_node/deps/openssl/unofficial.gni
 index 2a82d7d448..e9d558f64f 100644
 --- a/third_party/electron_node/deps/openssl/unofficial.gni
@@ -3866,6 +3968,19 @@ index 2a82d7d448..e9d558f64f 100644
        libs = [ "atomic" ]
      }
  
+diff --git a/third_party/electron_node/deps/uv/common.gypi b/third_party/electron_node/deps/uv/common.gypi
+index cc9c98e762..b2c39dec18 100644
+--- a/third_party/electron_node/deps/uv/common.gypi
++++ b/third_party/electron_node/deps/uv/common.gypi
+@@ -135,7 +135,7 @@
+           }]
+         ]
+       }],
+-      ['OS in "freebsd dragonflybsd linux openbsd solaris android aix os400"', {
++      ['OS in "freebsd dragonflybsd linux netbsd openbsd solaris android aix os400"', {
+         'cflags': [ '-Wall' ],
+         'cflags_cc': [ '-fno-rtti', '-fno-exceptions' ],
+         'target_conditions': [
 diff --git a/third_party/electron_node/deps/uv/src/unix/pipe.c b/third_party/electron_node/deps/uv/src/unix/pipe.c
 index eb03a47ccc..3cbc287fdd 100644
 --- a/third_party/electron_node/deps/uv/src/unix/pipe.c
@@ -3887,52 +4002,492 @@ index eb03a47ccc..3cbc287fdd 100644
  #if defined(__APPLE__)
    err = uv__stream_try_select((uv_stream_t*) handle, &fd);
 diff --git a/third_party/electron_node/deps/uv/unofficial.gni b/third_party/electron_node/deps/uv/unofficial.gni
-index 0944d6ddd2..b1ffe2c664 100644
+index a289188783..baf93b10ef 100644
 --- a/third_party/electron_node/deps/uv/unofficial.gni
 +++ b/third_party/electron_node/deps/uv/unofficial.gni
-@@ -27,7 +27,7 @@ template("uv_gn_build") {
-         "_FILE_OFFSET_BITS=64",
-       ]
+@@ -39,7 +39,7 @@ template("uv_gn_build") {
+           "_FILE_OFFSET_BITS=64",
+         ]
+       }
+-      if (is_linux) {
++      if (is_linux && !is_bsd) {
+         defines += [
+           "_POSIX_C_SOURCE=200112",
+           "_GNU_SOURCE",
+@@ -108,6 +108,9 @@ template("uv_gn_build") {
+           "rt",
+         ]
+       }
++      if (is_netbsd) {
++        libs += [ "kvm" ]
++      }
+ 
+       sources = gypi_values.uv_sources_common
+       if (is_win) {
+@@ -117,13 +120,31 @@ template("uv_gn_build") {
+         sources += gypi_values.uv_sources_posix +
+                    [ "src/unix/proctitle.c" ]
+       }
+-      if (is_linux) {
++      if (is_linux && !is_bsd) {
+         sources += gypi_values.uv_sources_linux
+       }
+       if (is_apple) {
+         sources += gypi_values.uv_sources_apple +
+                    gypi_values.uv_sources_bsd_common
+       }
++      if (is_freebsd) {
++        sources += gypi_values.uv_sources_bsd_common + [
++                  "src/unix/freebsd.c",
++                  "src/unix/random-getrandom.c",
++                  "src/unix/posix-hrtime.c",
++                  "src/unix/bsd-proctitle.c",
++        ]
++        sources -= [ "src/unix/proctitle.c" ]
++      }
++      if (is_netbsd) {
++        sources += gypi_values.uv_sources_bsd_common + [
++                  "src/unix/netbsd.c",
++                  "src/unix/random-getrandom.c",
++                  "src/unix/posix-hrtime.c",
++                  "src/unix/bsd-proctitle.c",
++        ]
++        sources -= [ "src/unix/proctitle.c" ]
++      }
      }
--    if (is_linux) {
-+    if (is_linux && !is_bsd) {
-       defines += [
-         "_POSIX_C_SOURCE=200112",
-         "_GNU_SOURCE",
-@@ -105,12 +105,30 @@ template("uv_gn_build") {
-       sources += gypi_values.uv_sources_posix +
-                  [ "src/unix/proctitle.c" ]
-     }
--    if (is_linux) {
-+    if (is_linux && !is_bsd) {
-       sources += gypi_values.uv_sources_linux
-     }
-     if (is_apple) {
-       sources += gypi_values.uv_sources_apple +
-                  gypi_values.uv_sources_bsd_common
-     }
-+    if (is_freebsd) {
-+      sources += gypi_values.uv_sources_bsd_common + [
-+        "src/unix/freebsd.c",
-+        "src/unix/random-getrandom.c",
-+        "src/unix/posix-hrtime.c",
-+        "src/unix/bsd-proctitle.c",
-+      ]
-+      sources -= [ "src/unix/proctitle.c" ]
-+    }
-+    if (is_netbsd) {
-+      sources += gypi_values.uv_sources_bsd_common + [
-+        "src/unix/netbsd.c",
-+        "src/unix/random-getrandom.c",
-+        "src/unix/posix-hrtime.c",
-+        "src/unix/bsd-proctitle.c",
-+      ]
-+      sources -= [ "src/unix/proctitle.c" ]
-+    }
    }
  }
+diff --git a/third_party/electron_node/deps/uvwasi/include/wasi_serdes.h b/third_party/electron_node/deps/uvwasi/include/wasi_serdes.h
+index b482918855..4d7de7c827 100644
+--- a/third_party/electron_node/deps/uvwasi/include/wasi_serdes.h
++++ b/third_party/electron_node/deps/uvwasi/include/wasi_serdes.h
+@@ -3,6 +3,13 @@
+ 
+ #include "wasi_types.h"
+ 
++#ifdef __NetBSD__
++#undef uint8_t
++#undef uint16_t
++#undef uint32_t
++#undef uint64_t
++#endif
++
+ /* Basic uint{8,16,32,64}_t read/write functions. */
+ 
+ #define BASIC_TYPE(name, type)                                                \
+diff --git a/third_party/electron_node/deps/v8/src/base/platform/memory.h b/third_party/electron_node/deps/v8/src/base/platform/memory.h
+index 32161ba819..606c1d3830 100644
+--- a/third_party/electron_node/deps/v8/src/base/platform/memory.h
++++ b/third_party/electron_node/deps/v8/src/base/platform/memory.h
+@@ -27,7 +27,7 @@
+ #include <malloc.h>
+ #endif
+ 
+-#if (V8_OS_POSIX && !V8_OS_AIX && !V8_OS_SOLARIS && !V8_OS_ZOS && !V8_OS_OPENBSD) || V8_OS_WIN
++#if (V8_OS_POSIX && !V8_OS_AIX && !V8_OS_SOLARIS && !V8_OS_ZOS && !V8_OS_OPENBSD && !V8_OS_NETBSD) || V8_OS_WIN
+ #define V8_HAS_MALLOC_USABLE_SIZE 1
+ #endif
+ 
+diff --git a/third_party/electron_node/deps/v8/src/base/platform/platform-freebsd.cc b/third_party/electron_node/deps/v8/src/base/platform/platform-freebsd.cc
+index e17d19d8a2..a4fbf28593 100644
+--- a/third_party/electron_node/deps/v8/src/base/platform/platform-freebsd.cc
++++ b/third_party/electron_node/deps/v8/src/base/platform/platform-freebsd.cc
+@@ -48,7 +48,7 @@ static unsigned StringToLong(char* buffer) {
+ }
+ 
+ std::vector<OS::SharedLibraryAddress> OS::GetSharedLibraryAddresses() {
+-  std::vector<SharedLibraryAddress> result;
++  std::vector<SharedLibraryAddress> address_result;
+   int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_VMMAP, getpid()};
+   size_t miblen = sizeof(mib) / sizeof(mib[0]);
+   size_t buffer_size;
+@@ -81,7 +81,7 @@ std::vector<OS::SharedLibraryAddress> OS::GetSharedLibraryAddresses() {
+           } else {
+             lib_name = std::string(path);
+           }
+-          result.push_back(SharedLibraryAddress(
++          address_result.push_back(SharedLibraryAddress(
+               lib_name, reinterpret_cast<uintptr_t>(map->kve_start),
+               reinterpret_cast<uintptr_t>(map->kve_end)));
+         }
+@@ -90,7 +90,7 @@ std::vector<OS::SharedLibraryAddress> OS::GetSharedLibraryAddresses() {
+       }
+     }
+   }
+-  return result;
++  return address_result;
+ }
+ 
+ void OS::SignalCodeMovingGC() {}
+diff --git a/third_party/electron_node/deps/v8/src/base/platform/platform-openbsd.cc b/third_party/electron_node/deps/v8/src/base/platform/platform-openbsd.cc
+index 84555e388d..cab163bba6 100644
+--- a/third_party/electron_node/deps/v8/src/base/platform/platform-openbsd.cc
++++ b/third_party/electron_node/deps/v8/src/base/platform/platform-openbsd.cc
+@@ -34,6 +34,48 @@
+ namespace v8 {
+ namespace base {
+ 
++#ifdef __arm__
++
++bool OS::ArmUsingHardFloat() {
++  // GCC versions 4.6 and above define __ARM_PCS or __ARM_PCS_VFP to specify
++  // the Floating Point ABI used (PCS stands for Procedure Call Standard).
++  // We use these as well as a couple of other defines to statically determine
++  // what FP ABI used.
++  // GCC versions 4.4 and below don't support hard-fp.
++  // GCC versions 4.5 may support hard-fp without defining __ARM_PCS or
++  // __ARM_PCS_VFP.
++
++#define GCC_VERSION (__GNUC__ * 10000                                          \
++                     + __GNUC_MINOR__ * 100                                    \
++                     + __GNUC_PATCHLEVEL__)
++#if GCC_VERSION >= 40600
++#if defined(__ARM_PCS_VFP)
++  return true;
++#else
++  return false;
++#endif
++
++#elif GCC_VERSION < 40500
++  return false;
++
++#else
++#if defined(__ARM_PCS_VFP)
++  return true;
++#elif defined(__ARM_PCS) || defined(__SOFTFP__) || defined(__SOFTFP) || \
++      !defined(__VFP_FP__)
++  return false;
++#else
++#error "Your version of GCC does not report the FP ABI compiled for."          \
++       "Please report it on this issue"                                        \
++       "http://code.google.com/p/v8/issues/detail?id=2140"
++
++#endif
++#endif
++#undef GCC_VERSION
++}
++
++#endif  // def __arm__
++
+ TimezoneCache* OS::CreateTimezoneCache() {
+   return new PosixDefaultTimezoneCache();
+ }
+diff --git a/third_party/electron_node/deps/v8/src/base/platform/platform-posix.cc b/third_party/electron_node/deps/v8/src/base/platform/platform-posix.cc
+index 5c93b3aaaf..ecb4d3444b 100644
+--- a/third_party/electron_node/deps/v8/src/base/platform/platform-posix.cc
++++ b/third_party/electron_node/deps/v8/src/base/platform/platform-posix.cc
+@@ -422,6 +422,10 @@ void* OS::GetRandomMmapAddr() {
+   raw_addr += 0x20000000;
+ #endif
+ #endif
++#endif
++
++#if V8_OS_NETBSD
++  raw_addr = 0;
+ #endif
+   return reinterpret_cast<void*>(raw_addr);
+ }
+@@ -588,14 +592,11 @@ bool OS::DiscardSystemPages(void* address, size_t size) {
+     // MADV_FREE_REUSABLE sometimes fails, so fall back to MADV_DONTNEED.
+     ret = madvise(address, size, MADV_DONTNEED);
+   }
+-#elif defined(_AIX) || defined(V8_OS_SOLARIS)
+-  int ret = madvise(reinterpret_cast<caddr_t>(address), size, MADV_FREE);
++#elif defined(POSIX_MADV_DONTNEED)
++  int ret = posix_madvise(address, size, POSIX_MADV_DONTNEED);
+   if (ret != 0 && errno == ENOSYS) {
+     return true;  // madvise is not available on all systems.
+   }
+-  if (ret != 0 && errno == EINVAL) {
+-    ret = madvise(reinterpret_cast<caddr_t>(address), size, MADV_DONTNEED);
+-  }
+ #else
+   int ret = madvise(address, size, MADV_DONTNEED);
+ #endif
+@@ -863,6 +864,8 @@ int OS::GetCurrentThreadIdInternal() {
+   return static_cast<int>(syscall(__NR_gettid));
+ #elif V8_OS_ANDROID
+   return static_cast<int>(gettid());
++#elif V8_OS_NETBSD || V8_OS_FREEBSD
++  return static_cast<int>(reinterpret_cast<intptr_t>(pthread_self()));
+ #elif V8_OS_AIX
+   return static_cast<int>(thread_self());
+ #elif V8_OS_FUCHSIA
+@@ -1168,7 +1171,11 @@ Thread::Thread(const Options& options)
+       stack_size_(options.stack_size()),
+       priority_(options.priority()),
+       start_semaphore_(nullptr) {
++#if V8_OS_NETBSD
++  const int min_stack_size = sysconf(_SC_THREAD_STACK_MIN);
++#else
+   const int min_stack_size = static_cast<int>(PTHREAD_STACK_MIN);
++#endif
+   if (stack_size_ > 0) stack_size_ = std::max(stack_size_, min_stack_size);
+   set_name(options.name());
+ }
+@@ -1183,7 +1190,7 @@ static void SetThreadName(const char* name) {
+   pthread_set_name_np(pthread_self(), name);
+ #elif V8_OS_NETBSD
+   static_assert(Thread::kMaxThreadNameLength <= PTHREAD_MAX_NAMELEN_NP);
+-  pthread_setname_np(pthread_self(), "%s", name);
++  pthread_setname_np(pthread_self(), "%s", (void *)name);
+ #elif V8_OS_DARWIN
+   // pthread_setname_np is only available in 10.6 or later, so test
+   // for it at runtime.
+diff --git a/third_party/electron_node/deps/v8/src/base/platform/semaphore.cc b/third_party/electron_node/deps/v8/src/base/platform/semaphore.cc
+index 2ac431dbf6..20611bfbea 100644
+--- a/third_party/electron_node/deps/v8/src/base/platform/semaphore.cc
++++ b/third_party/electron_node/deps/v8/src/base/platform/semaphore.cc
+@@ -12,6 +12,10 @@
+ 
+ #include <errno.h>
+ 
++#if V8_OS_NETBSD
++#include <sys/param.h>	// for __NetBSD_Version__
++#endif
++
+ #include "src/base/logging.h"
+ #include "src/base/platform/elapsed-timer.h"
+ #include "src/base/platform/time.h"
+diff --git a/third_party/electron_node/deps/v8/src/base/strings.h b/third_party/electron_node/deps/v8/src/base/strings.h
+index c3015e72c8..2ecbd5db5a 100644
+--- a/third_party/electron_node/deps/v8/src/base/strings.h
++++ b/third_party/electron_node/deps/v8/src/base/strings.h
+@@ -8,6 +8,7 @@
+ #include "src/base/base-export.h"
+ #include "src/base/macros.h"
+ #include "src/base/vector.h"
++#include <stdarg.h>
+ 
+ namespace v8 {
+ namespace base {
+diff --git a/third_party/electron_node/deps/v8/src/codegen/arm/cpu-arm.cc b/third_party/electron_node/deps/v8/src/codegen/arm/cpu-arm.cc
+index 6fc1dd9659..a7bfb69d8e 100644
+--- a/third_party/electron_node/deps/v8/src/codegen/arm/cpu-arm.cc
++++ b/third_party/electron_node/deps/v8/src/codegen/arm/cpu-arm.cc
+@@ -21,6 +21,10 @@
+ 
+ #include "src/codegen/cpu-features.h"
+ 
++#if V8_OS_NETBSD
++#include <machine/sysarch.h>
++#endif
++
+ namespace v8 {
+ namespace internal {
+ 
+@@ -34,6 +38,8 @@ V8_NOINLINE void CpuFeatures::FlushICache(void* start, size_t size) {
+   struct arm_sync_icache_args args = {
+       .addr = reinterpret_cast<uintptr_t>(start), .len = size};
+   sysarch(ARM_SYNC_ICACHE, reinterpret_cast<void*>(&args));
++#elif V8_OS_NETBSD
++  arm_sync_icache(reinterpret_cast<uintptr_t>(start), size);
+ #else
+   register uint32_t beg asm("r0") = reinterpret_cast<uint32_t>(start);
+   register uint32_t end asm("r1") = beg + size;
+diff --git a/third_party/electron_node/deps/v8/src/common/globals.h b/third_party/electron_node/deps/v8/src/common/globals.h
+index 7a90d5d2f2..4ee2c49de4 100644
+--- a/third_party/electron_node/deps/v8/src/common/globals.h
++++ b/third_party/electron_node/deps/v8/src/common/globals.h
+@@ -7,6 +7,7 @@
+ 
+ #include <stddef.h>
+ #include <stdint.h>
++#include <stdarg.h>
+ 
+ #include <limits>
+ #include <ostream>
+diff --git a/third_party/electron_node/deps/v8/src/compiler/turboshaft/int64-lowering-reducer.h b/third_party/electron_node/deps/v8/src/compiler/turboshaft/int64-lowering-reducer.h
+index ee6fe95a60..6cb8c252f7 100644
+--- a/third_party/electron_node/deps/v8/src/compiler/turboshaft/int64-lowering-reducer.h
++++ b/third_party/electron_node/deps/v8/src/compiler/turboshaft/int64-lowering-reducer.h
+@@ -637,7 +637,7 @@ class Int64LoweringReducer : public Next {
+       result = __ Word32CountLeadingZeros(high);
+     }
+ 
+-    return __ Tuple<Word32, Word32>(result, __ Word32Constant(0));
++    return __ template Tuple<Word32, Word32>(result, __ Word32Constant(0));
+   }
+ 
+   V<Word32Pair> LowerCtz(V<Word32Pair> input) {
+@@ -650,7 +650,7 @@ class Int64LoweringReducer : public Next {
+       result = __ Word32CountTrailingZeros(low);
+     }
+ 
+-    return __ Tuple<Word32, Word32>(result, __ Word32Constant(0));
++    return __ template Tuple<Word32, Word32>(result, __ Word32Constant(0));
+   }
+ 
+   V<Word32Pair> LowerPopCount(V<Word32Pair> input) {
+diff --git a/third_party/electron_node/deps/v8/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.cc b/third_party/electron_node/deps/v8/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.cc
+index 2c16830983..63e29041f2 100644
+--- a/third_party/electron_node/deps/v8/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.cc
++++ b/third_party/electron_node/deps/v8/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.cc
+@@ -377,7 +377,7 @@ void ElfMemImage::SymbolIterator::Update(uint32_t increment) {
+   const ElfW(Versym) *version_symbol = image->GetVersym(index_);
+   ABSL_RAW_CHECK(symbol && version_symbol, "");
+   const char *const symbol_name = image->GetDynstr(symbol->st_name);
+-#if defined(__NetBSD__)
++#if defined(__NetBSD__) && ((_SYS_EXEC_ELF_H_ + 0) < 2)
+   const int version_index = version_symbol->vs_vers & VERSYM_VERSION;
+ #else
+   const ElfW(Versym) version_index = version_symbol[0] & VERSYM_VERSION;
+diff --git a/third_party/electron_node/deps/v8/tools/profiling/run-llprof.sh b/third_party/electron_node/deps/v8/tools/profiling/run-llprof.sh
+index 54a3881f20..805da9227e 100755
+--- a/third_party/electron_node/deps/v8/tools/profiling/run-llprof.sh
++++ b/third_party/electron_node/deps/v8/tools/profiling/run-llprof.sh
+@@ -46,7 +46,7 @@ framework, then calls the low level tick processor to analyze the results.
+ EOF
+ }
+ 
+-if [ $# -eq 0 ] || [ "$1" == "-h" ]  || [ "$1" == "--help" ] ; then
++if [ $# -eq 0 ] || [ "$1" = "-h" ]  || [ "$1" = "--help" ] ; then
+   usage
+   exit 1
+ fi
+diff --git a/third_party/electron_node/node.gypi b/third_party/electron_node/node.gypi
+index 6587270c9e..a1877563da 100644
+--- a/third_party/electron_node/node.gypi
++++ b/third_party/electron_node/node.gypi
+@@ -306,6 +306,7 @@
+     [ 'OS=="solaris"', {
+       'libraries': [
+         '-lkstat',
++        '-lsocket',
+         '-lumem',
+       ],
+       'defines!': [
+diff --git a/third_party/electron_node/src/compile_cache.cc b/third_party/electron_node/src/compile_cache.cc
+index 6b054db1cc..63c216a7a2 100644
+--- a/third_party/electron_node/src/compile_cache.cc
++++ b/third_party/electron_node/src/compile_cache.cc
+@@ -1,5 +1,6 @@
+ #include "compile_cache.h"
+ #include <string>
++#include <unistd.h>
+ #include "debug_utils-inl.h"
+ #include "env-inl.h"
+ #include "node_file.h"
+diff --git a/third_party/electron_node/src/crypto/crypto_rsa.cc b/third_party/electron_node/src/crypto/crypto_rsa.cc
+index 6eea14dce8..ff4f546131 100644
+--- a/third_party/electron_node/src/crypto/crypto_rsa.cc
++++ b/third_party/electron_node/src/crypto/crypto_rsa.cc
+@@ -12,6 +12,30 @@
+ #include <openssl/bn.h>
+ #include <openssl/rsa.h>
+ 
++#if defined(OPENSSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER <0x1010105fL
++struct rsa_st {
++  int pad;
++  int32_t version;
++  void *meth;
++  void *engine;
++  void *n;
++  void *e;
++  void *d;
++  void *p;
++  void *q;
++  void *dmp1;
++  void *dmq1;
++  void *iqmp;
++  void *prime_infos;
++  RSA_PSS_PARAMS *pss;
++};
++
++static const RSA_PSS_PARAMS *RSA_get0_pss_params(const RSA *r)
++{
++  return r->pss;
++}
++#endif
++
+ namespace node {
+ 
+ using ncrypto::BignumPointer;
+diff --git a/third_party/electron_node/src/inspector_agent.cc b/third_party/electron_node/src/inspector_agent.cc
+index dec1d25272..9399e2f9b5 100644
+--- a/third_party/electron_node/src/inspector_agent.cc
++++ b/third_party/electron_node/src/inspector_agent.cc
+@@ -104,7 +104,7 @@ static int StartWatchdogThread() {
+   CHECK_EQ(0, uv_sem_init(&start_io_thread_semaphore, 0));
+   pthread_attr_t attr;
+   CHECK_EQ(0, pthread_attr_init(&attr));
+-#if defined(PTHREAD_STACK_MIN) && !defined(__FreeBSD__)
++#if defined(PTHREAD_STACK_MIN) && !defined(__FreeBSD__) && !defined(__NetBSD__)
+   // PTHREAD_STACK_MIN is 2 KiB with musl libc, which is too small to safely
+   // receive signals. PTHREAD_STACK_MIN + MINSIGSTKSZ is 8 KiB on arm64, which
+   // is the musl architecture with the biggest MINSIGSTKSZ so let's use that
+diff --git a/third_party/electron_node/src/node_platform.cc b/third_party/electron_node/src/node_platform.cc
+index bf2dac8f5d..96824cf7a9 100644
+--- a/third_party/electron_node/src/node_platform.cc
++++ b/third_party/electron_node/src/node_platform.cc
+@@ -548,6 +548,12 @@ void NodePlatform::AddIsolateFinishedCallback(Isolate* isolate,
+ void NodePlatform::Shutdown() {
+   if (has_shut_down_) return;
+   has_shut_down_ = true;
++
++  // V8 background tasks may be parked waiting for foreground GC work before
++  // they can return from the worker thread task.
++  while (FlushForegroundTasksForAllIsolates()) {
++  }
++
+   worker_thread_task_runner_->Shutdown();
+ 
+   {
+@@ -739,6 +745,25 @@ bool NodePlatform::FlushForegroundTasks(Isolate* isolate) {
+   return per_isolate->FlushForegroundTasksInternal();
+ }
+ 
++bool NodePlatform::FlushForegroundTasksForAllIsolates() {
++  std::vector<std::shared_ptr<PerIsolatePlatformData>> per_isolates;
++  {
++    Mutex::ScopedLock lock(per_isolate_mutex_);
++    per_isolates.reserve(per_isolate_.size());
++    for (const auto& entry : per_isolate_) {
++      if (entry.second.second) {
++        per_isolates.push_back(entry.second.second);
++      }
++    }
++  }
++
++  bool did_work = false;
++  for (const auto& per_isolate : per_isolates) {
++    did_work |= per_isolate->FlushForegroundTasksInternal();
++  }
++  return did_work;
++}
++
+ std::unique_ptr<v8::JobHandle> NodePlatform::CreateJobImpl(
+     v8::TaskPriority priority,
+     std::unique_ptr<v8::JobTask> job_task,
+diff --git a/third_party/electron_node/src/node_platform.h b/third_party/electron_node/src/node_platform.h
+index 665d2a467e..3089b6e4ee 100644
+--- a/third_party/electron_node/src/node_platform.h
++++ b/third_party/electron_node/src/node_platform.h
+@@ -266,6 +266,7 @@ class NodePlatform : public MultiIsolatePlatform {
+  private:
+   IsolatePlatformDelegate* ForIsolate(v8::Isolate* isolate);
+   std::shared_ptr<PerIsolatePlatformData> ForNodeIsolate(v8::Isolate* isolate);
++  bool FlushForegroundTasksForAllIsolates();
+ 
+   Mutex per_isolate_mutex_;
+   using DelegatePair = std::pair<IsolatePlatformDelegate*,
+diff --git a/third_party/electron_node/src/node_postmortem_metadata.cc b/third_party/electron_node/src/node_postmortem_metadata.cc
+index e40d82c0a5..082c8e46f0 100644
+--- a/third_party/electron_node/src/node_postmortem_metadata.cc
++++ b/third_party/electron_node/src/node_postmortem_metadata.cc
+@@ -13,6 +13,10 @@
+ #define NODEDBG_OFFSET(Class, Member, Type) \
+     NODEDBG_SYMBOL(offset_ ## Class ## __ ## Member ## __ ## Type)
+ 
++// Some systems provide macros for the types as well, which get expanded
++// by the nested macros here.
++#undef uintptr_t
++
+ // These are the constants describing Node internal structures. Every constant
+ // should use the format described above.  These constants are declared as
+ // global integers so that they'll be present in the generated node binary. They
 diff --git a/third_party/electron_node/tools/generate_config_gypi.py b/third_party/electron_node/tools/generate_config_gypi.py
-index 436767e633..4e56ec129b 100755
+index d464d4b585..96c7ede6d5 100755
 --- a/third_party/electron_node/tools/generate_config_gypi.py
 +++ b/third_party/electron_node/tools/generate_config_gypi.py
 @@ -19,7 +19,7 @@ import getnapibuildversion
@@ -3944,6 +4499,83 @@ index 436767e633..4e56ec129b 100755
  
  def bool_to_number(v):
    return 1 if v else 0
+diff --git a/third_party/electron_node/tools/gyp/pylib/gyp/generator/make.py b/third_party/electron_node/tools/gyp/pylib/gyp/generator/make.py
+index 16b6f4e80b..7ab066a67c 100644
+--- a/third_party/electron_node/tools/gyp/pylib/gyp/generator/make.py
++++ b/third_party/electron_node/tools/gyp/pylib/gyp/generator/make.py
+@@ -208,7 +208,7 @@ cmd_solink_module = $(LINK.$(TOOLSET)) -o $@ -shared $(GYP_LDFLAGS) $(LDFLAGS.$(
+ 
+ LINK_COMMANDS_MAC = """\
+ quiet_cmd_alink = LIBTOOL-STATIC $@
+-cmd_alink = rm -f $@ && %(python)s gyp-mac-tool filter-libtool libtool $(GYP_LIBTOOLFLAGS) -static -o $@ $(filter %%.o,$^)
++cmd_alink = rm -f $@ && %(python)s gyp-mac-tool filter-libtool /usr/bin/libtool $(GYP_LIBTOOLFLAGS) -static -o $@ $(filter %%.o,$^)
+ 
+ quiet_cmd_link = LINK($(TOOLSET)) $@
+ cmd_link = $(LINK.$(TOOLSET)) $(GYP_LDFLAGS) $(LDFLAGS.$(TOOLSET)) -o "$@" $(LD_INPUTS) $(LIBS)
+@@ -2562,7 +2562,7 @@ def GenerateOutput(target_list, target_dicts, data, params):
+                 "flock_index": 2,
+             }
+         )
+-    elif flavor == "freebsd":
++    elif flavor == "freebsd" or flavor == 'dragonflybsd' or flavor == 'netbsd':
+         # Note: OpenBSD has sysutils/flock. lockf seems to be FreeBSD specific.
+         header_params.update({"flock": "lockf"})
+     elif flavor == "openbsd":
+diff --git a/third_party/electron_node/tools/gyp/pylib/gyp/xcode_emulation.py b/third_party/electron_node/tools/gyp/pylib/gyp/xcode_emulation.py
+index d13eaa9af2..2268aaaaa6 100644
+--- a/third_party/electron_node/tools/gyp/pylib/gyp/xcode_emulation.py
++++ b/third_party/electron_node/tools/gyp/pylib/gyp/xcode_emulation.py
+@@ -605,7 +605,7 @@ class XcodeSettings:
+ 
+         self._Appendf(cflags, "GCC_OPTIMIZATION_LEVEL", "-O%s", default="s")
+ 
+-        if self._Test("GCC_GENERATE_DEBUGGING_SYMBOLS", "YES", default="YES"):
++        if self._Test("GCC_GENERATE_DEBUGGING_SYMBOLS", "YES", default="NO"):
+             dbg_format = self._Settings().get("DEBUG_INFORMATION_FORMAT", "dwarf")
+             if dbg_format == "dwarf":
+                 cflags.append("-gdwarf-2")
+@@ -1097,7 +1097,7 @@ class XcodeSettings:
+         # For static libraries, no dSYMs are created.
+         result = []
+         if (
+-            self._Test("GCC_GENERATE_DEBUGGING_SYMBOLS", "YES", default="YES")
++            self._Test("GCC_GENERATE_DEBUGGING_SYMBOLS", "YES", default="NO")
+             and self._Test(
+                 "DEBUG_INFORMATION_FORMAT", "dwarf-with-dsym", default="dwarf"
+             )
+diff --git a/third_party/electron_node/tools/install.py b/third_party/electron_node/tools/install.py
+index 573d7423c9..2ba8d4edcc 100755
+--- a/third_party/electron_node/tools/install.py
++++ b/third_party/electron_node/tools/install.py
+@@ -198,10 +198,7 @@ def files(options, action):
+   action(options, [os.path.join(options.v8_dir, 'tools/gdbinit')], 'share/doc/node/')
+   action(options, [os.path.join(options.v8_dir, 'tools/lldb_commands.py')], 'share/doc/node/')
+ 
+-  if 'openbsd' in sys.platform:
+-    action(options, ['doc/node.1'], 'man/man1/')
+-  else:
+-    action(options, ['doc/node.1'], 'share/man/man1/')
++  action(options, ['doc/node.1'], os.environ.get('PKGMANDIR') + '/man1/')
+ 
+   if 'true' == options.variables.get('node_install_npm'):
+     npm_files(options, action)
+diff --git a/third_party/electron_node/tools/v8_gypfiles/v8.gyp b/third_party/electron_node/tools/v8_gypfiles/v8.gyp
+index 60d630702b..ec1628bb7e 100644
+--- a/third_party/electron_node/tools/v8_gypfiles/v8.gyp
++++ b/third_party/electron_node/tools/v8_gypfiles/v8.gyp
+@@ -1365,6 +1365,12 @@
+         }],
+         # Platforms that don't have Compare-And-Swap (CAS) support need to link atomic library
+         # to implement atomic memory access.
++        # NetBSD/arm also needs -larm.
++        ['OS=="netbsd" and v8_current_cpu in ["arm"]', {
++          'link_settings': {
++            'libraries': ['-larm', ],
++          },
++        }],
+         # Clang needs it for some atomic operations (https://clang.llvm.org/docs/Toolchain.html#atomics-library).
+         ['(OS=="linux" and clang==1) or (v8_current_cpu in ["mips64", "mips64el", "arm", "riscv64", "loong64"])', {
+           'link_settings': {
 diff --git a/ui/gfx/font_util.cc b/ui/gfx/font_util.cc
 index 13dcfa03fe..8100ac3a24 100644
 --- a/ui/gfx/font_util.cc
@@ -3982,3 +4614,16 @@ index 877889e3c2..f005a0bc98 100644
  void* GetLibGdk3() {
  #if BUILDFLAG(IS_BSD)
    static void* libgdk3 = DlOpen("libgdk-3.so");
+diff --git a/ui/shell_dialogs/select_file_dialog.h b/ui/shell_dialogs/select_file_dialog.h
+index 4ac0658720..e7a4003ea0 100644
+--- a/ui/shell_dialogs/select_file_dialog.h
++++ b/ui/shell_dialogs/select_file_dialog.h
+@@ -224,7 +224,7 @@ class SHELL_DIALOGS_EXPORT SelectFileDialog
+                   const GURL* caller = nullptr);
+   bool HasMultipleFileTypeChoices();
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // Set the label used for the file select button.
+   virtual void SetButtonLabel(const std::string& label) = 0;
+ 

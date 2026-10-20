@@ -22,6 +22,17 @@ fetch_freebsd_ports() {
     fi
 }
 
+fetch_pkgsrc() {
+    if [ ! -d "pkgsrc-kaiju" ]; then
+        mkdir pkgsrc-kaiju || die
+        git clone https://github.com/NetBSD/pkgsrc.git pkgsrc-kaiju || die "clone pkgsrc"
+    else
+        cd pkgsrc-kaiju || die
+        git pull || die "pkgsrc update: "
+        cd ..
+    fi
+}
+
 # electron versions from freebsd-ports
 get_value() {
     cat freebsd-ports/devel/$2/Makefile.version \

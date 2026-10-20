@@ -1,3 +1,16 @@
+diff --git a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
+index 956e285889..129cebd795 100644
+--- a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
++++ b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
+@@ -603,7 +603,7 @@ class ChromeFileSystemAccessPermissionContext
+             FILE_PATH_LITERAL("Library/Mobile Documents/com~apple~CloudDocs"),
+             BlockType::kDontBlockChildren),
+   #endif
+-  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID)
++  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_BSD)
+         // On Linux also block access to devices via /dev.
+         BlockPath::CreateAbsolute(FILE_PATH_LITERAL("/dev"),
+                                   BlockType::kBlockAllChildren),
 diff --git a/content/browser/child_process_launcher_helper_linux.cc b/content/browser/child_process_launcher_helper_linux.cc
 index bf5185172d..d0a99a2d21 100644
 --- a/content/browser/child_process_launcher_helper_linux.cc
@@ -109,6 +122,18 @@ index bdcf3d87eb..c2ba5a28e2 100644
    // On Linux we could not access clipboard in renderer process.
    for (const method of Object.keys(originalClipboard) as (keyof Electron.Clipboard)[]) {
      clipboard[method] = makeRemoteMethod(method);
+diff --git a/electron/lib/renderer/security-warnings.ts b/electron/lib/renderer/security-warnings.ts
+index 42b69d1e6c..6717efdbfc 100644
+--- a/electron/lib/renderer/security-warnings.ts
++++ b/electron/lib/renderer/security-warnings.ts
+@@ -25,6 +25,7 @@ const shouldLogSecurityWarnings = function (): boolean {
+       shouldLog = execPath.endsWith('MacOS/Electron') || execPath.includes('Electron.app/Contents/Frameworks/');
+       break;
+     case 'freebsd':
++    case 'netbsd':
+     case 'linux':
+       shouldLog = execPath.endsWith('/electron');
+       break;
 diff --git a/electron/node_modules/@sentry/cli/scripts/install.js b/electron/node_modules/@sentry/cli/scripts/install.js
 index 0728957daf..8a49011a25 100644
 --- a/electron/node_modules/@sentry/cli/scripts/install.js
@@ -121,6 +146,18 @@ index 0728957daf..8a49011a25 100644
        return `${releasesUrl}-Linux-${archString}`;
      default:
        return null;
+diff --git a/electron/npm/install.js b/electron/npm/install.js
+index 1d0f70202c..e172dd4dee 100755
+--- a/electron/npm/install.js
++++ b/electron/npm/install.js
+@@ -107,6 +107,7 @@ function getPlatformPath() {
+     case 'darwin':
+       return 'Electron.app/Contents/MacOS/Electron';
+     case 'freebsd':
++    case 'netbsd':
+     case 'openbsd':
+     case 'linux':
+       return 'electron';
 diff --git a/electron/script/lib/config.py b/electron/script/lib/config.py
 index a3ec073358..9731db0d7c 100644
 --- a/electron/script/lib/config.py
@@ -160,10 +197,10 @@ index 968f8a9f2f..fa217ed2db 100644
        if (!fs.existsSync(nssDb)) {
          fs.mkdirSync(nssDb, { recursive: true });
 diff --git a/electron/script/spec-runner.js b/electron/script/spec-runner.js
-index dc464d3a75..b8f4a2bba3 100755
+index 6104ce591b..92aab541c7 100755
 --- a/electron/script/spec-runner.js
 +++ b/electron/script/spec-runner.js
-@@ -586,7 +586,7 @@ function toVitestInvocation(exe, specDir, runnerArgs) {
+@@ -584,7 +584,7 @@ function toVitestInvocation(exe, specDir, runnerArgs) {
    };
    let command = process.execPath;
    let commandArgs = vitestArgs;
@@ -172,7 +209,7 @@ index dc464d3a75..b8f4a2bba3 100755
      // The mock D-Bus services are started once around the whole run; every
      // Electron worker inherits the bus addresses from the CLI's environment.
      commandArgs = [path.resolve(__dirname, 'dbus_mock.py'), command, ...commandArgs];
-@@ -689,7 +689,7 @@ async function installSpecModules(dir) {
+@@ -687,7 +687,7 @@ async function installSpecModules(dir) {
      process.exit(1);
    }
  
@@ -181,7 +218,7 @@ index dc464d3a75..b8f4a2bba3 100755
      const { status: rebuildStatus } = childProcess.spawnSync('npm', ['rebuild', 'abstract-socket'], {
        env,
        cwd: dir,
-@@ -767,7 +767,7 @@ async function installSpecModules(dir) {
+@@ -765,7 +765,7 @@ async function installSpecModules(dir) {
  // the same GCC that rejects the headers, so nothing on that host can build
  // the fixtures.
  function getNativeAddonToolchainEnv() {
@@ -226,10 +263,10 @@ index 53666992bc..67b13ad3a8 100644
    fprintf(stderr, "Not Implemented signalfd & prctl in atom/browser/relauncher_linux.cc");
  #else
 diff --git a/electron/spec/api-app.spec.ts b/electron/spec/api-app.spec.ts
-index 416b3aae55..12350d9c11 100644
+index 46bc74428d..9e1f5f5a00 100644
 --- a/electron/spec/api-app.spec.ts
 +++ b/electron/spec/api-app.spec.ts
-@@ -127,7 +127,7 @@ describe('app module', () => {
+@@ -131,7 +131,7 @@ describe('app module', () => {
      });
    });
  
@@ -238,21 +275,21 @@ index 416b3aae55..12350d9c11 100644
      it('sets the desktop name to the CHROME_DESKTOP environment variable', () => {
        const original = process.env.CHROME_DESKTOP;
        defer(() => {
-@@ -156,11 +156,11 @@ describe('app module', () => {
+@@ -160,11 +160,11 @@ describe('app module', () => {
    });
  
    describe('app.getPreferredSystemLanguages()', () => {
 -    ifit(process.platform !== 'linux' && process.platform !== 'freebsd')('should not be empty', () => {
 +    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('should not be empty', () => {
-       expect(app.getPreferredSystemLanguages().length).to.not.equal(0);
+       expect(app.getPreferredSystemLanguages().length).not.toBe(0);
      });
  
 -    ifit(process.platform === 'linux' || process.platform === 'freebsd')('should be empty or contain C entry', () => {
 +    ifit(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('should be empty or contain C entry', () => {
        const languages = app.getPreferredSystemLanguages();
        if (languages.length) {
-         expect(languages).to.not.include('C');
-@@ -202,7 +202,7 @@ describe('app module', () => {
+         expect(languages).not.toContain('C');
+@@ -206,7 +206,7 @@ describe('app module', () => {
      });
    });
  
@@ -261,16 +298,25 @@ index 416b3aae55..12350d9c11 100644
      'when a D-Bus bus goes away',
      () => {
        it('exits cleanly instead of crashing', async () => {
-@@ -293,7 +293,7 @@ describe('app module', () => {
+@@ -300,7 +300,7 @@ describe('app module', () => {
+     // A missing display makes toolkit initialisation fail before the main loop
+     // runs; that early return must still tear the JS environment down cleanly.
+     // Skipped under ASan for the same reason as the test above.
+-    ifit((process.platform === 'linux' || process.platform === 'freebsd') && !process.env.IS_ASAN)(
++    ifit((process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') && !process.env.IS_ASAN)(
+       'exits with code 1 when no display is available',
+       async () => {
+         const appPath = path.join(fixturesPath, 'api', 'no-display');
+@@ -321,7 +321,7 @@ describe('app module', () => {
        }
-     });
+     );
  
--    ifit(['darwin', 'linux', 'freebsd'].includes(process.platform))('exits gracefully', async function () {
-+    ifit(['darwin', 'linux', 'freebsd', 'netbsd'].includes(process.platform))('exits gracefully', async function () {
+-    ifit(['darwin', 'linux', 'freebsd'].includes(process.platform))('exits gracefully', async () => {
++    ifit(['darwin', 'linux', 'freebsd', 'netbsd'].includes(process.platform))('exits gracefully', async () => {
        const electronPath = process.execPath;
        const appPath = path.join(fixturesPath, 'api', 'singleton');
        appProcess = cp.spawn(electronPath, [appPath]);
-@@ -491,7 +491,7 @@ describe('app module', () => {
+@@ -554,7 +554,7 @@ describe('app module', () => {
    });
  
    // GitHub Actions macOS-13 runners used for x64 seem to have a problem with this test.
@@ -279,7 +325,7 @@ index 416b3aae55..12350d9c11 100644
      const tempFiles = [
        path.join(fixturesPath, 'foo.txt'),
        path.join(fixturesPath, 'bar.txt'),
-@@ -620,7 +620,7 @@ describe('app module', () => {
+@@ -691,7 +691,7 @@ describe('app module', () => {
    //   let w = null
  
    //   before(function () {
@@ -288,7 +334,7 @@ index 416b3aae55..12350d9c11 100644
    //       this.skip()
    //     }
    //   })
-@@ -733,7 +733,7 @@ describe('app module', () => {
+@@ -804,7 +804,7 @@ describe('app module', () => {
  
    describe('app.badgeCount', () => {
      const platformIsNotSupported =
@@ -297,16 +343,16 @@ index 416b3aae55..12350d9c11 100644
  
      const expectedBadgeCount = 42;
  
-@@ -780,7 +780,7 @@ describe('app module', () => {
+@@ -851,7 +851,7 @@ describe('app module', () => {
    });
  
    ifdescribe(
 -    process.platform !== 'linux' && process.platform !== 'freebsd' && !process.mas && (process.platform !== 'darwin' || process.arch === 'arm64')
 +    process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd' && !process.mas && (process.platform !== 'darwin' || process.arch === 'arm64')
-   )('app.get/setLoginItemSettings API', function () {
+   )('app.get/setLoginItemSettings API', () => {
      const isMac = process.platform === 'darwin';
      const isWin = process.platform === 'win32';
-@@ -1207,7 +1207,7 @@ describe('app module', () => {
+@@ -1278,7 +1278,7 @@ describe('app module', () => {
      });
    });
  
@@ -315,7 +361,7 @@ index 416b3aae55..12350d9c11 100644
      // These tests toggle a process-wide AXMode. Turn it back off so the rest of
      // the suite doesn't run with renderer accessibility enabled.
      afterEach(() => {
-@@ -1483,7 +1483,7 @@ describe('app module', () => {
+@@ -1561,7 +1561,7 @@ describe('app module', () => {
      });
    });
  
@@ -323,18 +369,18 @@ index 416b3aae55..12350d9c11 100644
 +  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('select-client-certificate event', () => {
      let w: BrowserWindow;
  
-     before(function () {
-@@ -1626,7 +1626,7 @@ describe('app module', () => {
+     beforeAll(() => {
+@@ -1707,7 +1707,7 @@ describe('app module', () => {
  
    describe('getApplicationNameForProtocol()', () => {
      // TODO: Linux CI doesn't have registered http & https handlers
 -    ifit(!(process.env.CI && (process.platform === 'linux' || process.platform === 'freebsd')) && !isWayland)(
 +    ifit(!(process.env.CI && (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')) && !isWayland)(
        'returns application names for common protocols',
-       function () {
+       () => {
          // We can't expect particular app names here, but these protocols should
-@@ -1643,7 +1643,7 @@ describe('app module', () => {
-       expect(app.getApplicationNameForProtocol('bogus-protocol://')).to.equal('');
+@@ -1724,7 +1724,7 @@ describe('app module', () => {
+       expect(app.getApplicationNameForProtocol('bogus-protocol://')).toBe('');
      });
  
 -    ifdescribe(process.platform === 'linux' || process.platform === 'freebsd')('on Linux with mocked XDG dirs', () => {
@@ -342,35 +388,35 @@ index 416b3aae55..12350d9c11 100644
        const desktopFileId = 'mock-browser.desktop';
        const mockDisplayName = 'Mock Browser';
        const mockScheme = 'mockproto';
-@@ -1693,7 +1693,7 @@ describe('app module', () => {
+@@ -1774,7 +1774,7 @@ describe('app module', () => {
      let xdgBinDir: string;
  
-     before(() => {
+     beforeAll(() => {
 -      if (process.platform !== 'linux' && process.platform !== 'freebsd') {
 +      if (process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd') {
          return;
        }
  
-@@ -1710,7 +1710,7 @@ describe('app module', () => {
+@@ -1791,7 +1791,7 @@ describe('app module', () => {
      });
  
-     after(() => {
+     afterAll(() => {
 -      if (process.platform === 'linux' || process.platform === 'freebsd') {
 +      if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
          fs.rmSync(xdgDir, { recursive: true, force: true });
        }
      });
-@@ -1722,7 +1722,7 @@ describe('app module', () => {
+@@ -1803,7 +1803,7 @@ describe('app module', () => {
      });
  
-     it('returns resolved promise with appPath, displayName and icon', async function () {
+     it('returns resolved promise with appPath, displayName and icon', async () => {
 -      if (process.platform === 'linux' || process.platform === 'freebsd') {
 +      if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
          const appInfo = await spawnProtocolInfoWithXdgMock(`${mockScheme}://`, xdgDataHome, xdgConfigHome);
-         expect(appInfo.name).to.equal(mockDisplayName);
-         expect(appInfo.path).to.equal('/usr/bin/true');
-@@ -1736,7 +1736,7 @@ describe('app module', () => {
-       expect(appInfo.icon).not.to.be.undefined();
+         expect(appInfo.name).toBe(mockDisplayName);
+         expect(appInfo.path).toBe('/usr/bin/true');
+@@ -1817,7 +1817,7 @@ describe('app module', () => {
+       expect(appInfo.icon).not.toBeUndefined();
      });
  
 -    ifit(process.platform === 'linux' || process.platform === 'freebsd')('resolves an executable name via PATH', async () => {
@@ -378,7 +424,7 @@ index 416b3aae55..12350d9c11 100644
        const pathLookupExecutable = 'mock-browser';
        const pathLookupExecutablePath = path.join(xdgBinDir, pathLookupExecutable);
        const pathLookupDisplayName = 'Mock Browser PATH';
-@@ -1770,7 +1770,7 @@ describe('app module', () => {
+@@ -1851,7 +1851,7 @@ describe('app module', () => {
      });
    });
  
@@ -387,7 +433,7 @@ index 416b3aae55..12350d9c11 100644
      const protocol = 'electron-test-linux';
      const desktopFileId = 'electron-test.desktop';
      const protocolMimeType = `x-scheme-handler/${protocol}`;
-@@ -1887,7 +1887,7 @@ describe('app module', () => {
+@@ -1968,7 +1968,7 @@ describe('app module', () => {
    });
  
    // FIXME Get these specs running on Linux CI
@@ -396,16 +442,16 @@ index 416b3aae55..12350d9c11 100644
      const iconPath = path.join(import.meta.dirname, 'fixtures/assets/icon.ico');
      const sizes = {
        small: 16,
-@@ -1969,7 +1969,7 @@ describe('app module', () => {
-           expect(entry.memory).to.have.property('privateBytes').that.is.greaterThan(0);
+@@ -2057,7 +2057,7 @@ describe('app module', () => {
+           expect(entry.memory.privateBytes).toBeGreaterThan(0);
          }
  
 -        if (process.platform !== 'linux' && process.platform !== 'freebsd') {
 +        if (process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd') {
-           expect(entry.sandboxed).to.be.a('boolean');
+           expect(entry.sandboxed).toBeTypeOf('boolean');
          }
  
-@@ -1986,7 +1986,7 @@ describe('app module', () => {
+@@ -2074,7 +2074,7 @@ describe('app module', () => {
      });
    });
  
@@ -414,7 +460,7 @@ index 416b3aae55..12350d9c11 100644
      const fixture = path.join(fixturesPath, 'apps', 'gdk-backend');
      const run = async (env: NodeJS.ProcessEnv) => {
        const child = cp.spawn(process.execPath, [fixture], { env, stdio: ['ignore', 'pipe', 'ignore'] });
-@@ -2063,7 +2063,7 @@ describe('app module', () => {
+@@ -2156,7 +2156,7 @@ describe('app module', () => {
  
      it('succeeds with complete GPUInfo', async () => {
        const completeInfo = await getGPUInfo('complete');
@@ -423,7 +469,7 @@ index 416b3aae55..12350d9c11 100644
          // For linux and macOS complete info is same as basic info
          await verifyBasicGPUInfo(completeInfo);
          const basicInfo = await getGPUInfo('basic');
-@@ -2087,7 +2087,7 @@ describe('app module', () => {
+@@ -2179,7 +2179,7 @@ describe('app module', () => {
      });
    });
  
@@ -433,7 +479,7 @@ index 416b3aae55..12350d9c11 100644
      () => {
        let appProcess: cp.ChildProcess = null as any;
 diff --git a/electron/spec/api-browser-window-ignore-mouse-events.spec.ts b/electron/spec/api-browser-window-ignore-mouse-events.spec.ts
-index 905c053199..e8f5504cd4 100644
+index 13d166535a..7d9bfbaa38 100644
 --- a/electron/spec/api-browser-window-ignore-mouse-events.spec.ts
 +++ b/electron/spec/api-browser-window-ignore-mouse-events.spec.ts
 @@ -41,11 +41,11 @@ type PageEvent = { type: string; x?: number; y?: number };
@@ -451,11 +497,11 @@ index 905c053199..e8f5504cd4 100644
  // #target turns orange while hovered. Element.matches(':hover') is not usable
  // here: it stays false while the (never focused) window is inactive even
 diff --git a/electron/spec/api-browser-window.spec.ts b/electron/spec/api-browser-window.spec.ts
-index 1039c013c0..765f3a0424 100755
+index 9088773032..ba1e549f0e 100755
 --- a/electron/spec/api-browser-window.spec.ts
 +++ b/electron/spec/api-browser-window.spec.ts
 @@ -105,7 +105,7 @@ describe('BrowserWindow module', () => {
-       }).not.to.throw();
+       }).not.toThrow();
      });
  
 -    ifit(process.platform === 'linux' || process.platform === 'freebsd')('does not crash when setting large window icons', async () => {
@@ -472,7 +518,7 @@ index 1039c013c0..765f3a0424 100755
      afterEach(closeAllWindows);
      it('can set content protection', async () => {
        const w = new BrowserWindow({ show: false });
-@@ -1397,7 +1397,7 @@ describe('BrowserWindow module', () => {
+@@ -1406,7 +1406,7 @@ describe('BrowserWindow module', () => {
  
      describe('BrowserWindow.minimize()', () => {
        // TODO(codebytere): Enable for Linux once maximize/minimize events work in CI.
@@ -481,7 +527,7 @@ index 1039c013c0..765f3a0424 100755
          const minimize = once(w, 'minimize');
          w.minimize();
          await minimize;
-@@ -1414,7 +1414,7 @@ describe('BrowserWindow module', () => {
+@@ -1423,7 +1423,7 @@ describe('BrowserWindow module', () => {
        });
  
        // TODO(dsanders11): Enable for Linux once CI plays nice with these kinds of tests
@@ -490,7 +536,7 @@ index 1039c013c0..765f3a0424 100755
          const maximize = once(w, 'maximize');
          const shown = once(w, 'show');
          w.maximize();
-@@ -1511,7 +1511,7 @@ describe('BrowserWindow module', () => {
+@@ -1520,7 +1520,7 @@ describe('BrowserWindow module', () => {
          }
        );
  
@@ -499,8 +545,8 @@ index 1039c013c0..765f3a0424 100755
          const w1 = new BrowserWindow({ show: false });
          const w2 = new BrowserWindow({ show: false });
          const w3 = new BrowserWindow({ show: false });
-@@ -1616,7 +1616,7 @@ describe('BrowserWindow module', () => {
-         expect(w.isFocused()).to.equal(false);
+@@ -1625,7 +1625,7 @@ describe('BrowserWindow module', () => {
+         expect(w.isFocused()).toBe(false);
        });
  
 -      ifit(process.platform !== 'linux' && process.platform !== 'freebsd')('transfers focus status to the next window', async () => {
@@ -508,7 +554,7 @@ index 1039c013c0..765f3a0424 100755
          const w1 = new BrowserWindow({ show: false });
          const w2 = new BrowserWindow({ show: false });
          const w3 = new BrowserWindow({ show: false });
-@@ -2170,7 +2170,7 @@ describe('BrowserWindow module', () => {
+@@ -2179,7 +2179,7 @@ describe('BrowserWindow module', () => {
          });
        });
  
@@ -517,7 +563,7 @@ index 1039c013c0..765f3a0424 100755
          it('checks normal bounds when maximized', async () => {
            const bounds = w.getBounds();
            const maximize = once(w, 'maximize');
-@@ -2388,7 +2388,7 @@ describe('BrowserWindow module', () => {
+@@ -2398,7 +2398,7 @@ describe('BrowserWindow module', () => {
          });
        });
  
@@ -526,7 +572,7 @@ index 1039c013c0..765f3a0424 100755
          it('checks normal bounds when minimized', async () => {
            const bounds = w.getBounds();
            const minimize = once(w, 'minimize');
-@@ -3497,7 +3497,7 @@ describe('BrowserWindow module', () => {
+@@ -3507,7 +3507,7 @@ describe('BrowserWindow module', () => {
    describe('BrowserWindow.setOpacity(opacity)', () => {
      afterEach(closeAllWindows);
  
@@ -534,8 +580,8 @@ index 1039c013c0..765f3a0424 100755
 +    ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('Windows and Mac', () => {
        it('make window with initial opacity', () => {
          const w = new BrowserWindow({ show: false, opacity: 0.5 });
-         expect(w.getOpacity()).to.equal(0.5);
-@@ -3523,7 +3523,7 @@ describe('BrowserWindow module', () => {
+         expect(w.getOpacity()).toBe(0.5);
+@@ -3533,7 +3533,7 @@ describe('BrowserWindow module', () => {
        });
      });
  
@@ -544,8 +590,8 @@ index 1039c013c0..765f3a0424 100755
        it('sets 1 regardless of parameter', () => {
          const w = new BrowserWindow({ show: false });
          w.setOpacity(0);
-@@ -3753,7 +3753,7 @@ describe('BrowserWindow module', () => {
-       expect(overlayRectPreMax.height).to.equal(size);
+@@ -3763,7 +3763,7 @@ describe('BrowserWindow module', () => {
+       expect(overlayRectPreMax.height).toBe(size);
  
        // 'maximize' event is not emitted on Linux in CI.
 -      if ((process.platform !== 'linux' && process.platform !== 'freebsd') && !w.isMaximized()) {
@@ -553,8 +599,8 @@ index 1039c013c0..765f3a0424 100755
          const maximize = once(w, 'maximize');
          w.show();
          w.maximize();
-@@ -3883,7 +3883,7 @@ describe('BrowserWindow module', () => {
-         expect(preMaxHeight).to.equal(size);
+@@ -3885,7 +3885,7 @@ describe('BrowserWindow module', () => {
+         expect(preMaxHeight).toBe(size);
  
          // 'maximize' event is not emitted on Linux in CI.
 -        if ((process.platform !== 'linux' && process.platform !== 'freebsd') && !w.isMaximized()) {
@@ -562,16 +608,16 @@ index 1039c013c0..765f3a0424 100755
            const maximize = once(w, 'maximize');
            w.show();
            w.maximize();
-@@ -5071,7 +5071,7 @@ describe('BrowserWindow module', () => {
-         expect(test.nodeTimers).to.equal(true);
-         expect(test.nodeUrl).to.equal(true);
+@@ -5084,7 +5084,7 @@ describe('BrowserWindow module', () => {
+         expect(test.nodeTimers).toBe(true);
+         expect(test.nodeUrl).toBe(true);
  
 -        if ((process.platform === 'linux' || process.platform === 'freebsd') && test.osSandbox) {
 +        if ((process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') && test.osSandbox) {
-           expect(test.creationTime).to.be.null('creation time');
-           expect(test.systemMemoryInfo).to.be.null('system memory info');
+           expect(test.creationTime, 'creation time').toBeNull();
+           expect(test.systemMemoryInfo, 'system memory info').toBeNull();
          } else {
-@@ -5587,7 +5587,7 @@ describe('BrowserWindow module', () => {
+@@ -5602,7 +5602,7 @@ describe('BrowserWindow module', () => {
      });
    });
  
@@ -580,7 +626,7 @@ index 1039c013c0..765f3a0424 100755
      afterEach(closeAllWindows);
      it('emits an event when window is maximized', async () => {
        const w = new BrowserWindow({ show: false });
-@@ -5863,7 +5863,7 @@ describe('BrowserWindow module', () => {
+@@ -5878,7 +5878,7 @@ describe('BrowserWindow module', () => {
      // TODO(zcbenz):
      // This test does not run on Linux CI. See:
      // https://github.com/electron/electron/issues/28699
@@ -589,16 +635,16 @@ index 1039c013c0..765f3a0424 100755
        'should bring a minimized maximized window back to maximized state',
        async () => {
          const w = new BrowserWindow({});
-@@ -5881,7 +5881,7 @@ describe('BrowserWindow module', () => {
+@@ -5896,7 +5896,7 @@ describe('BrowserWindow module', () => {
        }
      );
  
--    ifit(process.platform !== 'linux' && process.platform !== 'freebsd')('should not break fullscreen state', async () => {
-+    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('should not break fullscreen state', async () => {
+-    ifit(process.platform !== 'linux' && process.platform !== 'freebsd')('should not break fullscreen state', { tags: ['serial'] }, async () => {
++    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('should not break fullscreen state', { tags: ['serial'] }, async () => {
        const w = new BrowserWindow({ show: false });
        w.show();
  
-@@ -5904,7 +5904,7 @@ describe('BrowserWindow module', () => {
+@@ -5919,7 +5919,7 @@ describe('BrowserWindow module', () => {
    });
  
    // TODO(dsanders11): Enable once maximize event works on Linux again on CI
@@ -607,7 +653,7 @@ index 1039c013c0..765f3a0424 100755
      afterEach(closeAllWindows);
      it('should show the window if it is not currently shown', async () => {
        const w = new BrowserWindow({ show: false });
-@@ -5941,7 +5941,7 @@ describe('BrowserWindow module', () => {
+@@ -5956,7 +5956,7 @@ describe('BrowserWindow module', () => {
  
      // TODO(dsanders11): Enable once minimize event works on Linux again.
      //                   See https://github.com/electron/electron/issues/28699
@@ -616,16 +662,16 @@ index 1039c013c0..765f3a0424 100755
        const w = new BrowserWindow();
        const minimize = once(w, 'minimize');
        w.minimize();
-@@ -6456,7 +6456,7 @@ describe('BrowserWindow module', () => {
+@@ -6476,7 +6476,7 @@ describe('BrowserWindow module', () => {
        });
  
        // On Linux there is no "resizable" property of a window.
 -      ifit(process.platform !== 'linux' && process.platform !== 'freebsd')('does affect maximizability when disabled and enabled', () => {
 +      ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('does affect maximizability when disabled and enabled', () => {
          const w = new BrowserWindow({ show: false });
-         expect(w.resizable).to.be.true('resizable');
+         expect(w.resizable, 'resizable').toBe(true);
  
-@@ -6697,7 +6697,7 @@ describe('BrowserWindow module', () => {
+@@ -6717,7 +6717,7 @@ describe('BrowserWindow module', () => {
      });
    });
  
@@ -634,7 +680,7 @@ index 1039c013c0..765f3a0424 100755
      // Not implemented on Linux.
      afterEach(closeAllWindows);
  
-@@ -8060,7 +8060,7 @@ describe('BrowserWindow module', () => {
+@@ -8084,7 +8084,7 @@ describe('BrowserWindow module', () => {
    describe('"transparent" option', { tags: ['serial'] }, () => {
      afterEach(closeAllWindows);
  
@@ -644,7 +690,7 @@ index 1039c013c0..765f3a0424 100755
        async () => {
          const w = new BrowserWindow({
 diff --git a/electron/spec/api-clipboard.spec.ts b/electron/spec/api-clipboard.spec.ts
-index e2a73833f5..760ad38933 100644
+index 89ccea5a62..68f42ffc1d 100644
 --- a/electron/spec/api-clipboard.spec.ts
 +++ b/electron/spec/api-clipboard.spec.ts
 @@ -54,7 +54,7 @@ ifdescribe(process.platform !== 'win32' || process.arch !== 'arm64')('clipboard
@@ -667,15 +713,15 @@ index e2a73833f5..760ad38933 100644
        expect(() => {
 @@ -114,7 +114,7 @@ ifdescribe(process.platform !== 'win32' || process.arch !== 'arm64')('clipboard
        const readImage = clipboard.readImage();
-       expect(readImage.toDataURL()).to.equal(i.toDataURL());
+       expect(readImage.toDataURL()).toBe(i.toDataURL());
  
 -      if (process.platform !== 'linux' && process.platform !== 'freebsd') {
 +      if (process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd') {
          if (process.platform !== 'win32') {
-           expect(clipboard.readBookmark()).to.deep.equal(bookmark);
+           expect(clipboard.readBookmark()).toEqual(bookmark);
          } else {
 diff --git a/electron/spec/api-content-tracing.spec.ts b/electron/spec/api-content-tracing.spec.ts
-index 023e818a58..38cff03c0a 100644
+index dd0427a623..b23574c9ce 100644
 --- a/electron/spec/api-content-tracing.spec.ts
 +++ b/electron/spec/api-content-tracing.spec.ts
 @@ -23,7 +23,7 @@ const isCI = !!process.env.CI;
@@ -684,20 +730,20 @@ index 023e818a58..38cff03c0a 100644
  // FIXME: The tests are skipped on linux arm/arm64
 -ifdescribe(!['arm', 'arm64'].includes(process.arch) || (process.platform !== 'linux' && process.platform !== 'freebsd'))('contentTracing', () => {
 +ifdescribe(!['arm', 'arm64'].includes(process.arch) || (process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd'))('contentTracing', () => {
-   const record = async (
+   let pendingRecording: Promise<string> | undefined;
+   const record = (
      options: TraceConfig | TraceCategoriesAndOptions,
-     outputFilePath: string | undefined,
-@@ -114,7 +114,7 @@ ifdescribe(!['arm', 'arm64'].includes(process.arch) || (process.platform !== 'li
+@@ -118,7 +118,7 @@ ifdescribe(!['arm', 'arm64'].includes(process.arch) || (process.platform !== 'li
      });
    });
  
--  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd')('stopRecording', function () {
-+  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('stopRecording', function () {
-     if (process.platform === 'win32' && process.arch === 'arm64') {
-       // WOA needs more time
-       this.timeout(10e3);
+-  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd')('stopRecording', { timeout: recordingTimeout }, () => {
++  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('stopRecording', { timeout: recordingTimeout }, () => {
+     // FIXME(samuelmaddock): this test regularly flakes
+     it.skip('does not crash on empty string', async () => {
+       const options = {
 diff --git a/electron/spec/api-crash-reporter.spec.ts b/electron/spec/api-crash-reporter.spec.ts
-index 718f60fc00..e9b087616c 100644
+index a7a38afe90..ee98eca4dc 100644
 --- a/electron/spec/api-crash-reporter.spec.ts
 +++ b/electron/spec/api-crash-reporter.spec.ts
 @@ -14,7 +14,7 @@ import { setTimeout } from 'node:timers/promises';
@@ -715,47 +761,47 @@ index 718f60fc00..e9b087616c 100644
    // 32-bit Linux.  Figure out why.
 -  if (!((process.platform === 'linux' || process.platform === 'freebsd') && process.arch === 'ia32')) {
 +  if (!((process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') && process.arch === 'ia32')) {
-     expect(fields.upload_file_minidump.length).to.be.greaterThan(0);
+     expect(fields.upload_file_minidump.length).toBeGreaterThan(0);
    }
  }
-@@ -193,7 +193,7 @@ ifdescribe(!isLinuxOnArm && !process.mas && !process.env.DISABLE_CRASH_REPORTER_
+@@ -191,7 +191,7 @@ ifdescribe(!isLinuxOnArm && !process.mas && !process.env.DISABLE_CRASH_REPORTER_
  
-       // Ensures that passing in crashpadHandlerPID flag for Linx child processes
-       // does not affect child process args.
--      ifit(process.platform === 'linux' || process.platform === 'freebsd')('ensure linux child process args are not modified', async () => {
-+      ifit(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('ensure linux child process args are not modified', async () => {
-         const { port, waitForCrash } = await startServer();
-         let exitCode: number | null = null;
-         const appPath = path.join(import.meta.dirname, 'fixtures', 'apps', 'crash');
-@@ -660,7 +660,7 @@ ifdescribe(!isLinuxOnArm && !process.mas && !process.env.DISABLE_CRASH_REPORTER_
-       }
+     // Ensures that passing in crashpadHandlerPID flag for Linx child processes
+     // does not affect child process args.
+-    ifit(process.platform === 'linux' || process.platform === 'freebsd')('ensure linux child process args are not modified', async () => {
++    ifit(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('ensure linux child process args are not modified', async () => {
+       const { port, waitForCrash } = await startServer();
+       let exitCode: number | null = null;
+       const appPath = path.join(import.meta.dirname, 'fixtures', 'apps', 'crash');
+@@ -653,7 +653,7 @@ ifdescribe(!isLinuxOnArm && !process.mas && !process.env.DISABLE_CRASH_REPORTER_
+     }
  
-       const processList =
--        (process.platform === 'linux' || process.platform === 'freebsd')
-+        (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')
-           ? ['main', 'renderer', 'sandboxed-renderer']
-           : ['main', 'renderer', 'sandboxed-renderer', 'node'];
-       for (const crashingProcess of processList) {
-@@ -677,7 +677,7 @@ ifdescribe(!isLinuxOnArm && !process.mas && !process.env.DISABLE_CRASH_REPORTER_
-               return app.getPath('crashDumps');
-             });
-             let reportsDir = crashesDir;
--            if (process.platform === 'darwin' || process.platform === 'linux' || process.platform === 'freebsd') {
-+            if (process.platform === 'darwin' || process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
-               reportsDir = path.join(crashesDir, 'completed');
-             } else if (process.platform === 'win32') {
-               reportsDir = path.join(crashesDir, 'reports');
-@@ -705,7 +705,7 @@ ifdescribe(!isLinuxOnArm && !process.mas && !process.env.DISABLE_CRASH_REPORTER_
-             expect(remoteCrashesDir).to.equal(crashesDir);
+     const processList =
+-      process.platform === 'linux' || process.platform === 'freebsd'
++      process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd'
+         ? ['main', 'renderer', 'sandboxed-renderer']
+         : ['main', 'renderer', 'sandboxed-renderer', 'node'];
+     for (const crashingProcess of processList) {
+@@ -670,7 +670,7 @@ ifdescribe(!isLinuxOnArm && !process.mas && !process.env.DISABLE_CRASH_REPORTER_
+             return app.getPath('crashDumps');
+           });
+           let reportsDir = crashesDir;
+-          if (process.platform === 'darwin' || process.platform === 'linux' || process.platform === 'freebsd') {
++          if (process.platform === 'darwin' || process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+             reportsDir = path.join(crashesDir, 'completed');
+           } else if (process.platform === 'win32') {
+             reportsDir = path.join(crashesDir, 'reports');
+@@ -698,7 +698,7 @@ ifdescribe(!isLinuxOnArm && !process.mas && !process.env.DISABLE_CRASH_REPORTER_
+           expect(remoteCrashesDir).toBe(crashesDir);
  
-             let reportsDir = crashesDir;
--            if (process.platform === 'darwin' || process.platform === 'linux' || process.platform === 'freebsd') {
-+            if (process.platform === 'darwin' || process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
-               reportsDir = path.join(crashesDir, 'completed');
-             } else if (process.platform === 'win32') {
-               reportsDir = path.join(crashesDir, 'reports');
+           let reportsDir = crashesDir;
+-          if (process.platform === 'darwin' || process.platform === 'linux' || process.platform === 'freebsd') {
++          if (process.platform === 'darwin' || process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
+             reportsDir = path.join(crashesDir, 'completed');
+           } else if (process.platform === 'win32') {
+             reportsDir = path.join(crashesDir, 'reports');
 diff --git a/electron/spec/api-desktop-capturer.spec.ts b/electron/spec/api-desktop-capturer.spec.ts
-index f99fd15cbf..f9408a3aa9 100644
+index 51658248f3..d3a6f4038b 100644
 --- a/electron/spec/api-desktop-capturer.spec.ts
 +++ b/electron/spec/api-desktop-capturer.spec.ts
 @@ -9,7 +9,7 @@ import { ifdescribe, ifit } from './lib/spec-helpers.ts';
@@ -767,16 +813,16 @@ index f99fd15cbf..f9408a3aa9 100644
      return ['screen'];
    }
    return ['window', 'screen'];
-@@ -35,7 +35,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
+@@ -38,7 +38,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
    });
  
    // Linux doesn't return any window sources.
 -  ifit(process.platform !== 'linux' && process.platform !== 'freebsd')('responds to subsequent calls of different options', async () => {
 +  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('responds to subsequent calls of different options', async () => {
      const promise1 = desktopCapturer.getSources({ types: ['window'] });
-     await expect(promise1).to.eventually.be.fulfilled();
+     await promise1;
  
-@@ -44,7 +44,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
+@@ -47,7 +47,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
    });
  
    // Linux doesn't return any window sources.
@@ -785,7 +831,7 @@ index f99fd15cbf..f9408a3aa9 100644
      const w2 = new BrowserWindow({ width: 200, height: 200 });
      await w2.loadURL('about:blank');
  
-@@ -56,7 +56,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
+@@ -61,7 +61,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
      }
    });
  
@@ -793,45 +839,45 @@ index f99fd15cbf..f9408a3aa9 100644
 +  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('returns display_ids matching the Screen API', async () => {
      const displays = screen.getAllDisplays();
      const sources = await desktopCapturer.getSources({ types: ['screen'] });
-     expect(sources).to.be.an('array').of.length(displays.length);
-@@ -103,7 +103,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
+     expect(sources).toBeInstanceOf(Array);
+@@ -111,7 +111,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
    });
  
    // Linux doesn't return any window sources.
--  ifit(process.platform !== 'linux' && process.platform !== 'freebsd')('getMediaSourceId should match DesktopCapturerSource.id', async function () {
-+  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('getMediaSourceId should match DesktopCapturerSource.id', async function () {
+-  ifit(process.platform !== 'linux' && process.platform !== 'freebsd')('getMediaSourceId should match DesktopCapturerSource.id', async () => {
++  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('getMediaSourceId should match DesktopCapturerSource.id', async () => {
      const w2 = new BrowserWindow({ show: false, width: 100, height: 100, webPreferences: { contextIsolation: false } });
      const wShown = once(w2, 'show');
      const wFocused = once(w2, 'focus');
-@@ -127,7 +127,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
+@@ -136,7 +136,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
    });
  
    // Linux doesn't return any window sources.
--  ifit(process.platform !== 'linux' && process.platform !== 'freebsd')('getSources should not incorrectly duplicate window_id', async function () {
-+  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('getSources should not incorrectly duplicate window_id', async function () {
+-  ifit(process.platform !== 'linux' && process.platform !== 'freebsd')('getSources should not incorrectly duplicate window_id', async () => {
++  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('getSources should not incorrectly duplicate window_id', async () => {
      const w2 = new BrowserWindow({ show: false, width: 100, height: 100, webPreferences: { contextIsolation: false } });
      const wShown = once(w2, 'show');
      const wFocused = once(w2, 'focus');
-@@ -173,7 +173,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
+@@ -184,7 +184,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
    });
  
    // Linux doesn't return any window sources.
--  ifit(process.platform !== 'linux' && process.platform !== 'freebsd')('moveAbove should move the window at the requested place', async function () {
-+  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('moveAbove should move the window at the requested place', async function () {
+-  ifit(process.platform !== 'linux' && process.platform !== 'freebsd')('moveAbove should move the window at the requested place', async () => {
++  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('moveAbove should move the window at the requested place', async () => {
      // DesktopCapturer.getSources() is guaranteed to return in the correct
      // z-order from foreground to background.
      const MAX_WIN = 4;
-@@ -259,7 +259,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
-   });
+@@ -272,7 +272,7 @@ describe('desktopCapturer', { tags: ['serial'] }, () => {
  
    // Linux doesn't return any window sources.
--  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd')('fetchWindowIcons', function () {
-+  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('fetchWindowIcons', function () {
-     // Tests are sequentially dependent
-     this.bail(true);
+   // Tests are sequentially dependent.
+-  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd')('fetchWindowIcons', () => {
++  ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('fetchWindowIcons', () => {
      let w: BrowserWindow;
+     let testSource: Electron.DesktopCapturerSource | undefined;
+     let appIcon: Electron.NativeImage | undefined;
 diff --git a/electron/spec/api-dialog.spec.ts b/electron/spec/api-dialog.spec.ts
-index b74994f272..9d91c3acae 100644
+index ae8f74eb7a..03c9e3449c 100644
 --- a/electron/spec/api-dialog.spec.ts
 +++ b/electron/spec/api-dialog.spec.ts
 @@ -1046,7 +1046,7 @@ describe('dialog module', () => {
@@ -844,7 +890,7 @@ index b74994f272..9d91c3acae 100644
        !process.arch.startsWith('arm') &&
        !!process.env.DBUS_SESSION_BUS_ADDRESS
 diff --git a/electron/spec/api-media-handler.spec.ts b/electron/spec/api-media-handler.spec.ts
-index b899e0f7db..32ac3069a2 100644
+index bffcc44132..d37a3853be 100644
 --- a/electron/spec/api-media-handler.spec.ts
 +++ b/electron/spec/api-media-handler.spec.ts
 @@ -64,7 +64,7 @@ describe('setDisplayMediaRequestHandler', () => {
@@ -854,26 +900,26 @@ index b899e0f7db..32ac3069a2 100644
 -  ifit(process.platform !== 'linux' && process.platform !== 'freebsd')(
 +  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')(
      'honors the restrictOwnAudio constraint when granted loopback audio',
-     async function () {
+     async (ctx) => {
        if ((await desktopCapturer.getSources({ types: ['screen'] })).length === 0) {
 diff --git a/electron/spec/api-menu.spec.ts b/electron/spec/api-menu.spec.ts
-index 0f20e87be8..b0faadc94d 100644
+index 24cf624479..51cf1071d8 100644
 --- a/electron/spec/api-menu.spec.ts
 +++ b/electron/spec/api-menu.spec.ts
-@@ -955,7 +955,7 @@ describe('Menu module', function () {
+@@ -959,7 +959,7 @@ describe('Menu module', () => {
      // https://github.com/electron/electron/issues/35724
      // Maximizing window is enough to trigger the bug
      // FIXME(dsanders11): Test always passes on CI, even pre-fix
--    ifit((process.platform === 'linux' || process.platform === 'freebsd') && !process.env.CI)('does not trigger issue #35724', (done) => {
-+    ifit((process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') && !process.env.CI)('does not trigger issue #35724', (done) => {
-       const showAndCloseMenu = async () => {
-         await setTimeout(1000);
-         menu.popup({ window: w, x: 50, y: 50 });
+-    ifit((process.platform === 'linux' || process.platform === 'freebsd') && !process.env.CI)(
++    ifit((process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') && !process.env.CI)(
+       'does not trigger issue #35724',
+       () =>
+         new Promise<void>((resolve, reject) => {
 diff --git a/electron/spec/api-native-image.spec.ts b/electron/spec/api-native-image.spec.ts
-index 1da2f2a2de..834b677caa 100644
+index e8c88ed7d8..6b730e52c6 100644
 --- a/electron/spec/api-native-image.spec.ts
 +++ b/electron/spec/api-native-image.spec.ts
-@@ -570,7 +570,7 @@ describe('nativeImage module', () => {
+@@ -569,7 +569,7 @@ describe('nativeImage module', () => {
      });
    });
  
@@ -883,11 +929,11 @@ index 1da2f2a2de..834b677caa 100644
  
      it('throws when invalid size is passed', async () => {
 diff --git a/electron/spec/api-net-log.spec.ts b/electron/spec/api-net-log.spec.ts
-index b36f39a085..2509c00e4c 100644
+index 1b44327dcd..9ffb340dc5 100644
 --- a/electron/spec/api-net-log.spec.ts
 +++ b/electron/spec/api-net-log.spec.ts
-@@ -129,7 +129,7 @@ describe('netLog module', () => {
-     ).to.be.true('uuid present in dump');
+@@ -137,7 +137,7 @@ describe('netLog module', () => {
+     ).toBe(true);
    });
  
 -  ifit(process.platform !== 'linux' && process.platform !== 'freebsd')(
@@ -895,7 +941,7 @@ index b36f39a085..2509c00e4c 100644
      'should begin and end logging automatically when --log-net-log is passed',
      async () => {
        const appProcess = ChildProcess.spawn(process.execPath, [appPath], {
-@@ -144,7 +144,7 @@ describe('netLog module', () => {
+@@ -152,7 +152,7 @@ describe('netLog module', () => {
      }
    );
  
@@ -904,7 +950,7 @@ index b36f39a085..2509c00e4c 100644
      'should begin and end logging automatically when --log-net-log is passed, and behave correctly when .startLogging() and .stopLogging() is called',
      async () => {
        const appProcess = ChildProcess.spawn(process.execPath, [appPath], {
-@@ -162,7 +162,7 @@ describe('netLog module', () => {
+@@ -170,7 +170,7 @@ describe('netLog module', () => {
      }
    );
  
@@ -914,7 +960,7 @@ index b36f39a085..2509c00e4c 100644
      async () => {
        const appProcess = ChildProcess.spawn(process.execPath, [appPath], {
 diff --git a/electron/spec/api-notification-dbus.spec.ts b/electron/spec/api-notification-dbus.spec.ts
-index 862e83ed32..f365b577d0 100644
+index 4edb60d246..a636efe1c4 100644
 --- a/electron/spec/api-notification-dbus.spec.ts
 +++ b/electron/spec/api-notification-dbus.spec.ts
 @@ -24,7 +24,7 @@ const require = createRequire(import.meta.url);
@@ -927,7 +973,7 @@ index 862e83ed32..f365b577d0 100644
    process.arch.indexOf('arm') === 0 ||
    !process.env.DBUS_SESSION_BUS_ADDRESS;
 diff --git a/electron/spec/api-power-monitor.spec.ts b/electron/spec/api-power-monitor.spec.ts
-index 9750701a0b..0a6688fd35 100644
+index efe43089cf..b62b02f358 100644
 --- a/electron/spec/api-power-monitor.spec.ts
 +++ b/electron/spec/api-power-monitor.spec.ts
 @@ -21,7 +21,7 @@ const require = createRequire(import.meta.url);
@@ -938,30 +984,30 @@ index 9750701a0b..0a6688fd35 100644
 +  ifdescribe((process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') && process.env.DBUS_SYSTEM_BUS_ADDRESS != null)(
      'when powerMonitor module is loaded with dbus mock',
      () => {
-       before(async () => {
+       beforeAll(async () => {
 diff --git a/electron/spec/api-process.spec.ts b/electron/spec/api-process.spec.ts
-index 235c557646..48c82d880b 100644
+index 051ebc2f6a..ceb9e48e6f 100644
 --- a/electron/spec/api-process.spec.ts
 +++ b/electron/spec/api-process.spec.ts
-@@ -43,7 +43,7 @@ describe('process module', () => {
+@@ -44,7 +44,7 @@ describe('process module', () => {
        it('resolves promise successfully with valid data', async () => {
          const memoryInfo = await invoke(() => process.getProcessMemoryInfo());
-         expect(memoryInfo).to.be.an('object');
+         expect(memoryInfo).toBeTypeOf('object');
 -        if (process.platform === 'linux' || process.platform === 'win32' || process.platform === 'freebsd') {
 +        if (process.platform === 'linux' || process.platform === 'win32' || process.platform === 'freebsd' || process.platform === 'netbsd') {
-           expect(memoryInfo.residentSet).to.be.a('number').greaterThan(0);
+           expect(memoryInfo.residentSet).toBeTypeOf('number');
+           expect(memoryInfo.residentSet).toBeGreaterThan(0);
          }
-         expect(memoryInfo.private).to.be.a('number').greaterThan(0);
-@@ -57,7 +57,7 @@ describe('process module', () => {
+@@ -61,7 +61,7 @@ describe('process module', () => {
          const systemMemoryInfo = await invoke(() => process.getSystemMemoryInfo());
-         expect(systemMemoryInfo.free).to.be.a('number');
-         expect(systemMemoryInfo.total).to.be.a('number');
+         expect(systemMemoryInfo.free).toBeTypeOf('number');
+         expect(systemMemoryInfo.total).toBeTypeOf('number');
 -        if (process.platform === 'linux' || process.platform === 'freebsd') {
 +        if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
-           expect(systemMemoryInfo.available).to.be.a('number').greaterThan(0);
+           expect(systemMemoryInfo.available).toBeTypeOf('number');
+           expect(systemMemoryInfo.available).toBeGreaterThan(0);
          }
-       });
-@@ -136,7 +136,7 @@ describe('process module', () => {
+@@ -141,7 +141,7 @@ describe('process module', () => {
      generateSpecs((fn, ...args) => fn(...args));
    });
  
@@ -971,60 +1017,60 @@ index 235c557646..48c82d880b 100644
        const fixture = path.join(import.meta.dirname, 'fixtures', 'api', 'environ-write-race.js');
        const child = cp.spawn(process.execPath, [fixture], { stdio: ['ignore', 'pipe', 'inherit'] });
 diff --git a/electron/spec/api-safe-storage.spec.ts b/electron/spec/api-safe-storage.spec.ts
-index 36ce21c969..63211b8c8a 100644
+index ee4d7f09b8..c5752fd731 100644
 --- a/electron/spec/api-safe-storage.spec.ts
 +++ b/electron/spec/api-safe-storage.spec.ts
-@@ -15,7 +15,7 @@ chai.use(chaiAsPromised);
+@@ -11,7 +11,7 @@ import { ifdescribe } from './lib/spec-helpers.ts';
  
  describe('safeStorage module', () => {
-   before(() => {
+   beforeAll(() => {
 -    if (process.platform === 'linux' || process.platform === 'freebsd') {
 +    if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
        safeStorage.setUsePlainTextEncryption(true);
      }
    });
-@@ -33,7 +33,7 @@ describe('safeStorage module', () => {
+@@ -29,7 +29,7 @@ describe('safeStorage module', () => {
      });
    });
  
 -  ifdescribe(process.platform === 'linux' || process.platform === 'freebsd')('SafeStorage.getSelectedStorageBackend()', () => {
 +  ifdescribe(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('SafeStorage.getSelectedStorageBackend()', () => {
      it('should return a valid backend', () => {
-       expect(safeStorage.getSelectedStorageBackend()).to.equal('basic_text');
+       expect(safeStorage.getSelectedStorageBackend()).toBe('basic_text');
      });
 diff --git a/electron/spec/api-screen.spec.ts b/electron/spec/api-screen.spec.ts
-index 2f370608d8..9705a21f58 100644
+index e74eec5f2f..fc3455fc6f 100644
 --- a/electron/spec/api-screen.spec.ts
 +++ b/electron/spec/api-screen.spec.ts
-@@ -95,7 +95,7 @@ describe('screen module', { tags: ['serial'] }, () => {
+@@ -97,7 +97,7 @@ describe('screen module', { tags: ['serial'] }, () => {
  
        const { size } = display!;
  
 -      if (process.platform === 'linux' || process.platform === 'freebsd') {
 +      if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
-         expect(size).to.have.property('width').that.is.a('number');
-         expect(size).to.have.property('height').that.is.a('number');
+         expect(size).toHaveProperty('width', expect.any(Number));
+         expect(size).toHaveProperty('height', expect.any(Number));
        } else {
-@@ -109,7 +109,7 @@ describe('screen module', { tags: ['serial'] }, () => {
+@@ -113,7 +113,7 @@ describe('screen module', { tags: ['serial'] }, () => {
  
        const { workAreaSize } = display!;
  
 -      if (process.platform === 'linux' || process.platform === 'freebsd') {
 +      if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
-         expect(workAreaSize).to.have.property('width').that.is.a('number');
-         expect(workAreaSize).to.have.property('height').that.is.a('number');
+         expect(workAreaSize).toHaveProperty('width', expect.any(Number));
+         expect(workAreaSize).toHaveProperty('height', expect.any(Number));
        } else {
-@@ -125,7 +125,7 @@ describe('screen module', { tags: ['serial'] }, () => {
-       expect(bounds).to.have.property('x').that.is.a('number');
-       expect(bounds).to.have.property('y').that.is.a('number');
+@@ -131,7 +131,7 @@ describe('screen module', { tags: ['serial'] }, () => {
+       expect(bounds).toHaveProperty('x', expect.any(Number));
+       expect(bounds).toHaveProperty('y', expect.any(Number));
  
 -      if (process.platform === 'linux' || process.platform === 'freebsd') {
 +      if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
-         expect(bounds).to.have.property('width').that.is.a('number');
-         expect(bounds).to.have.property('height').that.is.a('number');
+         expect(bounds).toHaveProperty('width', expect.any(Number));
+         expect(bounds).toHaveProperty('height', expect.any(Number));
        } else {
 diff --git a/electron/spec/api-shell.spec.ts b/electron/spec/api-shell.spec.ts
-index cac4b1a505..effef534b0 100644
+index cf7e421e58..eb41057b95 100644
 --- a/electron/spec/api-shell.spec.ts
 +++ b/electron/spec/api-shell.spec.ts
 @@ -37,7 +37,7 @@ describe('shell module', () => {
@@ -1049,7 +1095,7 @@ index cac4b1a505..effef534b0 100644
          // On the Mac CI machines, Safari tries to ask for a password to the
          // code signing keychain we set up to test code signing (see
 diff --git a/electron/spec/api-subframe.spec.ts b/electron/spec/api-subframe.spec.ts
-index b64be16d19..c15f6c3cec 100644
+index adfd43892c..4da08b64ab 100644
 --- a/electron/spec/api-subframe.spec.ts
 +++ b/electron/spec/api-subframe.spec.ts
 @@ -254,7 +254,7 @@ describe('subframe with non-standard schemes', () => {
@@ -1062,10 +1108,10 @@ index b64be16d19..c15f6c3cec 100644
    let crossSiteUrl: string;
    let serverUrl: string;
 diff --git a/electron/spec/api-system-preferences.spec.ts b/electron/spec/api-system-preferences.spec.ts
-index d36c39d7b0..edc5379bca 100644
+index 715858ca39..bd397b2a87 100644
 --- a/electron/spec/api-system-preferences.spec.ts
 +++ b/electron/spec/api-system-preferences.spec.ts
-@@ -5,8 +5,8 @@ import { expect } from 'chai';
+@@ -5,8 +5,8 @@ import { describe, expect, it } from 'vitest';
  import { ifdescribe, ifit } from './lib/spec-helpers.ts';
  
  describe('systemPreferences module', () => {
@@ -1077,40 +1123,40 @@ index d36c39d7b0..edc5379bca 100644
        // some tricky D-Bus mock setup.
        const accentColor = systemPreferences.getAccentColor();
 diff --git a/electron/spec/api-tray.spec.ts b/electron/spec/api-tray.spec.ts
-index 3591a9be3f..ca0c503ef2 100644
+index 1dfdc66588..1460a736f7 100644
 --- a/electron/spec/api-tray.spec.ts
 +++ b/electron/spec/api-tray.spec.ts
 @@ -32,13 +32,13 @@ describe('tray module', { tags: ['serial'] }, () => {
-       }).to.throw(/Failed to load image from path (.+)/);
+       }).toThrow(/Failed to load image from path (.+)/);
      });
  
 -    ifit(process.platform !== 'linux' && process.platform !== 'freebsd')('throws a descriptive error if an invalid guid is given', () => {
 +    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('throws a descriptive error if an invalid guid is given', () => {
        expect(() => {
          tray = new Tray(nativeImage.createEmpty(), 'I am not a guid');
-       }).to.throw('Invalid GUID format');
+       }).toThrow('Invalid GUID format');
      });
  
 -    ifit(process.platform !== 'linux' && process.platform !== 'freebsd')('accepts a valid guid', () => {
 +    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('accepts a valid guid', () => {
        expect(() => {
          tray = new Tray(nativeImage.createEmpty(), '0019A433-3526-48BA-A66C-676742C0FEFB');
-       }).to.not.throw();
+       }).not.toThrow();
 @@ -139,7 +139,7 @@ describe('tray module', { tags: ['serial'] }, () => {
        tray.destroy();
      });
  
--    ifit(process.platform !== 'linux' && process.platform !== 'freebsd')('returns a bounds object', function () {
-+    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('returns a bounds object', function () {
+-    ifit(process.platform !== 'linux' && process.platform !== 'freebsd')('returns a bounds object', () => {
++    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('returns a bounds object', () => {
        const bounds = tray.getBounds();
-       expect(bounds).to.be.an('object').and.to.have.all.keys('x', 'y', 'width', 'height');
-     });
+       expect(bounds).toBeTypeOf('object');
+       expect(Object.keys(bounds).sort()).toEqual(['height', 'width', 'x', 'y']);
 diff --git a/electron/spec/api-utility-process.spec.ts b/electron/spec/api-utility-process.spec.ts
-index 10ac7be952..29c1305cc7 100644
+index a35af683da..56a0f92cc5 100644
 --- a/electron/spec/api-utility-process.spec.ts
 +++ b/electron/spec/api-utility-process.spec.ts
-@@ -618,7 +618,7 @@ describe('utilityProcess module', () => {
-       expect(output).to.include(result);
+@@ -638,7 +638,7 @@ describe('utilityProcess module', () => {
+       expect(output).toContain(result);
      });
  
 -    ifit(process.platform !== 'linux' && process.platform !== 'freebsd')('can access exposed main process modules from the utility process', async () => {
@@ -1118,7 +1164,7 @@ index 10ac7be952..29c1305cc7 100644
        const message = 'Message from utility process';
        const child = utilityProcess.fork(path.join(fixturesPath, 'expose-main-process-module.js'));
        await once(child, 'spawn');
-@@ -655,7 +655,7 @@ describe('utilityProcess module', () => {
+@@ -675,7 +675,7 @@ describe('utilityProcess module', () => {
        await closeWindow(w);
      });
  
@@ -1128,19 +1174,19 @@ index 10ac7be952..29c1305cc7 100644
        await once(child, 'spawn');
        const [data] = await once(child, 'message');
 diff --git a/electron/spec/api-web-contents.spec.ts b/electron/spec/api-web-contents.spec.ts
-index 6a1079beab..681ec2301c 100644
+index 11edf2e2ac..692ffaf111 100644
 --- a/electron/spec/api-web-contents.spec.ts
 +++ b/electron/spec/api-web-contents.spec.ts
-@@ -1643,7 +1643,7 @@ describe('webContents module', () => {
+@@ -1631,7 +1631,7 @@ describe('webContents module', () => {
      // back to OpenFolder() which does a blocking DirectoryExists() on the UI
      // thread (pre-existing behavior). Workspace-gating is covered by the test
      // above.
 -    ifit(process.platform !== 'linux' && process.platform !== 'freebsd')(
 +    ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')(
        'reveals paths under a registered workspace folder without executing them',
-       async () => {
-         const w = new BrowserWindow({ show: false });
-@@ -4301,7 +4301,7 @@ describe('webContents module', () => {
+       // Opens a real Finder/Explorer window, which takes focus and stays open.
+       { tags: ['serial'] },
+@@ -4309,7 +4309,7 @@ describe('webContents module', () => {
      });
  
      // TODO(codebytere): OOPIF printing is disabled on Linux at the moment due to crashes.
@@ -1150,17 +1196,17 @@ index 6a1079beab..681ec2301c 100644
          res.writeHead(200);
          res.end(`
 diff --git a/electron/spec/chromium.spec.ts b/electron/spec/chromium.spec.ts
-index 934f564276..b173700cc9 100644
+index 13ab04f029..c8cbe71eef 100644
 --- a/electron/spec/chromium.spec.ts
 +++ b/electron/spec/chromium.spec.ts
-@@ -608,15 +608,15 @@ describe('command line switches', () => {
+@@ -611,15 +611,15 @@ describe('command line switches', () => {
        testLocale('asdfkl', `${currentLocale}|${currentSystemLocale}|${currentPreferredLanguages}`));
  
      const lcAll = String(process.env.LC_ALL);
 -    ifit(process.platform === 'linux' || process.platform === 'freebsd')('current process has a valid LC_ALL env', async () => {
 +    ifit(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('current process has a valid LC_ALL env', async () => {
        // The LC_ALL env should not be set to DOM locale string.
-       expect(lcAll).to.not.equal(app.getLocale());
+       expect(lcAll).not.toBe(app.getLocale());
      });
 -    ifit(process.platform === 'linux' || process.platform === 'freebsd')('should not change LC_ALL', async () => testLocale('fr', lcAll, true));
 -    ifit(process.platform === 'linux' || process.platform === 'freebsd')('should not change LC_ALL when setting invalid locale', async () =>
@@ -1173,22 +1219,22 @@ index 934f564276..b173700cc9 100644
        testLocale('', lcAll, true)
      );
    });
-@@ -4259,12 +4259,12 @@ describe('font fallback', () => {
-       expect(fonts[0].familyName).to.equal('Arial');
+@@ -4267,12 +4267,12 @@ describe('font fallback', () => {
+       expect(fonts[0].familyName).toBe('Arial');
      } else if (process.platform === 'darwin') {
-       expect(fonts[0].familyName).to.equal('Helvetica');
+       expect(fonts[0].familyName).toBe('Helvetica');
 -    } else if (process.platform === 'linux' || process.platform === 'freebsd') {
 +    } else if (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') {
-       expect(fonts[0].familyName).to.equal('DejaVu Sans');
+       expect(fonts[0].familyName).toBe('DejaVu Sans');
      } // I think this depends on the distro? We don't specify a default.
    });
  
--  ifit(process.platform !== 'linux' && process.platform !== 'freebsd')(
-+  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')(
-     'should fall back to Japanese font for sans-serif Japanese script',
-     async function () {
-       const html = `
-@@ -5010,7 +5010,7 @@ describe('paste execCommand', { tags: ['serial'] }, () => {
+-  ifit(process.platform !== 'linux' && process.platform !== 'freebsd')('should fall back to Japanese font for sans-serif Japanese script', async () => {
++  ifit(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('should fall back to Japanese font for sans-serif Japanese script', async () => {
+     const html = `
+     <html lang="ja-JP">
+       <head>
+@@ -5000,7 +5000,7 @@ describe('paste execCommand', { tags: ['serial'] }, () => {
    });
  });
  
@@ -1198,10 +1244,10 @@ index 934f564276..b173700cc9 100644
  
    const expectedBadgeCount = 42;
 diff --git a/electron/spec/crash.spec.ts b/electron/spec/crash.spec.ts
-index 708934367a..86ab82722a 100644
+index fdd40571b4..6913b8832d 100644
 --- a/electron/spec/crash.spec.ts
 +++ b/electron/spec/crash.spec.ts
-@@ -53,7 +53,7 @@ const shouldRunCase = (crashCase: string) => {
+@@ -54,7 +54,7 @@ const shouldRunCase = (crashCase: string) => {
        if (process.platform === 'win32') {
          return process.arch !== 'ia32';
        } else {
@@ -1211,7 +1257,7 @@ index 708934367a..86ab82722a 100644
      }
      default: {
 diff --git a/electron/spec/desktop-name.spec.ts b/electron/spec/desktop-name.spec.ts
-index 6a0d3996d3..5e9e78f74e 100644
+index 9cf513c912..d2b4adbce8 100644
 --- a/electron/spec/desktop-name.spec.ts
 +++ b/electron/spec/desktop-name.spec.ts
 @@ -10,7 +10,7 @@ const { defaultDesktopName }: typeof import('../lib/browser/desktop-name.ts') =
@@ -1263,11 +1309,11 @@ index b01c8aebca..2ec5b0a573 100644
      case 'darwin':
        return path.resolve(__dirname, 'build/Release/foo.dylib');
 diff --git a/electron/spec/lib/spec-helpers.ts b/electron/spec/lib/spec-helpers.ts
-index c0612555ec..c0db35c6ed 100644
+index 0ae712413e..a5d239f0b0 100644
 --- a/electron/spec/lib/spec-helpers.ts
 +++ b/electron/spec/lib/spec-helpers.ts
-@@ -29,7 +29,7 @@ export const ifit = (condition: boolean) => (condition ? it : addOnly<TestFuncti
- export const ifdescribe = (condition: boolean) => (condition ? describe : addOnly<SuiteFunction>(describe.skip));
+@@ -19,7 +19,7 @@ export const ifit = (condition: boolean) => (condition ? it : it.skip);
+ export const ifdescribe = (condition: boolean) => (condition ? describe : describe.skip);
  
  export const isWayland =
 -  (process.platform === 'linux' || process.platform === 'freebsd') &&
@@ -1276,10 +1322,10 @@ index c0612555ec..c0db35c6ed 100644
      !!process.env.WAYLAND_DISPLAY ||
      process.argv.includes('--ozone-platform=wayland'));
 diff --git a/electron/spec/node.spec.ts b/electron/spec/node.spec.ts
-index 7aeb2226b2..0f941e2965 100644
+index 44d67b14e0..0f137aa72a 100644
 --- a/electron/spec/node.spec.ts
 +++ b/electron/spec/node.spec.ts
-@@ -221,7 +221,7 @@ describe('node feature', () => {
+@@ -224,7 +224,7 @@ describe('node feature', () => {
      });
  
      describe('child_process.exec', () => {
@@ -1289,11 +1335,11 @@ index 7aeb2226b2..0f941e2965 100644
          // https://github.com/torvalds/linux/blob/40fde647cc/Documentation/userspace-api/no_new_privs.rst).
          // We disable this for unsandboxed processes, which the renderer tests
 diff --git a/electron/spec/spellchecker.spec.ts b/electron/spec/spellchecker.spec.ts
-index bdeee37b7b..7abf879064 100644
+index 2a41e65e92..6d2978044c 100644
 --- a/electron/spec/spellchecker.spec.ts
 +++ b/electron/spec/spellchecker.spec.ts
-@@ -91,7 +91,7 @@ ifdescribe(features.isBuiltinSpellCheckerEnabled())('spellchecker', function ()
-       });
+@@ -92,7 +92,7 @@ ifdescribe(features.isBuiltinSpellCheckerEnabled())('spellchecker', { timeout },
+       }, timeout);
  
        // Context menu test can not run on Windows or Linux (https://github.com/electron/electron/pull/48657 broke linux).
 -      const shouldRun = process.platform !== 'win32' && process.platform !== 'linux' && process.platform !== 'freebsd';
@@ -1302,7 +1348,7 @@ index bdeee37b7b..7abf879064 100644
        ifit(shouldRun)('should detect correctly spelled words as correct', async () => {
          await w.webContents.executeJavaScript('document.body.querySelector("textarea").value = "typography"');
 diff --git a/electron/spec/visibility-state.spec.ts b/electron/spec/visibility-state.spec.ts
-index aae5edce7f..469e1eb441 100644
+index 68af39fe42..7dbaf56f1b 100644
 --- a/electron/spec/visibility-state.spec.ts
 +++ b/electron/spec/visibility-state.spec.ts
 @@ -19,7 +19,7 @@ import { closeAllWindows } from './lib/window-helpers.ts';
@@ -1313,12 +1359,12 @@ index aae5edce7f..469e1eb441 100644
 +ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('document.visibilityState', () => {
    let w: BaseWindow & { webContents: WebContents };
  
-   before(() => {
+   beforeAll(() => {
 diff --git a/electron/spec/webview.spec.ts b/electron/spec/webview.spec.ts
-index 7f2683ace2..94485c1cb9 100644
+index 65715c33f9..4f98ca9ad6 100644
 --- a/electron/spec/webview.spec.ts
 +++ b/electron/spec/webview.spec.ts
-@@ -617,7 +617,7 @@ describe('<webview> tag', function () {
+@@ -626,7 +626,7 @@ describe('<webview> tag', () => {
      });
  
      // FIXME(zcbenz): Fullscreen events do not work on Linux.
@@ -1361,50 +1407,81 @@ index 1895d1fbd0..7c00c1f638 100644
    not(debug_assertions)
  ))]
  #[global_allocator]
+diff --git a/third_party/electron_node/deps/cares/config/netbsd/ares_config.h b/third_party/electron_node/deps/cares/config/netbsd/ares_config.h
+index 4efcd2d1a5..06666e0c05 100644
+--- a/third_party/electron_node/deps/cares/config/netbsd/ares_config.h
++++ b/third_party/electron_node/deps/cares/config/netbsd/ares_config.h
+@@ -119,7 +119,7 @@
+ /* #undef HAVE_GETRANDOM */
+ 
+ /* Define to 1 if you have `getservbyport_r` */
+-#define HAVE_GETSERVBYPORT_R 1
++/*#define HAVE_GETSERVBYPORT_R 1*/
+ 
+ /* Define to 1 if you have `gettimeofday` */
+ #define HAVE_GETTIMEOFDAY 1
+@@ -580,4 +580,4 @@
+ /* #undef __MINGW_USE_VC2005_COMPAT */
+ 
+ /* Define as 'unsigned int' if <stddef.h> doesn't define. */
+-/* #undef size_t */
+\ No newline at end of file
++/* #undef size_t */
 diff --git a/third_party/electron_node/deps/cares/unofficial.gni b/third_party/electron_node/deps/cares/unofficial.gni
-index 60b6144ced..a834a0c1cf 100644
+index 1c6a180445..72eda82753 100644
 --- a/third_party/electron_node/deps/cares/unofficial.gni
 +++ b/third_party/electron_node/deps/cares/unofficial.gni
-@@ -50,6 +50,8 @@ template("cares_gn_build") {
-       include_dirs += [ "config/darwin" ]
-     } else if (is_freebsd) {
-       include_dirs += [ "config/freebsd" ]
-+    } else if (is_netbsd) {
-+      include_dirs += [ "config/netbsd" ]
-     }
+@@ -62,6 +62,8 @@ template("cares_gn_build") {
+         include_dirs += [ "config/darwin" ]
+       } else if (is_freebsd) {
+         include_dirs += [ "config/freebsd" ]
++      } else if (is_netbsd) {
++        include_dirs += [ "config/netbsd" ]
+       }
  
-     if (is_win) {
-@@ -69,6 +71,9 @@ template("cares_gn_build") {
-     if (is_freebsd) {
-       sources += [ "config/freebsd/ares_config.h" ]
-     }
-+    if (is_netbsd) {
-+      sources += [ "config/netbsd/ares_config.h" ]
-+    }
- 
-     if (is_clang) {
        if (is_win) {
+@@ -81,6 +83,9 @@ template("cares_gn_build") {
+       if (is_freebsd) {
+         sources += [ "config/freebsd/ares_config.h" ]
+       }
++      if (is_netbsd) {
++        sources += [ "config/netbsd/ares_config.h" ]
++      }
+ 
+       if (is_clang) {
+         if (is_win) {
 diff --git a/third_party/electron_node/deps/uv/unofficial.gni b/third_party/electron_node/deps/uv/unofficial.gni
-index 5ef9d2105e..b1ffe2c664 100644
+index 525828cec4..baf93b10ef 100644
 --- a/third_party/electron_node/deps/uv/unofficial.gni
 +++ b/third_party/electron_node/deps/uv/unofficial.gni
-@@ -121,5 +121,14 @@ template("uv_gn_build") {
-       ]
-       sources -= [ "src/unix/proctitle.c" ]
+@@ -108,6 +108,9 @@ template("uv_gn_build") {
+           "rt",
+         ]
+       }
++      if (is_netbsd) {
++        libs += [ "kvm" ]
++      }
+ 
+       sources = gypi_values.uv_sources_common
+       if (is_win) {
+@@ -133,6 +136,15 @@ template("uv_gn_build") {
+         ]
+         sources -= [ "src/unix/proctitle.c" ]
+       }
++      if (is_netbsd) {
++        sources += gypi_values.uv_sources_bsd_common + [
++                  "src/unix/netbsd.c",
++                  "src/unix/random-getrandom.c",
++                  "src/unix/posix-hrtime.c",
++                  "src/unix/bsd-proctitle.c",
++        ]
++        sources -= [ "src/unix/proctitle.c" ]
++      }
      }
-+    if (is_netbsd) {
-+      sources += gypi_values.uv_sources_bsd_common + [
-+        "src/unix/netbsd.c",
-+        "src/unix/random-getrandom.c",
-+        "src/unix/posix-hrtime.c",
-+        "src/unix/bsd-proctitle.c",
-+      ]
-+      sources -= [ "src/unix/proctitle.c" ]
-+    }
    }
  }
 diff --git a/third_party/electron_node/tools/generate_config_gypi.py b/third_party/electron_node/tools/generate_config_gypi.py
-index 436767e633..4e56ec129b 100755
+index d464d4b585..96c7ede6d5 100755
 --- a/third_party/electron_node/tools/generate_config_gypi.py
 +++ b/third_party/electron_node/tools/generate_config_gypi.py
 @@ -19,7 +19,7 @@ import getnapibuildversion
@@ -1416,3 +1493,16 @@ index 436767e633..4e56ec129b 100755
  
  def bool_to_number(v):
    return 1 if v else 0
+diff --git a/ui/shell_dialogs/select_file_dialog.h b/ui/shell_dialogs/select_file_dialog.h
+index 4ac0658720..e7a4003ea0 100644
+--- a/ui/shell_dialogs/select_file_dialog.h
++++ b/ui/shell_dialogs/select_file_dialog.h
+@@ -224,7 +224,7 @@ class SHELL_DIALOGS_EXPORT SelectFileDialog
+                   const GURL* caller = nullptr);
+   bool HasMultipleFileTypeChoices();
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // Set the label used for the file select button.
+   virtual void SetButtonLabel(const std::string& label) = 0;
+ 
