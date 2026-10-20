@@ -247,6 +247,121 @@ index f0694f2777..675f4f4f1d 100644
  #include "chrome/browser/ui/process_singleton_dialog_linux.h"
  #endif
  
+diff --git a/components/os_crypt/sync/os_crypt.h b/components/os_crypt/sync/os_crypt.h
+index 7a67acb080..b888373676 100644
+--- a/components/os_crypt/sync/os_crypt.h
++++ b/components/os_crypt/sync/os_crypt.h
+@@ -25,9 +25,9 @@ class KeychainV2;
+ }
+ #endif
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ class KeyStorageLinux;
+-#endif  // BUILDFLAG(IS_LINUX)
++#endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ 
+ #if BUILDFLAG(IS_WIN)
+ class PrefRegistrySimple;
+@@ -41,10 +41,10 @@ struct Config;
+ // Temporary interface due to OSCrypt refactor. See OSCryptImpl for descriptions
+ // of what each function does.
+ namespace OSCrypt {
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ COMPONENT_EXPORT(OS_CRYPT)
+ void SetConfig(std::unique_ptr<os_crypt::Config> config);
+-#endif  // BUILDFLAG(IS_LINUX)
++#endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ COMPONENT_EXPORT(OS_CRYPT) bool IsEncryptionAvailable();
+ COMPONENT_EXPORT(OS_CRYPT)
+ bool EncryptString16(const std::u16string& plaintext, std::string* ciphertext);
+@@ -88,7 +88,7 @@ COMPONENT_EXPORT(OS_CRYPT) void UseMockKeyForTesting(bool use_mock);
+ COMPONENT_EXPORT(OS_CRYPT) void SetLegacyEncryptionForTesting(bool legacy);
+ COMPONENT_EXPORT(OS_CRYPT) void ResetStateForTesting();
+ #endif  // BUILDFLAG(IS_WIN)
+-#if (BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CASTOS))
++#if (BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CASTOS)) || BUILDFLAG(IS_BSD)
+ COMPONENT_EXPORT(OS_CRYPT)
+ void UseMockKeyStorageForTesting(
+     base::OnceCallback<std::unique_ptr<KeyStorageLinux>()>
+@@ -96,14 +96,14 @@ void UseMockKeyStorageForTesting(
+ COMPONENT_EXPORT(OS_CRYPT) void ClearCacheForTesting();
+ COMPONENT_EXPORT(OS_CRYPT)
+ void SetEncryptionPasswordForTesting(const std::string& password);
+-#endif  // (BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CASTOS))
++#endif  // (BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CASTOS)) || BUILDFLAG(IS_BSD)
+ #if BUILDFLAG(IS_POSIX) && !BUILDFLAG(IS_APPLE) &&         \
+-        !(BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CASTOS)) || \
++        !(BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CASTOS)) && !(BUILDFLAG(IS_BSD)) || \
+     BUILDFLAG(IS_FUCHSIA)
+ COMPONENT_EXPORT(OS_CRYPT)
+ void SetEncryptionAvailableForTesting(std::optional<bool> available);
+ #endif  // BUILDFLAG(IS_POSIX) && !BUILDFLAG(IS_APPLE) && !(BUILDFLAG(IS_LINUX)
+-        // && !BUILDFLAG(IS_CASTOS)) || BUILDFLAG(IS_FUCHSIA)
++        // && !BUILDFLAG(IS_CASTOS)) && !(BUILDFLAG(IS_BSD)) || BUILDFLAG(IS_FUCHSIA)
+ }  // namespace OSCrypt
+ 
+ // The OSCryptImpl class gives access to simple encryption and decryption of
+@@ -122,12 +122,12 @@ class COMPONENT_EXPORT(OS_CRYPT) OSCryptImpl {
+   // Returns singleton instance of OSCryptImpl.
+   static OSCryptImpl* GetInstance();
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   // Set the configuration of OSCryptImpl.
+   // This method, or SetRawEncryptionKey(), must be called before using
+   // EncryptString() and DecryptString().
+   void SetConfig(std::unique_ptr<os_crypt::Config> config);
+-#endif  // BUILDFLAG(IS_LINUX)
++#endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ 
+   // In production code:
+   // - On Linux, returns true iff the real secret key (not hardcoded one) is
+@@ -214,7 +214,7 @@ class COMPONENT_EXPORT(OS_CRYPT) OSCryptImpl {
+   void ResetStateForTesting();
+ #endif
+ 
+-#if (BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CASTOS))
++#if (BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CASTOS)) || BUILDFLAG(IS_BSD)
+   // For unit testing purposes, inject methods to be used.
+   // |storage_provider_factory| provides the desired |KeyStorage|
+   // implementation. If the provider returns |nullptr|, a hardcoded password
+@@ -230,7 +230,7 @@ class COMPONENT_EXPORT(OS_CRYPT) OSCryptImpl {
+ 
+   // Sets the password with which the encryption key is derived, e.g. "peanuts".
+   void SetEncryptionPasswordForTesting(const std::string& password);
+-#endif  // (BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CASTOS))
++#endif  // (BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CASTOS)) || BUILDFLAG(IS_BSD)
+  private:
+ #if BUILDFLAG(IS_APPLE)
+   // Return the keychain to use for accessing the encryption key.
+@@ -241,13 +241,13 @@ class COMPONENT_EXPORT(OS_CRYPT) OSCryptImpl {
+   bool DeriveKey();
+ #endif  // BUILDFLAG(IS_APPLE)
+ 
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_APPLE)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_BSD)
+   // This lock is used to make the GetEncryptionKey and
+   // GetRawEncryptionKey methods thread-safe.
+   static base::Lock& GetLock();
+-#endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_APPLE)
++#endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_BSD)
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+   static constexpr size_t kDerivedKeyBytes = 16;
+ 
+   crypto::SubtlePassKey MakeCryptoPassKey();
+@@ -276,7 +276,7 @@ class COMPONENT_EXPORT(OS_CRYPT) OSCryptImpl {
+ 
+   base::OnceCallback<std::unique_ptr<KeyStorageLinux>()>
+       storage_provider_factory_for_testing_;
+-#endif  // BUILDFLAG(IS_LINUX)
++#endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ 
+ #if BUILDFLAG(IS_WIN)
+   // Use mock key instead of a real encryption key. Used for testing.
 diff --git a/content/browser/child_process_launcher_helper_linux.cc b/content/browser/child_process_launcher_helper_linux.cc
 index c188cd72bc..d0a99a2d21 100644
 --- a/content/browser/child_process_launcher_helper_linux.cc
@@ -278,7 +393,7 @@ index c188cd72bc..d0a99a2d21 100644
  #if !BUILDFLAG(IS_BSD)
      DCHECK(GetZygoteForLaunch());
 diff --git a/electron/BUILD.gn b/electron/BUILD.gn
-index 515228b340..0b9f946a47 100644
+index 515228b340..295307fa64 100644
 --- a/electron/BUILD.gn
 +++ b/electron/BUILD.gn
 @@ -629,7 +629,7 @@ source_set("electron_lib") {
@@ -303,7 +418,86 @@ index 515228b340..0b9f946a47 100644
    if (is_linux) {
      libs = [ "xshmfence" ]
      deps += [
-@@ -1548,7 +1554,7 @@ if (is_mac) {
+@@ -989,6 +995,29 @@ if (electron_generate_js2c_code_cache) {
+     ]
+   }
+ 
++  if (target_os == "netbsd") {
++    action("run_paxctl_electron_natives_codecache") {
++      deps = [ ":electron_natives_codecache($v8_snapshot_toolchain)" ]
++
++      script = "//v8/tools/run-paxctl.py"
++      stamp = "$target_gen_dir/paxctl_electron_natives_codecache_stamp"
++      outputs = [ stamp ]
++
++      sources = []
++      data = []
++
++      _pax_dir = get_label_info(":electron_natives_codecache($v8_snapshot_toolchain)",
++                                "root_out_dir")
++      args = [
++        rebase_path(stamp, root_build_dir),
++        "/usr/sbin/paxctl",
++        "+m",
++        "./" + rebase_path(_pax_dir + "/electron_natives_codecache",
++                           root_build_dir),
++      ]
++    }
++  }
++
+   foreach(_f, _js2c_cc_flavors) {
+     action("run_electron_natives_codecache_" + _f.name) {
+       deps = [
+@@ -996,6 +1025,9 @@ if (electron_generate_js2c_code_cache) {
+         "//tools/v8_context_snapshot",
+         "//v8:run_mksnapshot_default",
+       ]
++      if (target_os == "netbsd") {
++        deps += [ ":run_paxctl_electron_natives_codecache" ]
++      }
+       script = "//v8/tools/run.py"
+       _gen_dir =
+           get_label_info(":electron_natives_codecache($v8_snapshot_toolchain)",
+@@ -1022,11 +1054,38 @@ if (electron_generate_js2c_code_cache) {
+   # Browser flavor, built against the embedded Node startup snapshot so its
+   # code-cache read-only checksum matches the runtime browser isolate.
+   if (node_use_node_snapshot) {
++    if (target_os == "netbsd") {
++      action("run_paxctl_electron_snapshot") {
++         deps = [ ":electron_natives_codecache_snapshot($v8_snapshot_toolchain)" ]
++
++         script = "//v8/tools/run-paxctl.py"
++         stamp = "$target_gen_dir/paxctl_node_electronstamp"
++         outputs = [ stamp ]
++
++         sources = []
++         data = []
++
++         node_mksnapshot_dir =
++             get_label_info(":electron_natives_codecache_snapshot($v8_snapshot_toolchain)",
++                            "root_out_dir")
++         args = [
++           rebase_path(stamp, root_build_dir),
++           "/usr/sbin/paxctl",
++           "+m",
++           "./" + rebase_path(node_mksnapshot_dir + "/electron_natives_codecache_snapshot",
++                              root_build_dir),
++        ]
++      }
++    }
++
+     action("run_electron_natives_codecache_browser") {
+       deps = [
+         ":electron_natives_codecache_snapshot($v8_snapshot_toolchain)",
+         "//v8:run_mksnapshot_default",
+       ]
++      if (target_os == "netbsd") {
++        deps += [ ":run_paxctl_electron_snapshot" ]
++      }
+       script = "//v8/tools/run.py"
+       _gen_dir = get_label_info(
+               ":electron_natives_codecache_snapshot($v8_snapshot_toolchain)",
+@@ -1548,7 +1607,7 @@ if (is_mac) {
      } else if (is_linux) {
        sources = [
          "shell/app/electron_main_linux.cc",
@@ -312,7 +506,7 @@ index 515228b340..0b9f946a47 100644
          "shell/app/uv_stdio_fix.cc",
          "shell/app/uv_stdio_fix.h",
        ]
-@@ -1560,7 +1566,7 @@ if (is_mac) {
+@@ -1560,7 +1619,7 @@ if (is_mac) {
        ":electron_lib",
        ":electron_win32_resources",
        ":packed_resources",
@@ -321,7 +515,7 @@ index 515228b340..0b9f946a47 100644
        "//content:sandbox_helper_win",
        "//electron/buildflags",
        "//third_party/electron_node:libnode",
-@@ -1587,7 +1593,7 @@ if (is_mac) {
+@@ -1587,7 +1646,7 @@ if (is_mac) {
        public_deps = [ "//tools/v8_context_snapshot" ]
      }
  
@@ -330,7 +524,7 @@ index 515228b340..0b9f946a47 100644
        data_deps += [ "//components/crash/core/app:chrome_crashpad_handler" ]
      }
  
-@@ -1654,7 +1660,7 @@ if (is_mac) {
+@@ -1654,7 +1713,7 @@ if (is_mac) {
          configs += [ "//build/config/gcc:rpath_for_built_shared_libraries" ]
        }
  
@@ -339,7 +533,7 @@ index 515228b340..0b9f946a47 100644
          deps += [ "//sandbox/linux:chrome_sandbox" ]
        }
      }
-@@ -1775,7 +1781,9 @@ dist_zip("electron_dist_zip") {
+@@ -1775,7 +1834,9 @@ dist_zip("electron_dist_zip") {
        ]
      }
  
@@ -3900,10 +4094,15 @@ index 4efcd2d1a5..06666e0c05 100644
 \ No newline at end of file
 +/* #undef size_t */
 diff --git a/third_party/electron_node/deps/cares/unofficial.gni b/third_party/electron_node/deps/cares/unofficial.gni
-index 364df1f312..72eda82753 100644
+index 364df1f312..3ccc0cd501 100644
 --- a/third_party/electron_node/deps/cares/unofficial.gni
 +++ b/third_party/electron_node/deps/cares/unofficial.gni
-@@ -60,6 +60,10 @@ template("cares_gn_build") {
+@@ -56,10 +56,14 @@ template("cares_gn_build") {
+       ]
+       if (is_win) {
+         include_dirs += [ "config/win32" ]
+-      } else if (is_linux) {
++      } else if (is_linux && !is_bsd) {
          include_dirs += [ "config/linux" ]
        } else if (is_mac) {
          include_dirs += [ "config/darwin" ]
@@ -3914,7 +4113,14 @@ index 364df1f312..72eda82753 100644
        }
  
        if (is_win) {
-@@ -76,6 +80,12 @@ template("cares_gn_build") {
+@@ -70,12 +74,18 @@ template("cares_gn_build") {
+       }
+ 
+       sources = gypi_values.cares_sources_common
+-      if (is_linux) {
++      if (is_linux && !is_bsd) {
+         sources += [ "config/linux/ares_config.h" ]
+       }
        if (is_mac) {
          sources += gypi_values.cares_sources_mac
        }
@@ -3928,17 +4134,19 @@ index 364df1f312..72eda82753 100644
        if (is_clang) {
          if (is_win) {
 diff --git a/third_party/electron_node/deps/histogram/src/hdr_histogram.c b/third_party/electron_node/deps/histogram/src/hdr_histogram.c
-index a34de2c1b2..027643dd14 100644
+index a34de2c1b2..e49828cb44 100644
 --- a/third_party/electron_node/deps/histogram/src/hdr_histogram.c
 +++ b/third_party/electron_node/deps/histogram/src/hdr_histogram.c
-@@ -36,8 +36,8 @@
+@@ -36,8 +36,10 @@
  
  /* Runtime-dispatched AVX2 path: keep the rest of this TU at the project's
     baseline ISA so the shipped binary does not silently require AVX2. */
 -#if (defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)) \
 -    && (defined(__GNUC__) || defined(__clang__)) && !defined(__INTEL_COMPILER) && !defined(_MSC_VER)
++/* NetBSD + clang: hdr_histogram.c:(.text+0x43): undefined reference to `__cpu_model' */
 +#if (defined(__x86_64__) || defined(_M_X64) || defined(_M_IX86)) \
-+     && (defined(__GNUC__) || defined(__clang__)) && !defined(__INTEL_COMPILER) && !defined(_MSC_VER)
++     && (defined(__GNUC__) || defined(__clang__)) && !defined(__INTEL_COMPILER) && !defined(_MSC_VER) \
++     && !defined(__NetBSD__)
  #  define HDR_HAS_AVX2_DISPATCH 1
  #  include <immintrin.h>
  #endif
@@ -4576,6 +4784,51 @@ index 60d630702b..ec1628bb7e 100644
          # Clang needs it for some atomic operations (https://clang.llvm.org/docs/Toolchain.html#atomics-library).
          ['(OS=="linux" and clang==1) or (v8_current_cpu in ["mips64", "mips64el", "arm", "riscv64", "loong64"])', {
            'link_settings': {
+diff --git a/third_party/electron_node/unofficial.gni b/third_party/electron_node/unofficial.gni
+index 95feec90c1..1204f3a17d 100644
+--- a/third_party/electron_node/unofficial.gni
++++ b/third_party/electron_node/unofficial.gni
+@@ -379,6 +379,30 @@ template("node_gn_build") {
+     # so the browser js2c code-cache tool (v8_snapshot_toolchain) is keyed to
+     # the exact snapshot the framework ships (two runs need not be identical).
+     if (current_toolchain == default_toolchain) {
++      if (target_os == "netbsd") {
++        action("run_paxctl_node_mksnapshot") {
++          deps = [ ":node_mksnapshot($v8_snapshot_toolchain)" ]
++
++          script = "$node_v8_path/tools/run-paxctl.py"
++          stamp = "$target_gen_dir/paxctl_node_mksnapshot_stamp"
++          outputs = [ stamp ]
++
++          sources = []
++          data = []
++
++          node_mksnapshot_dir =
++              get_label_info(":node_mksnapshot($v8_snapshot_toolchain)",
++                             "root_out_dir")
++          args = [
++            rebase_path(stamp, root_build_dir),
++            "/usr/sbin/paxctl",
++            "+m",
++            "./" + rebase_path(node_mksnapshot_dir + "/node_mksnapshot",
++                               root_build_dir),
++          ]
++        }
++      }
++
+       action("run_node_mksnapshot") {
+         deps = [
+           ":node_mksnapshot($v8_snapshot_toolchain)",
+@@ -386,6 +410,9 @@ template("node_gn_build") {
+           # The V8 startup snapshot node_mksnapshot extends.
+           "$node_v8_path:run_mksnapshot_default",
+         ]
++        if (target_os == "netbsd") {
++          deps += [ ":run_paxctl_node_mksnapshot" ]
++        }
+         script = "$node_v8_path/tools/run.py"
+         sources = []
+         data = []
 diff --git a/ui/gfx/font_util.cc b/ui/gfx/font_util.cc
 index 13dcfa03fe..8100ac3a24 100644
 --- a/ui/gfx/font_util.cc

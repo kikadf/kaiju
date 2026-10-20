@@ -285,6 +285,7 @@ if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-fbpatches_done" ]; then
 
     cd "electron${_e_main}-netbsd-${e_ver}" || die
     for _patch in "$p_dir"/patch-electron* \
+                  "$p_dir"/patch-components_os__crypt_sync* \
                   "$p_dir"/patch-rollup* \
                   "$p_dir"/patch-third__party_electron__node* ; do
         if [ -e "$_patch" ]; then
