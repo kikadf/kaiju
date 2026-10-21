@@ -35,12 +35,17 @@ fetch_pkgsrc() {
 
 # electron versions from freebsd-ports
 get_value() {
-    cat freebsd-ports/devel/$2/Makefile.version \
-        freebsd-ports/devel/$2/Makefile \
+    if [ "$2" = "vscode" ]; then
+        _path="editors/vscode"
+    else
+        _path="devel/$2"
+    fi
+    cat freebsd-ports/${_path}/Makefile.version \
+        freebsd-ports/${_path}/Makefile \
         | sed -n "s|^$1=[[:space:]]*\(.*\)|\1|p"
 }
 
-# sub folder of chromium release 
+# sub folder of chromium release
 get_urlsf_chr() {
     cat freebsd-ports/devel/$1/Makefile \
         | sed -n "s|.*download/v\(.*\)/:chromium.*|\1|p"
