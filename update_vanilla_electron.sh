@@ -31,6 +31,7 @@ _ro_ver=$(getver 6)
 _m_ver=$(getver 7)
 _eng_ver=$(getver 8)
 _rollup_ver=$(getver 9)
+_sparkle_ver=$(getver 10)
 
 _epatch_rej="${_startdir}/patches/electron${_e_main}/epatch_rej"
 
@@ -86,6 +87,13 @@ if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-download_done" ]; then
              -o "$distfiles/rollup-rollup-v${_rollup_ver}.tar.gz" \
              || die "curl rollup"
     fi
+    if [ "$_sparkle_ver" != "" ]; then
+        if [ ! -f "$distfiles/rollup-rollup-v${_rollup_ver}.tar.gz" ]; then
+            curl -L "https://github.com/rollup/rollup/archive/v${_rollup_ver}.tar.gz" \
+             -o "$distfiles/rollup-rollup-v${_rollup_ver}.tar.gz" \
+             || die "curl rollup"
+        fi
+    fi
     cd "$_startdir" || die
     touch "$tools_workdir/electron${_e_main}-${e_ver}-download_done"
 fi
@@ -106,6 +114,10 @@ if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-extract_done" ]; then
     tar -xzf "$distfiles/Squirrel-Squirrel.Mac-${_sq_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac" || die "extract squirrel"
     mkdir -p "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac/vendor/ReactiveObjC" || die
     tar -xzf "$distfiles/ReactiveCocoa-ReactiveObjC-${_ro_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac/vendor/ReactiveObjC" || die "extract ReactiveObjC"
+    if [ "$_sparkle_ver" != "" ]; then
+        mkdir -p "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac/vendor/Sparkle" || die
+        tar -xzf "$distfiles/sparkle-project-Sparkle-${_sparkle_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac/vendor/Sparkle" || die "extract Sparkle"
+    fi
     mkdir "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac/vendor/Mantle" || die
     tar -xzf "$distfiles/Mantle-Mantle-${_m_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac/vendor/Mantle" || die "extract mantle"
 #    mkdir "electron${_e_main}-netbsd-${e_ver}/third_party/engflow-reclient-configs" || die
@@ -119,10 +131,10 @@ fi
 
 # get node modules
 if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-node_done" ]; then
-    cd "$tools_workdir/electron${_e_main}-netbsd-${e_ver}/electron"
+    cd "$tools_workdir/electron${_e_main}-netbsd-${e_ver}/electron" || die
     HOME="$PWD" XDG_CACHE_HOME="$PWD/.ecache" \
     YARN_GLOBAL_FOLDER="$PWD/.ecache/yarn-global" \
-    YARN_CACHE_FOLDER="$PWD/.ecache/electron${_e_main}-node_modules-${_ver}" \
+    YARN_CACHE_FOLDER="$PWD/.ecache/electron${_e_main}-node_modules-${e_ver}" \
     YARN_ENABLE_GLOBAL_CACHE=false \
     YARN_ENABLE_TELEMETRY=0 \
     YARN_ENABLE_SCRIPTS=false \
@@ -133,7 +145,7 @@ fi
 
 # init git repo
 if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-init_done" ]; then
-    cd "$tools_workdir"
+    cd "$tools_workdir" || die
     echo "*.rej" >> "electron${_e_main}-netbsd-${e_ver}/.gitignore"
     echo "*.rej.*" >> "electron${_e_main}-netbsd-${e_ver}/.gitignore"
     echo "*.orig" >> "electron${_e_main}-netbsd-${e_ver}/.gitignore"
@@ -153,7 +165,7 @@ if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-init_done" ]; then
     sed -i'' 's/vendor/vendorXXX/g' "electron${_e_main}-netbsd-${e_ver}/third_party/squirrel.mac/.gitignore"
     sed -i'' 's/nacl/naclXXX/g' "electron${_e_main}-netbsd-${e_ver}/buildtools/reclient_cfgs/.gitignore"
 
-    cd "$tools_workdir/electron${_e_main}-netbsd-${e_ver}"
+    cd "$tools_workdir/electron${_e_main}-netbsd-${e_ver}" || die
     git init || die
     git add . || die
     git commit -m  "Electron-${e_ver}" || die

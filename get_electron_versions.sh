@@ -29,8 +29,9 @@ _ro_ver=$(get_value REACTIVEOBJC_VER "$ename")
 _m_ver=$(get_value MANTLE_VER "$ename")
 _eng_ver=$(get_value ENGFLOW_RECLIENT_CONFIGS_VER "$ename")
 _rollup_ver=$(get_value ROLLUP_VER "$ename")
+_sparkle_ver=$(get_value SPARKLE_VER "$ename")
 
-_versions="$_e_ver:$_c_ver:$_node_ver:$_nan_ver:$_sq_ver:$_ro_ver:$_m_ver:$_eng_ver:$_rollup_ver"
+_versions="$_e_ver:$_c_ver:$_node_ver:$_nan_ver:$_sq_ver:$_ro_ver:$_m_ver:$_eng_ver:$_rollup_ver:$_sparkle_ver"
 
 grep -q "$_versions" "$_startdir/electron.versions" \
     || echo "$_versions" >> "$_startdir/electron.versions"
