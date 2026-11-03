@@ -88,10 +88,10 @@ if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-download_done" ]; then
              || die "curl rollup"
     fi
     if [ "$_sparkle_ver" != "" ]; then
-        if [ ! -f "$distfiles/rollup-rollup-v${_rollup_ver}.tar.gz" ]; then
-            curl -L "https://github.com/rollup/rollup/archive/v${_rollup_ver}.tar.gz" \
-             -o "$distfiles/rollup-rollup-v${_rollup_ver}.tar.gz" \
-             || die "curl rollup"
+        if [ ! -f "$distfiles/sparkle-project-Sparkle-${_sparkle_ver}.tar.gz" ]; then
+            curl -L "https://github.com/sparkle-project/Sparkle/archive/${_sparkle_ver}.tar.gz" \
+             -o "$distfiles/sparkle-project-Sparkle-${_sparkle_ver}.tar.gz" \
+             || die "curl Sparkle"
         fi
     fi
     cd "$_startdir" || die
