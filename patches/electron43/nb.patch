@@ -1,5 +1,5 @@
 diff --git a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc
-index 1ba949fdc2..32a5ae7074 100644
+index 06cb8621a9..3f89ba9b76 100644
 --- a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc
 +++ b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc
 @@ -291,214 +291,10 @@ bool MaybeIsLocalUNCPath(const base::FilePath& path) {
@@ -222,10 +222,10 @@ index 1ba949fdc2..32a5ae7074 100644
  // Checks if `path` should be blocked by the `rules`.
  // The BlockType of the nearest ancestor of a path to check is what
 diff --git a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
-index 956e285889..129cebd795 100644
+index 2b9f609951..cc30ed3f66 100644
 --- a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
 +++ b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
-@@ -603,7 +603,7 @@ class ChromeFileSystemAccessPermissionContext
+@@ -686,7 +686,7 @@ class ChromeFileSystemAccessPermissionContext
              FILE_PATH_LITERAL("Library/Mobile Documents/com~apple~CloudDocs"),
              BlockType::kDontBlockChildren),
    #endif
@@ -362,6 +362,37 @@ index 7a67acb080..b888373676 100644
  
  #if BUILDFLAG(IS_WIN)
    // Use mock key instead of a real encryption key. Used for testing.
+diff --git a/components/os_crypt/sync/os_crypt_unittest.cc b/components/os_crypt/sync/os_crypt_unittest.cc
+index 8c48d3765d..8304d351f5 100644
+--- a/components/os_crypt/sync/os_crypt_unittest.cc
++++ b/components/os_crypt/sync/os_crypt_unittest.cc
+@@ -19,7 +19,7 @@
+ #include "components/os_crypt/sync/os_crypt_mocker.h"
+ #include "testing/gtest/include/gtest/gtest.h"
+ 
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+ #include "components/os_crypt/sync/os_crypt_mocker_linux.h"
+ #endif
+ 
+@@ -163,7 +163,7 @@ TEST_F(OSCryptTest, Metrics) {
+ #if BUILDFLAG(IS_WIN)
+     histograms.ExpectTotalCount("OSCrypt.EncryptionPrefixVersion", 0);
+ #else
+-#if BUILDFLAG(IS_LINUX)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+     // Linux defaults to using a `v11` key.
+     const os_crypt::EncryptionPrefixVersion expected =
+         os_crypt::EncryptionPrefixVersion::kVersion11;
+@@ -171,7 +171,7 @@ TEST_F(OSCryptTest, Metrics) {
+     // All other non-Windows platforms use a `v10` key.
+     const os_crypt::EncryptionPrefixVersion expected =
+         os_crypt::EncryptionPrefixVersion::kVersion10;
+-#endif  // BUILDFLAG(IS_LINUX)
++#endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+     histograms.ExpectUniqueSample("OSCrypt.EncryptionPrefixVersion", expected,
+                                   1u);
+ #endif  // BUILDFLAG(IS_WIN)
 diff --git a/content/browser/child_process_launcher_helper_linux.cc b/content/browser/child_process_launcher_helper_linux.cc
 index c188cd72bc..d0a99a2d21 100644
 --- a/content/browser/child_process_launcher_helper_linux.cc
@@ -545,10 +576,10 @@ index 515228b340..295307fa64 100644
    deps = data_deps
    outputs = [ "$root_build_dir/dist.zip" ]
 diff --git a/electron/build/args/all.gn b/electron/build/args/all.gn
-index d003f068f1..31676e18c1 100644
+index 30af645e38..85096d9044 100644
 --- a/electron/build/args/all.gn
 +++ b/electron/build/args/all.gn
-@@ -31,8 +31,8 @@ v8_enable_snapshot_native_code_counters = false
+@@ -37,8 +37,8 @@ v8_enable_snapshot_native_code_counters = false
  v8_enable_javascript_promise_hooks = true
  
  enable_cdm_host_verification = false
@@ -925,7 +956,7 @@ index 6230de1cb5..717d7c1632 100644
        reporter.SetMethod("removeExtraParameter", &ClearCrashKeyStub);
  #else
 diff --git a/electron/shell/browser/api/electron_api_app.cc b/electron/shell/browser/api/electron_api_app.cc
-index d8ba5f83b6..88ac82dd4e 100644
+index aff788f138..79fe6c23ac 100644
 --- a/electron/shell/browser/api/electron_api_app.cc
 +++ b/electron/shell/browser/api/electron_api_app.cc
 @@ -110,7 +110,7 @@
@@ -955,7 +986,7 @@ index d8ba5f83b6..88ac82dd4e 100644
    // Set the application name for audio streams shown in external
    // applications. Only affects pulseaudio currently.
    media::AudioManager::SetGlobalAppName(Browser::Get()->GetName());
-@@ -972,7 +972,7 @@ void App::SetPath(gin_helper::ErrorThrower thrower,
+@@ -961,7 +961,7 @@ void App::SetPath(gin_helper::ErrorThrower thrower,
  }
  
  void App::SetDesktopName(const std::string& desktop_name) {
@@ -964,7 +995,7 @@ index d8ba5f83b6..88ac82dd4e 100644
    auto env = base::Environment::Create();
    env->SetVar("CHROME_DESKTOP", desktop_name);
  #endif
-@@ -1074,7 +1074,7 @@ bool App::RequestSingleInstanceLock(gin::Arguments* args) {
+@@ -1063,7 +1063,7 @@ bool App::RequestSingleInstanceLock(gin::Arguments* args) {
        base::BindRepeating(NotificationCallbackWrapper, cb));
  #endif
  
@@ -973,7 +1004,7 @@ index d8ba5f83b6..88ac82dd4e 100644
    // Read the xdg-activation token and set it in the command line for the
    // duration of the notification in order to ensure this is propagated to an
    // already running electron app instance if it exists.
-@@ -1470,7 +1470,7 @@ std::vector<gin_helper::Dictionary> App::GetAppMetrics(v8::Isolate* isolate) {
+@@ -1459,7 +1459,7 @@ std::vector<gin_helper::Dictionary> App::GetAppMetrics(v8::Isolate* isolate) {
        pid_dict.Set("name", process_metric.second->name);
      }
  
@@ -982,7 +1013,7 @@ index d8ba5f83b6..88ac82dd4e 100644
      auto memory_info = process_metric.second->GetMemoryInfo();
  
      auto memory_dict = gin_helper::Dictionary::CreateEmpty(isolate);
-@@ -1974,7 +1974,7 @@ gin::ObjectTemplateBuilder App::GetObjectTemplateBuilder(v8::Isolate* isolate) {
+@@ -1963,7 +1963,7 @@ gin::ObjectTemplateBuilder App::GetObjectTemplateBuilder(v8::Isolate* isolate) {
        .SetMethod("getJumpListSettings", &App::GetJumpListSettings)
        .SetMethod("setJumpList", &App::SetJumpList)
  #endif
@@ -1343,7 +1374,7 @@ index 0c155118e3..2fe3298ef0 100644
  
    raw_ptr<ui::NativeTheme> ui_theme_;
 diff --git a/electron/shell/browser/api/electron_api_web_contents.cc b/electron/shell/browser/api/electron_api_web_contents.cc
-index 22565c4a77..b34730f5c0 100644
+index 24a7c8756f..4175be340f 100644
 --- a/electron/shell/browser/api/electron_api_web_contents.cc
 +++ b/electron/shell/browser/api/electron_api_web_contents.cc
 @@ -188,11 +188,11 @@
@@ -1378,7 +1409,7 @@ index 22565c4a77..b34730f5c0 100644
    if (auto* native_theme = ui::NativeTheme::GetInstanceForNativeUi())
      return native_theme->caret_blink_interval();
  #elif BUILDFLAG(IS_WIN)
-@@ -1060,7 +1060,7 @@ void WebContents::InitWithSessionAndOptions(
+@@ -1050,7 +1050,7 @@ void WebContents::InitWithSessionAndOptions(
    accept_languages.pop_back();
    prefs->accept_languages = accept_languages;
  
@@ -1387,7 +1418,7 @@ index 22565c4a77..b34730f5c0 100644
    // Update font settings.
    static const gfx::FontRenderParams params(
        gfx::GetFontRenderParams(gfx::FontRenderParamsQuery(), nullptr));
-@@ -3311,13 +3311,13 @@ void WebContents::ForcefullyCrashRenderer() {
+@@ -3329,13 +3329,13 @@ void WebContents::ForcefullyCrashRenderer() {
  
    content::RenderProcessHost* rph = rwh->GetProcess();
    if (rph) {
@@ -1403,7 +1434,7 @@ index 22565c4a77..b34730f5c0 100644
      CrashDumpHungChildProcess(rph->GetProcess().Handle());
  #endif
      rph->Shutdown(content::RESULT_CODE_HUNG);
-@@ -3958,7 +3958,7 @@ void WebContents::CopyImageAt(int x, int y) {
+@@ -3976,7 +3976,7 @@ void WebContents::CopyImageAt(int x, int y) {
  void WebContents::Focus() {
    // Focusing on WebContents does not automatically focus the window on macOS
    // and Linux, do it manually to match the behavior on Windows.
@@ -1412,7 +1443,7 @@ index 22565c4a77..b34730f5c0 100644
    if (owner_window())
      owner_window()->Focus(true);
  #endif
-@@ -4918,7 +4918,7 @@ ui::ImageModel WebContents::GetDevToolsWindowIcon() {
+@@ -4936,7 +4936,7 @@ ui::ImageModel WebContents::GetDevToolsWindowIcon() {
  }
  #endif
  
@@ -1422,10 +1453,10 @@ index 22565c4a77..b34730f5c0 100644
                                             std::string* class_name) {
    *class_name = Browser::Get()->GetName();
 diff --git a/electron/shell/browser/api/electron_api_web_contents.h b/electron/shell/browser/api/electron_api_web_contents.h
-index b9fcb34ccb..46181a3b5e 100644
+index ae93664030..800beb00d7 100644
 --- a/electron/shell/browser/api/electron_api_web_contents.h
 +++ b/electron/shell/browser/api/electron_api_web_contents.h
-@@ -794,7 +794,7 @@ class WebContents final : public ExclusiveAccessContext,
+@@ -801,7 +801,7 @@ class WebContents final : public ExclusiveAccessContext,
  #if defined(TOOLKIT_VIEWS) && !BUILDFLAG(IS_MAC)
    ui::ImageModel GetDevToolsWindowIcon() override;
  #endif
@@ -1598,10 +1629,10 @@ index 0b7daef173..0921daf6df 100644
  #endif
    embedder_support::OriginTrialsSettingsStorage origin_trials_settings_storage_;
 diff --git a/electron/shell/browser/electron_browser_main_parts.cc b/electron/shell/browser/electron_browser_main_parts.cc
-index d1c59d2dd3..014848c1f4 100644
+index ebd311bdc7..ba8faf9482 100644
 --- a/electron/shell/browser/electron_browser_main_parts.cc
 +++ b/electron/shell/browser/electron_browser_main_parts.cc
-@@ -81,7 +81,7 @@
+@@ -78,7 +78,7 @@
  #include "ui/wm/core/wm_state.h"
  #endif
  
@@ -1610,7 +1641,7 @@ index d1c59d2dd3..014848c1f4 100644
  #include <dlfcn.h>
  
  #include "base/environment.h"
-@@ -142,7 +142,7 @@ namespace electron {
+@@ -139,7 +139,7 @@ namespace electron {
  
  namespace {
  
@@ -1619,7 +1650,7 @@ index d1c59d2dd3..014848c1f4 100644
  // The display server connection or the session bus is gone: exit like
  // Chrome's SessionEnding(), with an off-thread watchdog that crashes us if
  // exiting hangs on the dead connection.
-@@ -214,13 +214,17 @@ ElectronBrowserMainParts::ElectronBrowserMainParts()
+@@ -211,13 +211,17 @@ ElectronBrowserMainParts::ElectronBrowserMainParts()
    self_ = this;
  }
  
@@ -1638,7 +1669,7 @@ index d1c59d2dd3..014848c1f4 100644
    return lib ? dlsym(lib, name) : nullptr;
  }
  
-@@ -251,10 +255,10 @@ std::vector<std::optional<std::string>> SnapshotFontConfigEnv() {
+@@ -248,10 +252,10 @@ std::vector<std::optional<std::string>> SnapshotFontConfigEnv() {
  }
  
  }  // namespace
@@ -1651,7 +1682,7 @@ index d1c59d2dd3..014848c1f4 100644
    JoinSystemFontConfigInit();
  #endif
  }
-@@ -321,7 +325,7 @@ void ElectronBrowserMainParts::PostEarlyInitialization() {
+@@ -318,7 +322,7 @@ void ElectronBrowserMainParts::PostEarlyInitialization() {
  
    node_bindings_->Initialize(isolate, context);
  
@@ -1660,7 +1691,7 @@ index d1c59d2dd3..014848c1f4 100644
    // Runs during Node.js environment creation and is joined before any app
    // code can run, so nothing else touches FontConfig or the environment.
    const auto fontconfig_env = SnapshotFontConfigEnv();
-@@ -357,7 +361,7 @@ void ElectronBrowserMainParts::PostEarlyInitialization() {
+@@ -354,7 +358,7 @@ void ElectronBrowserMainParts::PostEarlyInitialization() {
    // Wrap the uv loop with global env.
    node_bindings_->set_uv_env(node_env_.get());
  
@@ -1669,7 +1700,7 @@ index d1c59d2dd3..014848c1f4 100644
    JoinSystemFontConfigInit();
  #endif
  
-@@ -367,7 +371,7 @@ void ElectronBrowserMainParts::PostEarlyInitialization() {
+@@ -364,7 +368,7 @@ void ElectronBrowserMainParts::PostEarlyInitialization() {
    // Wait for app
    node_bindings_->JoinAppCode();
  
@@ -1678,7 +1709,7 @@ index d1c59d2dd3..014848c1f4 100644
    // Reload if the app's main script changed the FontConfig environment.
    if (fontconfig_env != SnapshotFontConfigEnv()) {
      if (auto fc_reinit = reinterpret_cast<int (*)()>(
-@@ -432,7 +436,7 @@ int ElectronBrowserMainParts::PreCreateThreads() {
+@@ -429,7 +433,7 @@ int ElectronBrowserMainParts::PreCreateThreads() {
    // happen before the ResourceBundle is loaded
    if (locale.empty())
      l10n_util::OverrideLocaleWithCocoaLocale();
@@ -1687,7 +1718,7 @@ index d1c59d2dd3..014848c1f4 100644
    // l10n_util::GetApplicationLocaleInternal uses g_get_language_names(),
    // which keys off of getenv("LC_ALL").
    // We must set this env first to make ui::ResourceBundle accept the custom
-@@ -461,7 +465,7 @@ int ElectronBrowserMainParts::PreCreateThreads() {
+@@ -458,7 +462,7 @@ int ElectronBrowserMainParts::PreCreateThreads() {
    ElectronBrowserClient::SetApplicationLocale(app_locale);
    fake_browser_process_->SetApplicationLocale(app_locale);
  
@@ -1696,7 +1727,7 @@ index d1c59d2dd3..014848c1f4 100644
    // Reset to the original LC_ALL since we should not be changing it.
    if (!locale.empty()) {
      if (lc_all)
-@@ -517,7 +521,7 @@ void ElectronBrowserMainParts::PostDestroyThreads() {
+@@ -514,7 +518,7 @@ void ElectronBrowserMainParts::PostDestroyThreads() {
  }
  
  void ElectronBrowserMainParts::ToolkitInitialized() {
@@ -1705,7 +1736,7 @@ index d1c59d2dd3..014848c1f4 100644
    // GTK3's gtk_init() probes the display for OpenGL and loads the GL driver
    // into this process; nothing here uses GdkGLContext. GDK_GL is read once at
    // init and only by GTK3 (GTK4 renders with GL itself and ignores it).
-@@ -567,14 +571,14 @@ void ElectronBrowserMainParts::ToolkitInitialized() {
+@@ -564,14 +568,14 @@ void ElectronBrowserMainParts::ToolkitInitialized() {
  #endif
  }
  
@@ -1722,7 +1753,7 @@ index d1c59d2dd3..014848c1f4 100644
  
  int ElectronBrowserMainParts::PreMainMessageLoopRun() {
    // Run user's main script before most things get initialized, so we can have
-@@ -647,19 +651,23 @@ void ElectronBrowserMainParts::WillRunMainMessageLoop(
+@@ -644,19 +648,23 @@ void ElectronBrowserMainParts::WillRunMainMessageLoop(
  }
  
  void ElectronBrowserMainParts::PostCreateMainMessageLoop() {
@@ -1748,7 +1779,7 @@ index d1c59d2dd3..014848c1f4 100644
    // Set up crypt config. This needs to be done before anything starts the
    // network service, as the raw encryption key needs to be shared with the
    // network service for encrypted cookie storage.
-@@ -756,7 +764,7 @@ void ElectronBrowserMainParts::PostMainMessageLoopRun() {
+@@ -736,7 +744,7 @@ void ElectronBrowserMainParts::PostMainMessageLoopRun() {
    fake_browser_process_->PostMainMessageLoopRun();
    content::DevToolsAgentHost::StopRemoteDebuggingPipeHandler();
  
@@ -2523,10 +2554,10 @@ index 8043b42440..9388031d9e 100644
    pixmap.modifier = shared_texture.modifier;
    pixmap.supports_zero_copy_webgpu_import =
 diff --git a/electron/shell/common/api/electron_api_testing.cc b/electron/shell/common/api/electron_api_testing.cc
-index 518b1b347c..a2b921c86f 100644
+index f2447c5180..cc99511254 100644
 --- a/electron/shell/common/api/electron_api_testing.cc
 +++ b/electron/shell/common/api/electron_api_testing.cc
-@@ -27,7 +27,7 @@
+@@ -31,7 +31,7 @@
  #include "ui/accessibility/platform/ax_platform.h"
  #include "v8/include/v8.h"
  
@@ -2535,7 +2566,7 @@ index 518b1b347c..a2b921c86f 100644
  #include <glib.h>
  #elif BUILDFLAG(IS_MAC)
  #include <CoreFoundation/CoreFoundation.h>
-@@ -239,7 +239,7 @@ struct SettleOutsideTask {
+@@ -248,7 +248,7 @@ struct SettleOutsideTask {
                                                   std::move(self->after_settle));
    }
  
@@ -2544,7 +2575,7 @@ index 518b1b347c..a2b921c86f 100644
    static gboolean OnIdle(gpointer data) {
      Run(base::WrapUnique(static_cast<SettleOutsideTask*>(data)));
      return G_SOURCE_REMOVE;
-@@ -269,7 +269,7 @@ v8::Local<v8::Promise> SettlePromiseOutsideTask(
+@@ -278,7 +278,7 @@ v8::Local<v8::Promise> SettlePromiseOutsideTask(
    auto state = std::make_unique<SettleOutsideTask>(SettleOutsideTask{
        gin_helper::Promise<void>(isolate), std::move(after_settle)});
    v8::Local<v8::Promise> handle = state->promise.GetHandle();
@@ -2672,7 +2703,7 @@ index df4957af84..893ecabc4b 100644
  struct Converter<unsigned long> {  // NOLINT(runtime/int)
    static v8::Local<v8::Value> ToV8(v8::Isolate* isolate,
 diff --git a/electron/shell/common/node_bindings.cc b/electron/shell/common/node_bindings.cc
-index 2596aa0c35..e0653f827f 100644
+index 0596726e1c..85bd9a54a7 100644
 --- a/electron/shell/common/node_bindings.cc
 +++ b/electron/shell/common/node_bindings.cc
 @@ -57,7 +57,7 @@
@@ -2702,7 +2733,7 @@ index 2596aa0c35..e0653f827f 100644
    // TryGetCurrent() instead of GetCurrent() to avoid FATAL if no isolate.
    v8::Isolate* isolate = v8::Isolate::TryGetCurrent();
    electron::v8_oom::RecordErrorDetails(isolate, location, details);
-@@ -655,7 +655,7 @@ void NodeBindings::Initialize(v8::Isolate* const isolate,
+@@ -652,7 +652,7 @@ void NodeBindings::Initialize(v8::Isolate* const isolate,
    TRACE_EVENT0("electron", "NodeBindings::Initialize");
    // Open node's error reporting system for browser process.
  
@@ -2878,7 +2909,7 @@ index e28ae6c8b7..6ae2563be6 100644
    electron::crash_keys::SetCrashKey("electron.v8-fatal.location", location);
  #endif
 diff --git a/electron/spec/api-app.spec.ts b/electron/spec/api-app.spec.ts
-index c2f85afaaa..9e1f5f5a00 100644
+index 8f2c12cc23..ec4fc6b23d 100644
 --- a/electron/spec/api-app.spec.ts
 +++ b/electron/spec/api-app.spec.ts
 @@ -131,7 +131,7 @@ describe('app module', () => {
@@ -2913,7 +2944,7 @@ index c2f85afaaa..9e1f5f5a00 100644
      'when a D-Bus bus goes away',
      () => {
        it('exits cleanly instead of crashing', async () => {
-@@ -300,7 +300,7 @@ describe('app module', () => {
+@@ -378,7 +378,7 @@ describe('app module', () => {
      // A missing display makes toolkit initialisation fail before the main loop
      // runs; that early return must still tear the JS environment down cleanly.
      // Skipped under ASan for the same reason as the test above.
@@ -2922,7 +2953,7 @@ index c2f85afaaa..9e1f5f5a00 100644
        'exits with code 1 when no display is available',
        async () => {
          const appPath = path.join(fixturesPath, 'api', 'no-display');
-@@ -321,7 +321,7 @@ describe('app module', () => {
+@@ -399,7 +399,7 @@ describe('app module', () => {
        }
      );
  
@@ -2931,7 +2962,7 @@ index c2f85afaaa..9e1f5f5a00 100644
        const electronPath = process.execPath;
        const appPath = path.join(fixturesPath, 'api', 'singleton');
        appProcess = cp.spawn(electronPath, [appPath]);
-@@ -554,7 +554,7 @@ describe('app module', () => {
+@@ -632,7 +632,7 @@ describe('app module', () => {
    });
  
    // GitHub Actions macOS-13 runners used for x64 seem to have a problem with this test.
@@ -2940,7 +2971,7 @@ index c2f85afaaa..9e1f5f5a00 100644
      const tempFiles = [
        path.join(fixturesPath, 'foo.txt'),
        path.join(fixturesPath, 'bar.txt'),
-@@ -691,7 +691,7 @@ describe('app module', () => {
+@@ -769,7 +769,7 @@ describe('app module', () => {
    //   let w = null
  
    //   before(function () {
@@ -2949,7 +2980,7 @@ index c2f85afaaa..9e1f5f5a00 100644
    //       this.skip()
    //     }
    //   })
-@@ -804,7 +804,7 @@ describe('app module', () => {
+@@ -882,7 +882,7 @@ describe('app module', () => {
  
    describe('app.badgeCount', () => {
      const platformIsNotSupported =
@@ -2958,7 +2989,7 @@ index c2f85afaaa..9e1f5f5a00 100644
  
      const expectedBadgeCount = 42;
  
-@@ -851,7 +851,7 @@ describe('app module', () => {
+@@ -929,7 +929,7 @@ describe('app module', () => {
    });
  
    ifdescribe(
@@ -2967,7 +2998,7 @@ index c2f85afaaa..9e1f5f5a00 100644
    )('app.get/setLoginItemSettings API', () => {
      const isMac = process.platform === 'darwin';
      const isWin = process.platform === 'win32';
-@@ -1278,7 +1278,7 @@ describe('app module', () => {
+@@ -1356,7 +1356,7 @@ describe('app module', () => {
      });
    });
  
@@ -2976,7 +3007,7 @@ index c2f85afaaa..9e1f5f5a00 100644
      // These tests toggle a process-wide AXMode. Turn it back off so the rest of
      // the suite doesn't run with renderer accessibility enabled.
      afterEach(() => {
-@@ -1561,7 +1561,7 @@ describe('app module', () => {
+@@ -1639,7 +1639,7 @@ describe('app module', () => {
      });
    });
  
@@ -2985,7 +3016,7 @@ index c2f85afaaa..9e1f5f5a00 100644
      let w: BrowserWindow;
  
      beforeAll(() => {
-@@ -1707,7 +1707,7 @@ describe('app module', () => {
+@@ -1785,7 +1785,7 @@ describe('app module', () => {
  
    describe('getApplicationNameForProtocol()', () => {
      // TODO: Linux CI doesn't have registered http & https handlers
@@ -2994,7 +3025,7 @@ index c2f85afaaa..9e1f5f5a00 100644
        'returns application names for common protocols',
        () => {
          // We can't expect particular app names here, but these protocols should
-@@ -1724,7 +1724,7 @@ describe('app module', () => {
+@@ -1802,7 +1802,7 @@ describe('app module', () => {
        expect(app.getApplicationNameForProtocol('bogus-protocol://')).toBe('');
      });
  
@@ -3003,7 +3034,7 @@ index c2f85afaaa..9e1f5f5a00 100644
        const desktopFileId = 'mock-browser.desktop';
        const mockDisplayName = 'Mock Browser';
        const mockScheme = 'mockproto';
-@@ -1774,7 +1774,7 @@ describe('app module', () => {
+@@ -1852,7 +1852,7 @@ describe('app module', () => {
      let xdgBinDir: string;
  
      beforeAll(() => {
@@ -3012,7 +3043,7 @@ index c2f85afaaa..9e1f5f5a00 100644
          return;
        }
  
-@@ -1791,7 +1791,7 @@ describe('app module', () => {
+@@ -1869,7 +1869,7 @@ describe('app module', () => {
      });
  
      afterAll(() => {
@@ -3021,7 +3052,7 @@ index c2f85afaaa..9e1f5f5a00 100644
          fs.rmSync(xdgDir, { recursive: true, force: true });
        }
      });
-@@ -1803,7 +1803,7 @@ describe('app module', () => {
+@@ -1881,7 +1881,7 @@ describe('app module', () => {
      });
  
      it('returns resolved promise with appPath, displayName and icon', async () => {
@@ -3030,7 +3061,7 @@ index c2f85afaaa..9e1f5f5a00 100644
          const appInfo = await spawnProtocolInfoWithXdgMock(`${mockScheme}://`, xdgDataHome, xdgConfigHome);
          expect(appInfo.name).toBe(mockDisplayName);
          expect(appInfo.path).toBe('/usr/bin/true');
-@@ -1817,7 +1817,7 @@ describe('app module', () => {
+@@ -1895,7 +1895,7 @@ describe('app module', () => {
        expect(appInfo.icon).not.toBeUndefined();
      });
  
@@ -3039,7 +3070,7 @@ index c2f85afaaa..9e1f5f5a00 100644
        const pathLookupExecutable = 'mock-browser';
        const pathLookupExecutablePath = path.join(xdgBinDir, pathLookupExecutable);
        const pathLookupDisplayName = 'Mock Browser PATH';
-@@ -1851,7 +1851,7 @@ describe('app module', () => {
+@@ -1929,7 +1929,7 @@ describe('app module', () => {
      });
    });
  
@@ -3048,7 +3079,7 @@ index c2f85afaaa..9e1f5f5a00 100644
      const protocol = 'electron-test-linux';
      const desktopFileId = 'electron-test.desktop';
      const protocolMimeType = `x-scheme-handler/${protocol}`;
-@@ -1968,7 +1968,7 @@ describe('app module', () => {
+@@ -2046,7 +2046,7 @@ describe('app module', () => {
    });
  
    // FIXME Get these specs running on Linux CI
@@ -3057,7 +3088,7 @@ index c2f85afaaa..9e1f5f5a00 100644
      const iconPath = path.join(import.meta.dirname, 'fixtures/assets/icon.ico');
      const sizes = {
        small: 16,
-@@ -2057,7 +2057,7 @@ describe('app module', () => {
+@@ -2135,7 +2135,7 @@ describe('app module', () => {
            expect(entry.memory.privateBytes).toBeGreaterThan(0);
          }
  
@@ -3066,16 +3097,16 @@ index c2f85afaaa..9e1f5f5a00 100644
            expect(entry.sandboxed).toBeTypeOf('boolean');
          }
  
-@@ -2074,7 +2074,7 @@ describe('app module', () => {
+@@ -2152,7 +2152,7 @@ describe('app module', () => {
      });
    });
  
 -  ifdescribe(process.platform === 'linux')('GDK_BACKEND', () => {
 +  ifdescribe(process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd')('GDK_BACKEND', () => {
      const fixture = path.join(fixturesPath, 'apps', 'gdk-backend');
-     const run = async (env: NodeJS.ProcessEnv) => {
-       const child = cp.spawn(process.execPath, [fixture], { env, stdio: ['ignore', 'pipe', 'ignore'] });
-@@ -2156,7 +2156,7 @@ describe('app module', () => {
+     // Wait for the app to exit, not just for its output. Otherwise the next
+     // test (or retry) launches the fixture again while this copy is still
+@@ -2235,7 +2235,7 @@ describe('app module', () => {
  
      it('succeeds with complete GPUInfo', async () => {
        const completeInfo = await getGPUInfo('complete');
@@ -3084,7 +3115,7 @@ index c2f85afaaa..9e1f5f5a00 100644
          // For linux and macOS complete info is same as basic info
          await verifyBasicGPUInfo(completeInfo);
          const basicInfo = await getGPUInfo('basic');
-@@ -2179,7 +2179,7 @@ describe('app module', () => {
+@@ -2258,7 +2258,7 @@ describe('app module', () => {
      });
    });
  
@@ -3685,10 +3716,10 @@ index 88a59f8eb0..fc3455fc6f 100644
          expect(bounds).toHaveProperty('height', expect.any(Number));
        } else {
 diff --git a/electron/spec/api-shell.spec.ts b/electron/spec/api-shell.spec.ts
-index 4c24833241..eb41057b95 100644
+index 21970e9383..cc5b07e87d 100644
 --- a/electron/spec/api-shell.spec.ts
 +++ b/electron/spec/api-shell.spec.ts
-@@ -37,7 +37,7 @@ describe('shell module', () => {
+@@ -47,7 +47,7 @@ describe('shell module', () => {
  
      afterEach(async () => {
        // reset env vars to prevent side effects
@@ -3697,7 +3728,7 @@ index 4c24833241..eb41057b95 100644
          process.env.DE = envVars.de;
          process.env.BROWSER = envVars.browser;
          process.env.DISPLAY = envVars.display;
-@@ -57,6 +57,16 @@ describe('shell module', () => {
+@@ -67,6 +67,16 @@ describe('shell module', () => {
          process.env.DE = 'generic';
          process.env.DISPLAY = '';
          requestReceived = Promise.resolve();
@@ -3772,10 +3803,10 @@ index ceef549785..1460a736f7 100644
        expect(bounds).toBeTypeOf('object');
        expect(Object.keys(bounds).sort()).toEqual(['height', 'width', 'x', 'y']);
 diff --git a/electron/spec/api-utility-process.spec.ts b/electron/spec/api-utility-process.spec.ts
-index d73b51c8f5..56a0f92cc5 100644
+index a40cad5dab..7e0c63136a 100644
 --- a/electron/spec/api-utility-process.spec.ts
 +++ b/electron/spec/api-utility-process.spec.ts
-@@ -638,7 +638,7 @@ describe('utilityProcess module', () => {
+@@ -659,7 +659,7 @@ describe('utilityProcess module', () => {
        expect(output).toContain(result);
      });
  
@@ -3784,7 +3815,7 @@ index d73b51c8f5..56a0f92cc5 100644
        const message = 'Message from utility process';
        const child = utilityProcess.fork(path.join(fixturesPath, 'expose-main-process-module.js'));
        await once(child, 'spawn');
-@@ -675,7 +675,7 @@ describe('utilityProcess module', () => {
+@@ -696,7 +696,7 @@ describe('utilityProcess module', () => {
        await closeWindow(w);
      });
  
@@ -3794,10 +3825,10 @@ index d73b51c8f5..56a0f92cc5 100644
        await once(child, 'spawn');
        const [data] = await once(child, 'message');
 diff --git a/electron/spec/api-web-contents.spec.ts b/electron/spec/api-web-contents.spec.ts
-index a848694ac6..692ffaf111 100644
+index 59ace4c848..7739599b20 100644
 --- a/electron/spec/api-web-contents.spec.ts
 +++ b/electron/spec/api-web-contents.spec.ts
-@@ -1631,7 +1631,7 @@ describe('webContents module', () => {
+@@ -1636,7 +1636,7 @@ describe('webContents module', () => {
      // back to OpenFolder() which does a blocking DirectoryExists() on the UI
      // thread (pre-existing behavior). Workspace-gating is covered by the test
      // above.
@@ -3806,7 +3837,7 @@ index a848694ac6..692ffaf111 100644
        'reveals paths under a registered workspace folder without executing them',
        // Opens a real Finder/Explorer window, which takes focus and stays open.
        { tags: ['serial'] },
-@@ -4309,7 +4309,7 @@ describe('webContents module', () => {
+@@ -4333,7 +4333,7 @@ describe('webContents module', () => {
      });
  
      // TODO(codebytere): OOPIF printing is disabled on Linux at the moment due to crashes.
@@ -3816,7 +3847,7 @@ index a848694ac6..692ffaf111 100644
          res.writeHead(200);
          res.end(`
 diff --git a/electron/spec/chromium.spec.ts b/electron/spec/chromium.spec.ts
-index 6750e3f400..c8cbe71eef 100644
+index c794c12b03..9e0ce98105 100644
 --- a/electron/spec/chromium.spec.ts
 +++ b/electron/spec/chromium.spec.ts
 @@ -611,15 +611,15 @@ describe('command line switches', () => {
@@ -3839,7 +3870,7 @@ index 6750e3f400..c8cbe71eef 100644
        testLocale('', lcAll, true)
      );
    });
-@@ -4267,12 +4267,12 @@ describe('font fallback', () => {
+@@ -4436,12 +4436,12 @@ describe('font fallback', () => {
        expect(fonts[0].familyName).toBe('Arial');
      } else if (process.platform === 'darwin') {
        expect(fonts[0].familyName).toBe('Helvetica');
@@ -3854,7 +3885,7 @@ index 6750e3f400..c8cbe71eef 100644
      const html = `
      <html lang="ja-JP">
        <head>
-@@ -5000,7 +5000,7 @@ describe('paste execCommand', { tags: ['serial'] }, () => {
+@@ -5169,7 +5169,7 @@ describe('paste execCommand', { tags: ['serial'] }, () => {
    });
  });
  
@@ -3929,7 +3960,7 @@ index c2761afc41..2ec5b0a573 100644
      case 'darwin':
        return path.resolve(__dirname, 'build/Release/foo.dylib');
 diff --git a/electron/spec/lib/spec-helpers.ts b/electron/spec/lib/spec-helpers.ts
-index 7ca6b19058..a5d239f0b0 100644
+index ec53ad759f..2b1f888318 100644
 --- a/electron/spec/lib/spec-helpers.ts
 +++ b/electron/spec/lib/spec-helpers.ts
 @@ -19,7 +19,7 @@ export const ifit = (condition: boolean) => (condition ? it : it.skip);
@@ -4041,7 +4072,7 @@ index dde2281861..7c00c1f638 100644
  ))]
  #[global_allocator]
 diff --git a/third_party/electron_node/common.gypi b/third_party/electron_node/common.gypi
-index 85f20322ae..1d2183a657 100644
+index 082a00c167..784346a1ca 100644
 --- a/third_party/electron_node/common.gypi
 +++ b/third_party/electron_node/common.gypi
 @@ -602,11 +602,11 @@
@@ -4058,6 +4089,27 @@ index 85f20322ae..1d2183a657 100644
          'cflags': [ '-Wall', '-Wextra', '-Wno-unused-parameter', ],
          'cflags_cc': [
            '-fno-rtti',
+diff --git a/third_party/electron_node/configure b/third_party/electron_node/configure
+index 0d8f79ba9a..7dcef72c22 100755
+--- a/third_party/electron_node/configure
++++ b/third_party/electron_node/configure
+@@ -4,6 +4,7 @@
+ # Note that the mix of single and double quotes is intentional,
+ # as is the fact that the ] goes on a new line.
+ _=[ 'exec' '/bin/sh' '-c' '''
++command -v python3.15 >/dev/null && exec python3.15 "$0" "$@"
+ command -v python3.14 >/dev/null && exec python3.14 "$0" "$@"
+ command -v python3.13 >/dev/null && exec python3.13 "$0" "$@"
+ command -v python3.12 >/dev/null && exec python3.12 "$0" "$@"
+@@ -23,7 +24,7 @@ except ImportError:
+   from distutils.spawn import find_executable as which
+ 
+ print('Node.js configure: Found Python {}.{}.{}...'.format(*sys.version_info))
+-acceptable_pythons = ((3, 14), (3, 13), (3, 12), (3, 11), (3, 10), (3, 9))
++acceptable_pythons = ((3, 15), (3, 14), (3, 13), (3, 12), (3, 11), (3, 10), (3, 9))
+ if sys.version_info[:2] in acceptable_pythons:
+   import configure
+ else:
 diff --git a/third_party/electron_node/deps/cares/cares.gyp b/third_party/electron_node/deps/cares/cares.gyp
 index fee055c079..5f1f2ca5fa 100644
 --- a/third_party/electron_node/deps/cares/cares.gyp
@@ -4566,7 +4618,7 @@ index 6587270c9e..a1877563da 100644
        ],
        'defines!': [
 diff --git a/third_party/electron_node/src/compile_cache.cc b/third_party/electron_node/src/compile_cache.cc
-index 6b054db1cc..63c216a7a2 100644
+index 6b054db1cc..de9d9b4c6c 100644
 --- a/third_party/electron_node/src/compile_cache.cc
 +++ b/third_party/electron_node/src/compile_cache.cc
 @@ -1,5 +1,6 @@
@@ -4576,6 +4628,49 @@ index 6b054db1cc..63c216a7a2 100644
  #include "debug_utils-inl.h"
  #include "env-inl.h"
  #include "node_file.h"
+@@ -44,16 +45,23 @@ uint32_t GetHash(const char* data, size_t size) {
+   return crc32(crc, reinterpret_cast<const Bytef*>(data), size);
+ }
+ 
+-std::string GetCacheVersionTag() {
++std::string GetCacheVersionTag(EnableOption option) {
++  std::string tag = std::string(NODE_VERSION) + '-' + std::string(NODE_ARCH) +
++                    '-' + Uint32ToHex(ScriptCompiler::CachedDataVersionTag());
++#ifdef NODE_IMPLEMENTS_POSIX_CREDENTIALS
+   // On platforms where uids are available, use different folders for
+   // different users to avoid cache miss due to permission incompatibility.
+   // On platforms where uids are not available, bare with the cache miss.
+   // This should be fine on Windows, as there local directories tend to be
+   // user-specific.
+-  std::string tag = std::string(NODE_VERSION) + '-' + std::string(NODE_ARCH) +
+-                    '-' + Uint32ToHex(ScriptCompiler::CachedDataVersionTag());
+-#ifdef NODE_IMPLEMENTS_POSIX_CREDENTIALS
+-  tag += '-' + std::to_string(getuid());
++  // A portable cache is meant to be reused wherever the same layout is
++  // found, including by other users (e.g. a cache generated at build time
++  // and shipped read-only with an application), so it is not split by uid:
++  // a user who cannot write to it still reads it, and a failed write is
++  // only a cache miss.
++  if (option != EnableOption::PORTABLE) {
++    tag += '-' + std::to_string(getuid());
++  }
+ #endif
+   return tag;
+ }
+@@ -538,11 +546,12 @@ CompileCacheHandler::CompileCacheHandler(Environment* env)
+ // Directory structure:
+ // - Compile cache directory (from NODE_COMPILE_CACHE)
+ //   - $NODE_VERSION-$ARCH-$CACHE_DATA_VERSION_TAG-$UID
++//     ($UID is omitted for a portable cache)
+ //     - $FILENAME_AND_MODULE_TYPE_HASH.cache: a hash of filename + module type
+ CompileCacheEnableResult CompileCacheHandler::Enable(Environment* env,
+                                                      const std::string& dir,
+                                                      EnableOption option) {
+-  std::string cache_tag = GetCacheVersionTag();
++  std::string cache_tag = GetCacheVersionTag(option);
+   std::string absolute_cache_dir_base = PathResolve(env, {dir});
+   std::string cache_dir_with_tag =
+       absolute_cache_dir_base + kPathSeparator + cache_tag;
 diff --git a/third_party/electron_node/src/crypto/crypto_rsa.cc b/third_party/electron_node/src/crypto/crypto_rsa.cc
 index 6eea14dce8..ff4f546131 100644
 --- a/third_party/electron_node/src/crypto/crypto_rsa.cc
@@ -4785,7 +4880,7 @@ index 60d630702b..ec1628bb7e 100644
          ['(OS=="linux" and clang==1) or (v8_current_cpu in ["mips64", "mips64el", "arm", "riscv64", "loong64"])', {
            'link_settings': {
 diff --git a/third_party/electron_node/unofficial.gni b/third_party/electron_node/unofficial.gni
-index 95feec90c1..1204f3a17d 100644
+index 615a3f891f..7f3d537d9f 100644
 --- a/third_party/electron_node/unofficial.gni
 +++ b/third_party/electron_node/unofficial.gni
 @@ -379,6 +379,30 @@ template("node_gn_build") {
