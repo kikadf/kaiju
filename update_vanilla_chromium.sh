@@ -35,8 +35,8 @@ else
 	exit 1
 fi
 
-#c_tarball_url="https://commondatastorage.googleapis.com/chromium-browser-official"
-c_tarball_url="https://github.com/chromium-linux-tarballs/chromium-tarballs/releases/download/${c_ver_nosuffix}"
+c_tarball_url="https://commondatastorage.googleapis.com/chromium-browser-official"
+#c_tarball_url="https://github.com/chromium-linux-tarballs/chromium-tarballs/releases/download/${c_ver_nosuffix}"
 #c_tarball_url="https://nerd.hu/distfiles"
 
 # create workdir
