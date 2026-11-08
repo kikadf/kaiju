@@ -49,6 +49,27 @@ index 70adc6f36e..ed7a4ca9ae 100644
  
  // Need TLS support.
  #define PA_CONFIG_THREAD_CACHE_SUPPORTED() \
+diff --git a/base/allocator/partition_allocator/src/partition_alloc/partition_tls.h b/base/allocator/partition_allocator/src/partition_alloc/partition_tls.h
+index 0093fad69b..13518ee9ff 100644
+--- a/base/allocator/partition_allocator/src/partition_alloc/partition_tls.h
++++ b/base/allocator/partition_allocator/src/partition_alloc/partition_tls.h
+@@ -65,9 +65,16 @@ constexpr inline size_t kMaxThreadCacheIndex = 1;
+ constexpr inline uintptr_t kTombstone = 1;
+ constexpr inline uintptr_t kTombstoneMask = ~kTombstone;
+ 
++/* NetBSD doesn't use futex, so ::Lock wraps a pthread_mutex_t
++ * instead of using SpinningMutex. This makes ThreadCache
++ * 32 bytes larger than with SpinningMutex.
++ */
+ #if PA_BUILDFLAG(HAS_64_BIT_POINTERS)
+ constexpr inline size_t kThreadCacheStorageSize =
+     1512 + (PA_CONFIG(THREAD_CACHE_ALLOC_STATS) ? 896 : 0) +
++#if PA_BUILDFLAG(IS_NETBSD)
++    32 +
++#endif
+     ((PA_BUILDFLAG(DCHECKS_ARE_ON) ||
+       PA_BUILDFLAG(ENABLE_PARTITION_LOCK_REENTRANCY_CHECK))
+          ? 8
 diff --git a/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc b/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc
 index 84ff139791..34a50b728b 100644
 --- a/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc
@@ -496,6 +517,22 @@ index 685796f31e..6f836861ed 100644
  #elif BUILDFLAG(IS_POSIX) && !BUILDFLAG(IS_AIX)
    return PlatformThreadId(reinterpret_cast<int64_t>(pthread_self()));
  #endif
+diff --git a/base/time/time_now_posix.cc b/base/time/time_now_posix.cc
+index 4ae267610f..564f898b2e 100644
+--- a/base/time/time_now_posix.cc
++++ b/base/time/time_now_posix.cc
+@@ -151,7 +151,11 @@ namespace subtle {
+ // ChromeOS, and Android). Apple platforms use an alternate implementation in
+ // time_apple.mm.
+ time_internal::RealTicks RealTicksNowIgnoringOverride() {
++#if BUILDFLAG(IS_NETBSD)
++  return time_internal::RealTicks() + Microseconds(ClockNow(CLOCK_MONOTONIC));
++#else
+   return time_internal::RealTicks() + Microseconds(ClockNow(CLOCK_BOOTTIME));
++#endif
+ }
+ }  // namespace subtle
+ 
 diff --git a/base/tracing/trace_time.cc b/base/tracing/trace_time.cc
 index b1c86d1dd7..dc5351a68b 100644
 --- a/base/tracing/trace_time.cc
@@ -3156,6 +3193,20 @@ index 32907956bb..b8ed47c064 100644
    // Note: CLOCK_MONOTONIC_RAW is a Linux extension.
    // FreeBSD doesn't implement it and its CLOCK_MONOTONIC_FAST
    // doesnt implement the same semantics as CLOCK_MONOTONIC_RAW.
+diff --git a/third_party/perfetto/include/perfetto/ext/base/futex.h b/third_party/perfetto/include/perfetto/ext/base/futex.h
+index 72c6c18546..e982043888 100644
+--- a/third_party/perfetto/include/perfetto/ext/base/futex.h
++++ b/third_party/perfetto/include/perfetto/ext/base/futex.h
+@@ -26,7 +26,8 @@
+ // TODO(rsavitski): Add support for other platforms.
+ #define PERFETTO_HAS_FUTEX()                            \
+   (PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX_BUT_NOT_QNX) || \
+-   PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID))
++   PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID)) && \
++   !PERFETTO_BUILDFLAG(PERFETTO_OS_NETBSD)
+ 
+ namespace perfetto::base {
+ 
 diff --git a/third_party/perfetto/src/base/android_utils.cc b/third_party/perfetto/src/base/android_utils.cc
 index 3f75f895d8..2881e14344 100644
 --- a/third_party/perfetto/src/base/android_utils.cc

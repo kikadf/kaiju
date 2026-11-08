@@ -676,6 +676,27 @@ index 4f1b80aa4d..b38a0e9e0c 100644
      // Check runtime pagesize. Though the code is currently the same, it is
      // not merged with the IS_APPLE case above as a 1 << 16 case is only
      // supported on Linux on AArch64.
+diff --git a/base/allocator/partition_allocator/src/partition_alloc/partition_tls.h b/base/allocator/partition_allocator/src/partition_alloc/partition_tls.h
+index 0093fad69b..13518ee9ff 100644
+--- a/base/allocator/partition_allocator/src/partition_alloc/partition_tls.h
++++ b/base/allocator/partition_allocator/src/partition_alloc/partition_tls.h
+@@ -65,9 +65,16 @@ constexpr inline size_t kMaxThreadCacheIndex = 1;
+ constexpr inline uintptr_t kTombstone = 1;
+ constexpr inline uintptr_t kTombstoneMask = ~kTombstone;
+ 
++/* NetBSD doesn't use futex, so ::Lock wraps a pthread_mutex_t
++ * instead of using SpinningMutex. This makes ThreadCache
++ * 32 bytes larger than with SpinningMutex.
++ */
+ #if PA_BUILDFLAG(HAS_64_BIT_POINTERS)
+ constexpr inline size_t kThreadCacheStorageSize =
+     1512 + (PA_CONFIG(THREAD_CACHE_ALLOC_STATS) ? 896 : 0) +
++#if PA_BUILDFLAG(IS_NETBSD)
++    32 +
++#endif
+     ((PA_BUILDFLAG(DCHECKS_ARE_ON) ||
+       PA_BUILDFLAG(ENABLE_PARTITION_LOCK_REENTRANCY_CHECK))
+          ? 8
 diff --git a/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc b/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc
 index edb2c47a7e..34a50b728b 100644
 --- a/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc
@@ -4030,7 +4051,7 @@ index 9c368ce2b3..9c533bb6c8 100644
  
  void* CheckTidCacheCorrectWrapper(void*) {
 diff --git a/base/time/time_now_posix.cc b/base/time/time_now_posix.cc
-index 70252d7230..4ae267610f 100644
+index 70252d7230..564f898b2e 100644
 --- a/base/time/time_now_posix.cc
 +++ b/base/time/time_now_posix.cc
 @@ -110,7 +110,11 @@ std::optional<TimeTicks> MaybeTimeTicksNowIgnoringOverride() {
@@ -4041,6 +4062,18 @@ index 70252d7230..4ae267610f 100644
 +  return TimeTicks() + Microseconds(ClockNow(CLOCK_MONOTONIC));
 +#else
    return TimeTicks() + Microseconds(ClockNow(CLOCK_MONOTONIC_COARSE));
++#endif
+ }
+ }  // namespace subtle
+ 
+@@ -147,7 +151,11 @@ namespace subtle {
+ // ChromeOS, and Android). Apple platforms use an alternate implementation in
+ // time_apple.mm.
+ time_internal::RealTicks RealTicksNowIgnoringOverride() {
++#if BUILDFLAG(IS_NETBSD)
++  return time_internal::RealTicks() + Microseconds(ClockNow(CLOCK_MONOTONIC));
++#else
+   return time_internal::RealTicks() + Microseconds(ClockNow(CLOCK_BOOTTIME));
 +#endif
  }
  }  // namespace subtle
@@ -42237,6 +42270,20 @@ index 1070732f7b..cad04bca29 100644
 +  ScopedFile write_fd_;
  #endif
  };
+ 
+diff --git a/third_party/perfetto/include/perfetto/ext/base/futex.h b/third_party/perfetto/include/perfetto/ext/base/futex.h
+index 72c6c18546..e982043888 100644
+--- a/third_party/perfetto/include/perfetto/ext/base/futex.h
++++ b/third_party/perfetto/include/perfetto/ext/base/futex.h
+@@ -26,7 +26,8 @@
+ // TODO(rsavitski): Add support for other platforms.
+ #define PERFETTO_HAS_FUTEX()                            \
+   (PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX_BUT_NOT_QNX) || \
+-   PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID))
++   PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID)) && \
++   !PERFETTO_BUILDFLAG(PERFETTO_OS_NETBSD)
+ 
+ namespace perfetto::base {
  
 diff --git a/third_party/perfetto/include/perfetto/ext/base/thread_utils.h b/third_party/perfetto/include/perfetto/ext/base/thread_utils.h
 index 52ae09d2e9..e7b872b756 100644
