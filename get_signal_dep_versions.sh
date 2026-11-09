@@ -203,16 +203,24 @@ if [ "${used_boring_signal_version}" != "${boring_signal_version}" ]; then
     echo "   ! Need boring-signal-${boring_signal_version}, but used ${used_boring_signal_version}"
 fi
 
-## boring-signal hash
+## boring hash
 if command -v lynx >/dev/null 2>&1; then
-    boring_signal_hash=$(lynx -dump "https://github.com/signalapp/boring/tree/signal-v${boring_signal_version}/boring-sys/deps" | sed -n 's|.*google/boringssl/tree/\(.*\)|\1|p' | head -1)
-    echo " - boring-signal-hash: ${boring_signal_hash}"
-    used_boring_signal_hash=$(make -C .. -V BORING_SIGNAL_HASH)
-    if [ "${used_boring_signal_hash}" != "${boring_signal_hash}" ]; then
-        echo "   ! Need boring-signal-${boring_signal_hash}, but used ${used_boring_signal_hash}"
+    boring_hash=$(lynx -dump "https://github.com/signalapp/boring/tree/signal-v${boring_signal_version}/boring-sys/deps" | sed -n 's|.*google/boringssl/tree/\(.*\)|\1|p' | head -1)
+    echo " - boring-hash: ${boring_hash}"
+    used_boring_hash=$(make -C .. -V BORING_HASH)
+    if [ "${used_boring_hash}" != "${boring_hash}" ]; then
+        echo "   ! Need boring-signal-${boring_hash}, but used ${used_boring_hash}"
     fi
 else
-    echo "   ! SKIP boring-signal-hash: lynx not found"
+    echo "   ! SKIP boring-hash: lynx not found"
+fi
+
+## spqr
+spqr_version=$(ftp -o - "https://raw.githubusercontent.com/signalapp/libsignal/v${libsignal_node_version}/Cargo.toml" | sed -n 's/^spqr = .*"v\([^"]*\)".*/\1/p')
+echo " - spqr: ${spqr_version}"
+used_spqr_version=$(make -C .. -V SPQR_VER)
+if [ "${used_spqr_version}" != "${spqr_version}" ]; then
+    echo "   ! Need spqr-${spqr_version}, but used ${used_spqr_version}"
 fi
 
 # node-sqlcipher
@@ -268,7 +276,8 @@ THIRD_PARTY_VER=${third_party_hash}
 TOOLS_VER=${tools_hash}
 LIBSIGNAL_NODE_VER=${libsignal_node_version}
 BORING_SIGNAL_VER=${boring_signal_version}
-BORING_SIGNAL_HASH=${boring_signal_hash}
+BORING_HASH=${boring_hash}
+SPQR_VER=${spqr_version}
 SQLCIPHER_VER=${sqlcipher_version}
 SQLCIPHER_EXT_VER=${sqlcipher_ext_version}
 SIGNAL_TOKENIZER_HASH=${signal_tokenizer_hash}
