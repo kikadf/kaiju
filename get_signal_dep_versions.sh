@@ -44,11 +44,21 @@ fi
 
 # ringrtc internal dependencies
 ## libsignal
-libsignal_version=$(ftp -o - "https://raw.githubusercontent.com/signalapp/ringrtc/v${ringrtc_version}/Cargo.lock" | sed -n 's/.*github.com\/signalapp\/libsignal?tag=v\([^#]*\)#.*/\1/p' | head -1)
+ftp -o /tmp/ringrtc_deps "https://raw.githubusercontent.com/signalapp/ringrtc/v${ringrtc_version}/Cargo.lock" > /dev/null 2>&1
+libsignal_version=$(sed -n 's/.*github.com\/signalapp\/libsignal?tag=v\([^#]*\)#.*/\1/p' /tmp/ringrtc_deps | head -1)
 echo " - libsignal: ${libsignal_version}"
 used_libsignal_version=$(make -C .. -V LIBSIGNAL_VER)
 if [ "${used_libsignal_version}" != "${libsignal_version}" ]; then
     echo "   ! Need libsignal-${libsignal_version}, but used ${used_libsignal_version}"
+    ringrtc_rebuild=1
+fi
+
+## libcubeb
+libcubeb_version=$(grep -A2 'cubeb-sys' /tmp/ringrtc_deps | sed -n 's/^version = "\([^"]*\)".*/\1/p')
+echo " - libcubeb: ${libcubeb_version}"
+used_libcubeb_version=$(make -C .. -V LIBCUBEB_VER)
+if [ "${used_libcubeb_version}" != "${libcubeb_version}" ]; then
+    echo "   ! Need libcubeb-${libcubeb_version}, but used ${used_libcubeb_version}"
     ringrtc_rebuild=1
 fi
 
@@ -59,7 +69,7 @@ used_webrtc_version=$(make -C .. -V WEBRTC_VER)
 if [ "${used_webrtc_version}" != "${webrtc_version}" ]; then
     echo "   ! Need webrtc-${webrtc_version}, but used ${used_webrtc_version}"
     ringrtc_rebuild=1
-fi    
+fi
 ftp -o /tmp/webrtc_deps "https://raw.githubusercontent.com/signalapp/webrtc/${webrtc_version}/DEPS" > /dev/null 2>&1
 
 ## boringssl
@@ -227,7 +237,8 @@ fi
 
 # libsignal-node internal dependencies
 ## boring-signal
-boring_signal_version=$(ftp -o - "https://raw.githubusercontent.com/signalapp/libsignal/v${libsignal_node_version}/Cargo.toml" | sed -n 's/^boring-signal = .*signal-v\([^"]*\)".*/\1/p')
+ftp -o /tmp/libsignal_toml "https://raw.githubusercontent.com/signalapp/libsignal/v${libsignal_node_version}/Cargo.toml" > /dev/null 2>&1
+boring_signal_version=$(sed -n 's/^boring-signal = .*signal-v\([^"]*\)".*/\1/p' /tmp/libsignal_toml)
 echo " - boring-signal: ${boring_signal_version}"
 used_boring_signal_version=$(make -C .. -V BORING_SIGNAL_VER)
 if [ "${used_boring_signal_version}" != "${boring_signal_version}" ]; then
@@ -249,7 +260,7 @@ else
 fi
 
 ## spqr
-spqr_version=$(ftp -o - "https://raw.githubusercontent.com/signalapp/libsignal/v${libsignal_node_version}/Cargo.toml" | sed -n 's/^spqr = .*"v\([^"]*\)".*/\1/p')
+spqr_version=$(sed -n 's/^spqr = .*"v\([^"]*\)".*/\1/p' /tmp/libsignal_toml)
 echo " - spqr: ${spqr_version}"
 used_spqr_version=$(make -C .. -V SPQR_VER)
 if [ "${used_spqr_version}" != "${spqr_version}" ]; then
@@ -269,7 +280,8 @@ fi
 
 # node-sqlcipher internal dependencies
 ## signal-sqlcipher-extension
-sqlcipher_ext_version=$(ftp -o - "https://raw.githubusercontent.com/signalapp/node-sqlcipher/refs/tags/v${sqlcipher_version}/deps/extension/Cargo.toml" | awk /version/'{print $3}' | head -n1 | sed 's#"##g')
+ftp -o /tmp/node_sqlcipher_extension "https://raw.githubusercontent.com/signalapp/node-sqlcipher/refs/tags/v${sqlcipher_version}/deps/extension/Cargo.toml" > /dev/null 2>&1
+sqlcipher_ext_version=$(sed -n 's/^version = "\([^"]*\)".*/\1/p' /tmp/node_sqlcipher_extension)
 echo " - signal-sqlcipher-extension: ${sqlcipher_ext_version}"
 used_sqlcipher_ext_version=$(make -C .. -V SQLCIPHER_EXT_VER)
 if [ "${sqlcipher_ext_version}" != "${used_sqlcipher_ext_version}" ]; then
@@ -278,7 +290,7 @@ if [ "${sqlcipher_ext_version}" != "${used_sqlcipher_ext_version}" ]; then
 fi
 
 ## signal-tokenizer
-signal_tokenizer_hash=$(ftp -o - "https://raw.githubusercontent.com/signalapp/node-sqlcipher/refs/tags/v${sqlcipher_version}/deps/extension/Cargo.toml" | sed -n 's/^signal-tokenizer.*rev = "\(.*\)".*/\1/p')
+signal_tokenizer_hash=$(sed -n 's/^signal-tokenizer.*rev = "\(.*\)".*/\1/p' /tmp/node_sqlcipher_extension)
 echo " - signal-tokenizer: ${signal_tokenizer_hash}"
 used_signal_tokenizer_hash=$(make -C .. -V SIGNAL_TOKENIZER_HASH)
 if [ "${signal_tokenizer_hash}" != "${used_signal_tokenizer_hash}" ]; then
@@ -306,6 +318,7 @@ SIGNAL_VERSION=${signal_ver}
 NODE_MAJOR=${node_major_version}
 RINGRTC_VER=${ringrtc_version}
 LIBSIGNAL_VER=${libsignal_version}
+LIBCUBEB_VER=${libcubeb_version}
 WEBRTC_VER=${webrtc_version}
 BORINGSSL_VER=${boringssl_hash}
 BUILD_VER=${build_hash}
