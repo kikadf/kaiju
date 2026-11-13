@@ -315,6 +315,7 @@ read -r answer
 if [ "$answer" = "y" ]; then
     cat <<EOF > ../versions.mk
 SIGNAL_VERSION=${signal_ver}
+ELECTRON_MAJOR_VER=${electron_major_version}
 NODE_MAJOR=${node_major_version}
 RINGRTC_VER=${ringrtc_version}
 LIBSIGNAL_VER=${libsignal_version}
