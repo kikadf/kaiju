@@ -32,6 +32,10 @@ if [ "${used_electron_major}" != "${electron_major_version}" ]; then
     echo "   ! Need electron${electron_major_version}, but used wip/electron${used_electron_major}/electron.mk"
 fi
 
+# lightningcss
+lightningcss_version=$(ftp -o - "https://raw.githubusercontent.com/signalapp/Signal-Desktop/v${signal_ver}/pnpm-lock.yaml" | sed -n 's/.*lightningcss@\([^)]*\)).*/\1/p' | head -1)
+echo "* lightningcss: ${lightningcss_version}"
+
 # ringrtc
 ringrtc_rebuild=0
 ringrtc_version=$(grep '@signalapp/ringrtc"' /tmp/package.json | awk -F ":" '{print $2}' | sed -E 's#("|,| )##g')
@@ -314,9 +318,12 @@ printf "Update wip/signal-desktop/versions.mk: [y/n] "
 read -r answer
 if [ "$answer" = "y" ]; then
     cat <<EOF > ../versions.mk
+# \$NetBSD$
+
 SIGNAL_VERSION=${signal_ver}
 ELECTRON_MAJOR_VER=${electron_major_version}
 NODE_MAJOR=${node_major_version}
+LIGHTNINGCSS_VER=${lightningcss_version}
 RINGRTC_VER=${ringrtc_version}
 LIBSIGNAL_VER=${libsignal_version}
 LIBCUBEB_VER=${libcubeb_version}
