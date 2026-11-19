@@ -33,6 +33,11 @@ _eng_ver=$(getver 8)
 _rollup_ver=$(getver 9)
 _sparkle_ver=$(getver 10)
 
+if [ "$_c_ver" = "" ]; then
+    echo "Error: not found electron version $e_ver in electron.versions"
+    exit 1
+fi
+
 _epatch_rej="${_startdir}/patches/electron${_e_main}/epatch_rej"
 
 # create workdir
@@ -103,7 +108,7 @@ if [ ! -f "$tools_workdir/electron${_e_main}-${e_ver}-extract_done" ]; then
     cd "$tools_workdir" || die
     echo "Extract distfiles to electron${_e_main}-netbsd-${e_ver}..."
     mkdir -p "electron${_e_main}-netbsd-${e_ver}" || die
-    tar -xJf "$distfiles/chromium-${_c_ver}-pkgsrc.tar.xz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}" || die "extract chromium"
+    tar -xJf "$distfiles/chromium-${_c_ver}-pkgsrc.tar.xz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}" || die "extract chromium ${_c_ver}"
     mkdir "electron${_e_main}-netbsd-${e_ver}/electron" || die
     tar -xzf "$distfiles/electron${_e_main}-${e_ver}.tar.gz" --strip-components=1 -C "electron${_e_main}-netbsd-${e_ver}/electron" || die "extract electron"
     mkdir "electron${_e_main}-netbsd-${e_ver}/third_party/electron_node" || die

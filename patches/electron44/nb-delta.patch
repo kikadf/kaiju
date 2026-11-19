@@ -1,8 +1,8 @@
 diff --git a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
-index 4e7212a00c..f2ec1a11bd 100644
+index fafd956302..4c9bb0c07f 100644
 --- a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
 +++ b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
-@@ -683,7 +683,7 @@ class ChromeFileSystemAccessPermissionContext
+@@ -692,7 +692,7 @@ class ChromeFileSystemAccessPermissionContext
              FILE_PATH_LITERAL("Library/Mobile Documents/com~apple~CloudDocs"),
              BlockType::kDontBlockChildren),
    #endif
@@ -333,7 +333,7 @@ index 53666992bc..67b13ad3a8 100644
    fprintf(stderr, "Not Implemented signalfd & prctl in atom/browser/relauncher_linux.cc");
  #else
 diff --git a/electron/spec/api-app.spec.ts b/electron/spec/api-app.spec.ts
-index 56145a6517..c940008e64 100644
+index 7fc653ba76..dee8233fc1 100644
 --- a/electron/spec/api-app.spec.ts
 +++ b/electron/spec/api-app.spec.ts
 @@ -130,7 +130,7 @@ describe('app module', () => {
@@ -549,7 +549,7 @@ index 56145a6517..c940008e64 100644
      let server: net.Server = null as any;
      const socketPath =
 diff --git a/electron/spec/api-browser-window-ignore-mouse-events.spec.ts b/electron/spec/api-browser-window-ignore-mouse-events.spec.ts
-index 177279c7d1..cc4347b2f3 100644
+index bc71e9363d..b71bb362e6 100644
 --- a/electron/spec/api-browser-window-ignore-mouse-events.spec.ts
 +++ b/electron/spec/api-browser-window-ignore-mouse-events.spec.ts
 @@ -45,11 +45,11 @@ type Page = { webContents: Electron.WebContents };
@@ -567,7 +567,7 @@ index 177279c7d1..cc4347b2f3 100644
  // #target turns orange while hovered. Element.matches(':hover') is not usable
  // here: it stays false while the (never focused) window is inactive even
 diff --git a/electron/spec/api-browser-window.spec.ts b/electron/spec/api-browser-window.spec.ts
-index 1535969374..81915e5995 100755
+index b6e2e29c99..f678a8f773 100755
 --- a/electron/spec/api-browser-window.spec.ts
 +++ b/electron/spec/api-browser-window.spec.ts
 @@ -119,7 +119,7 @@ describe('BrowserWindow module', () => {
@@ -732,7 +732,7 @@ index 1535969374..81915e5995 100755
      // Not implemented on Linux.
      afterEach(closeAllWindows);
  
-@@ -8496,7 +8496,7 @@ describe('BrowserWindow module', () => {
+@@ -8520,7 +8520,7 @@ describe('BrowserWindow module', () => {
    describe('"transparent" option', { tags: ['serial'] }, () => {
      afterEach(closeAllWindows);
  
@@ -955,10 +955,10 @@ index bffcc44132..d37a3853be 100644
      async (ctx) => {
        if ((await desktopCapturer.getSources({ types: ['screen'] })).length === 0) {
 diff --git a/electron/spec/api-menu.spec.ts b/electron/spec/api-menu.spec.ts
-index 423cea49cb..d66e1d4357 100644
+index 4df0cdd0c2..8bbd8024c4 100644
 --- a/electron/spec/api-menu.spec.ts
 +++ b/electron/spec/api-menu.spec.ts
-@@ -1007,7 +1007,7 @@ describe('Menu module', () => {
+@@ -1008,7 +1008,7 @@ describe('Menu module', () => {
      // https://github.com/electron/electron/issues/35724
      // Maximizing window is enough to trigger the bug
      // FIXME(dsanders11): Test always passes on CI, even pre-fix
@@ -1012,10 +1012,10 @@ index 1b44327dcd..9ffb340dc5 100644
      async () => {
        const appProcess = ChildProcess.spawn(process.execPath, [appPath], {
 diff --git a/electron/spec/api-net.spec.ts b/electron/spec/api-net.spec.ts
-index a51923e26d..19bb542190 100644
+index 93844897bb..f4dd84fa49 100644
 --- a/electron/spec/api-net.spec.ts
 +++ b/electron/spec/api-net.spec.ts
-@@ -2156,7 +2156,7 @@ describe('net module', () => {
+@@ -2193,7 +2193,7 @@ describe('net module', () => {
    // The select-client-certificate event only fires when the platform cert
    // store yields at least one matching identity, which the test suite cannot
    // guarantee on Linux (NSS) without app.importCertificate.
@@ -1160,15 +1160,15 @@ index 46300a3f7e..b0ee37ec03 100644
          // On the Mac CI machines, Safari tries to ask for a password to the
          // code signing keychain we set up to test code signing (see
 diff --git a/electron/spec/api-subframe.spec.ts b/electron/spec/api-subframe.spec.ts
-index adfd43892c..4da08b64ab 100644
+index f80122160f..8d0093a27c 100644
 --- a/electron/spec/api-subframe.spec.ts
 +++ b/electron/spec/api-subframe.spec.ts
-@@ -254,7 +254,7 @@ describe('subframe with non-standard schemes', () => {
+@@ -254,7 +254,7 @@ describe('subframe with non-standard schemes', { retry: 0 }, () => {
  });
  
  // app.getAppMetrics() does not return sandbox information on Linux.
--ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd')('cross-site frame sandboxing', () => {
-+ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('cross-site frame sandboxing', () => {
+-ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd')('cross-site frame sandboxing', { retry: 0 }, () => {
++ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('cross-site frame sandboxing', { retry: 0 }, () => {
    let server: http.Server;
    let crossSiteUrl: string;
    let serverUrl: string;
@@ -1217,10 +1217,10 @@ index 1dfdc66588..1460a736f7 100644
        expect(bounds).toBeTypeOf('object');
        expect(Object.keys(bounds).sort()).toEqual(['height', 'width', 'x', 'y']);
 diff --git a/electron/spec/api-utility-process.spec.ts b/electron/spec/api-utility-process.spec.ts
-index 40a2f73d53..6d4779e76b 100644
+index 0753d052e0..5fd8eb2102 100644
 --- a/electron/spec/api-utility-process.spec.ts
 +++ b/electron/spec/api-utility-process.spec.ts
-@@ -669,7 +669,7 @@ describe('utilityProcess module', () => {
+@@ -683,7 +683,7 @@ describe('utilityProcess module', { retry: 0 }, () => {
        expect(output).toContain(result);
      });
  
@@ -1229,7 +1229,7 @@ index 40a2f73d53..6d4779e76b 100644
        const message = 'Message from utility process';
        const child = utilityProcess.fork(path.join(fixturesPath, 'expose-main-process-module.js'));
        await once(child, 'spawn');
-@@ -706,7 +706,7 @@ describe('utilityProcess module', () => {
+@@ -720,7 +720,7 @@ describe('utilityProcess module', { retry: 0 }, () => {
        await closeWindow(w);
      });
  
@@ -1239,10 +1239,10 @@ index 40a2f73d53..6d4779e76b 100644
        await once(child, 'spawn');
        const [data] = await once(child, 'message');
 diff --git a/electron/spec/api-web-contents.spec.ts b/electron/spec/api-web-contents.spec.ts
-index 415b4a81fb..a0acb40e47 100644
+index d2a1e3dda1..bd33e3a1c7 100644
 --- a/electron/spec/api-web-contents.spec.ts
 +++ b/electron/spec/api-web-contents.spec.ts
-@@ -1647,7 +1647,7 @@ describe('webContents module', () => {
+@@ -1647,7 +1647,7 @@ describe('webContents module', { retry: 0 }, () => {
      // back to OpenFolder() which does a blocking DirectoryExists() on the UI
      // thread (pre-existing behavior). Workspace-gating is covered by the test
      // above.
@@ -1251,7 +1251,7 @@ index 415b4a81fb..a0acb40e47 100644
        'reveals paths under a registered workspace folder without executing them',
        // Opens a real Finder/Explorer window, which takes focus and stays open.
        { tags: ['serial'] },
-@@ -1673,7 +1673,7 @@ describe('webContents module', () => {
+@@ -1673,7 +1673,7 @@ describe('webContents module', { retry: 0 }, () => {
    // xdg-desktop-portal FileChooser that script/dbus_mock.py hosts on the fake
    // session bus.
    ifdescribe(
@@ -1260,7 +1260,7 @@ index 415b4a81fb..a0acb40e47 100644
        process.arch !== 'ia32' &&
        !process.arch.startsWith('arm') &&
        !!process.env.DBUS_SESSION_BUS_ADDRESS
-@@ -5411,7 +5411,7 @@ describe('webContents module', () => {
+@@ -5428,7 +5428,7 @@ describe('webContents module', { retry: 0 }, () => {
      });
  
      // TODO(codebytere): OOPIF printing is disabled on Linux at the moment due to crashes.
@@ -1283,10 +1283,10 @@ index 3031904a79..aef78f603f 100644
          async () => {
            const app = j(tmp, unicodeDir, 'main-app.asar');
 diff --git a/electron/spec/chromium.spec.ts b/electron/spec/chromium.spec.ts
-index 609ce02fc5..731c381a13 100644
+index 5991f7b136..8551a1d0e1 100644
 --- a/electron/spec/chromium.spec.ts
 +++ b/electron/spec/chromium.spec.ts
-@@ -612,15 +612,15 @@ describe('command line switches', () => {
+@@ -614,15 +614,15 @@ describe('command line switches', () => {
        testLocale('asdfkl', `${currentLocale}|${currentSystemLocale}|${currentPreferredLanguages}`));
  
      const lcAll = String(process.env.LC_ALL);
@@ -1306,7 +1306,7 @@ index 609ce02fc5..731c381a13 100644
        testLocale('', lcAll, true)
      );
    });
-@@ -4425,12 +4425,12 @@ describe('font fallback', () => {
+@@ -4523,12 +4523,12 @@ describe('font fallback', () => {
        expect(fonts[0].familyName).toBe('Arial');
      } else if (process.platform === 'darwin') {
        expect(fonts[0].familyName).toBe('Helvetica');
@@ -1321,7 +1321,7 @@ index 609ce02fc5..731c381a13 100644
      const html = `
      <html lang="ja-JP">
        <head>
-@@ -5148,7 +5148,7 @@ describe('paste execCommand', { tags: ['serial'] }, () => {
+@@ -5246,7 +5246,7 @@ describe('paste execCommand', { tags: ['serial'] }, () => {
    });
  });
  
@@ -1583,53 +1583,6 @@ index d4662774ab..0d2b3f2e9b 100644
      }
    }
  }
-diff --git a/third_party/electron_node/src/compile_cache.cc b/third_party/electron_node/src/compile_cache.cc
-index 63c216a7a2..de9d9b4c6c 100644
---- a/third_party/electron_node/src/compile_cache.cc
-+++ b/third_party/electron_node/src/compile_cache.cc
-@@ -45,16 +45,23 @@ uint32_t GetHash(const char* data, size_t size) {
-   return crc32(crc, reinterpret_cast<const Bytef*>(data), size);
- }
- 
--std::string GetCacheVersionTag() {
-+std::string GetCacheVersionTag(EnableOption option) {
-+  std::string tag = std::string(NODE_VERSION) + '-' + std::string(NODE_ARCH) +
-+                    '-' + Uint32ToHex(ScriptCompiler::CachedDataVersionTag());
-+#ifdef NODE_IMPLEMENTS_POSIX_CREDENTIALS
-   // On platforms where uids are available, use different folders for
-   // different users to avoid cache miss due to permission incompatibility.
-   // On platforms where uids are not available, bare with the cache miss.
-   // This should be fine on Windows, as there local directories tend to be
-   // user-specific.
--  std::string tag = std::string(NODE_VERSION) + '-' + std::string(NODE_ARCH) +
--                    '-' + Uint32ToHex(ScriptCompiler::CachedDataVersionTag());
--#ifdef NODE_IMPLEMENTS_POSIX_CREDENTIALS
--  tag += '-' + std::to_string(getuid());
-+  // A portable cache is meant to be reused wherever the same layout is
-+  // found, including by other users (e.g. a cache generated at build time
-+  // and shipped read-only with an application), so it is not split by uid:
-+  // a user who cannot write to it still reads it, and a failed write is
-+  // only a cache miss.
-+  if (option != EnableOption::PORTABLE) {
-+    tag += '-' + std::to_string(getuid());
-+  }
- #endif
-   return tag;
- }
-@@ -539,11 +546,12 @@ CompileCacheHandler::CompileCacheHandler(Environment* env)
- // Directory structure:
- // - Compile cache directory (from NODE_COMPILE_CACHE)
- //   - $NODE_VERSION-$ARCH-$CACHE_DATA_VERSION_TAG-$UID
-+//     ($UID is omitted for a portable cache)
- //     - $FILENAME_AND_MODULE_TYPE_HASH.cache: a hash of filename + module type
- CompileCacheEnableResult CompileCacheHandler::Enable(Environment* env,
-                                                      const std::string& dir,
-                                                      EnableOption option) {
--  std::string cache_tag = GetCacheVersionTag();
-+  std::string cache_tag = GetCacheVersionTag(option);
-   std::string absolute_cache_dir_base = PathResolve(env, {dir});
-   std::string cache_dir_with_tag =
-       absolute_cache_dir_base + kPathSeparator + cache_tag;
 diff --git a/third_party/electron_node/tools/generate_config_gypi.py b/third_party/electron_node/tools/generate_config_gypi.py
 index d464d4b585..96c7ede6d5 100755
 --- a/third_party/electron_node/tools/generate_config_gypi.py
@@ -1644,7 +1597,7 @@ index d464d4b585..96c7ede6d5 100755
  def bool_to_number(v):
    return 1 if v else 0
 diff --git a/third_party/electron_node/unofficial.gni b/third_party/electron_node/unofficial.gni
-index 8dbd4cf3d6..dda81154e1 100644
+index bcfcefa94a..a39afd76f8 100644
 --- a/third_party/electron_node/unofficial.gni
 +++ b/third_party/electron_node/unofficial.gni
 @@ -385,6 +385,30 @@ template("node_gn_build") {

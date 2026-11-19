@@ -1,14 +1,14 @@
-commit 9423056080f10dc502c41f09c2941968c83dbbe5
+commit 84796a0e102ec5322dc1c2507995da766f60e86e
 Author: kikadf <kikadf.01@gmail.com>
-Date:   Tue Nov 3 19:33:16 2026 +0100
+Date:   Thu Nov 19 10:33:00 2026 +0100
 
     Fix electron patchset
 
 diff --git a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc
-index 9a4ef69ffe..1d2b76f089 100644
+index 2382396af5..9e42dbdbdc 100644
 --- a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc
 +++ b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc
-@@ -335,216 +335,10 @@ bool MaybeIsLocalUNCPath(const base::FilePath& path) {
+@@ -360,215 +360,49 @@ bool MaybeIsLocalUNCPath(const base::FilePath& path) {
  }
  #endif
  
@@ -202,7 +202,21 @@ index 9a4ef69ffe..1d2b76f089 100644
 -                                    &path)) {
 -          continue;
 -        }
--
++// This patch moves the deleted content from this file over to
++// chrome/browser/file_system_access/chrome_file_system_access_permission_context.h.
++// NOTE IF THERE IS A CONFLICT ABOVE, you will need to copy the changes in the
++// removed block over to chrome_file_system_access_permission_context.h.
++
++// Returns true if `child_components` is the same as or a descendant of
++// `parent_components`, ignoring case differences.
++bool IsPathOrDescendantIgnoreCase(
++    const std::vector<base::FilePath::StringType>& parent_components,
++    const std::vector<base::FilePath::StringType>& child_components) {
++  if (parent_components.empty() ||
++      parent_components.size() > child_components.size()) {
++    return false;
++  }
+ 
 -        if (blocked_path.path) {
 -          path = path.Append(blocked_path.path);
 -        }
@@ -214,21 +228,41 @@ index 9a4ef69ffe..1d2b76f089 100644
 -        continue;
 -      }
 -    }
--
++  return std::equal(parent_components.begin(), parent_components.end(),
++                    child_components.begin(),
++                    base::FilePath::CompareEqualIgnoreCase);
++}
+ 
 -    block_path_rules->block_path_rules_.emplace_back(
 -        should_normalize_file_path ? NormalizeFilePath(path) : path,
 -        blocked_path.block_type);
--  }
--
++// Returns true if `child_path` is the same as or a descendant of
++// `parent_path`, ignoring case differences. Unlike
++// `base::FilePath::IsParent()`, this handles case-variant paths returned by
++// native pickers on case-insensitive filesystems.
++bool IsPathOrDescendantIgnoreCase(
++    const base::FilePath& parent_path,
++    const std::vector<base::FilePath::StringType>& parent_components,
++    const base::FilePath& child_path) {
++  // Fast path: Exact match or case-sensitive parent match.
++  if (child_path == parent_path || parent_path.IsParent(child_path)) {
++    return true;
+   }
++  return IsPathOrDescendantIgnoreCase(parent_components,
++                                      child_path.GetComponents());
++}
+ 
 -  return block_path_rules;
--}
-+// This patch moves the deleted content from this file over to
-+// chrome/browser/file_system_access/chrome_file_system_access_permission_context.h.
-+// NOTE IF THERE IS A CONFLICT ABOVE, you will need to copy the changes in the
-+// removed block over to chrome_file_system_access_permission_context.h.
++// Returns true if `parent_components` is a strict parent of
++// `child_components`, ignoring case differences.
++bool IsParentIgnoreCase(
++    const std::vector<base::FilePath::StringType>& parent_components,
++    const std::vector<base::FilePath::StringType>& child_components) {
++  return parent_components.size() < child_components.size() &&
++         IsPathOrDescendantIgnoreCase(parent_components, child_components);
+ }
  
  // Checks if `path` should be blocked by the `rules`.
- // The BlockType of the nearest ancestor of a path to check is what
 diff --git a/chrome/browser/process_singleton_posix.cc b/chrome/browser/process_singleton_posix.cc
 index 0bd1e387e2..da9a485a05 100644
 --- a/chrome/browser/process_singleton_posix.cc
@@ -282,6 +316,129 @@ index 1c4f4bb4a8..69d948ff24 100644
      if (!config_watcher_.Watch(base::BindRepeating(&Watcher::OnConfigChanged,
                                                     base::Unretained(this)))) {
        LOG(ERROR) << "DNS config watch failed to start.";
+diff --git a/third_party/blink/renderer/core/page/context_menu_controller.cc b/third_party/blink/renderer/core/page/context_menu_controller.cc
+index e1b4c1ff33..69eee03ce3 100644
+--- a/third_party/blink/renderer/core/page/context_menu_controller.cc
++++ b/third_party/blink/renderer/core/page/context_menu_controller.cc
+@@ -680,14 +680,13 @@ bool ContextMenuController::ShowContextMenu(
+     if (potential_image_node != nullptr &&
+         IsA<HTMLCanvasElement>(potential_image_node)) {
+       data.media_type = mojom::blink::ContextMenuDataMediaType::kCanvas;
++      const auto* canvas = To<HTMLCanvasElement>(potential_image_node);
++      data.has_image_contents = canvas->OriginClean();
+ #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+       // TODO(crbug.com/40902474): Support reading from the WebGPU front buffer
+       // on Linux and remove the below code, which results in "Copy Image" and
+       // "Save Image To" being grayed out in the context menu.
+-      data.has_image_contents =
+-          !To<HTMLCanvasElement>(potential_image_node)->IsWebGPU();
+-#else
+-      data.has_image_contents = true;
++      data.has_image_contents &= !canvas->IsWebGPU();
+ #endif
+     } else if (potential_image_node != nullptr &&
+                !HitTestResult::AbsoluteImageURL(potential_image_node)
+diff --git a/third_party/electron_node/src/node_http2.h b/third_party/electron_node/src/node_http2.h
+index 94e77cbc6f..793bc3e27e 100644
+--- a/third_party/electron_node/src/node_http2.h
++++ b/third_party/electron_node/src/node_http2.h
+@@ -146,6 +146,96 @@ struct Http2RcBufferPointerTraits {
+ using Http2Headers = NgHeaders<Http2HeadersTraits>;
+ using Http2RcBufferPointer = NgRcBufPointer<Http2RcBufferPointerTraits>;
+ 
++}  // namespace http2
++
++// ThinLTO: class template instantiations always have weak (linkonce_odr)
++// vtables. On Mach-O, LTO localizes weak unnamed_addr vtables during code
++// generation even when other LTO partitions still reference them, which
++// fails the link with undefined vtable symbols. This explicit specialization
++// is an ordinary class that can have a key function (the out-of-line
++// destructor), so its vtable is a strong symbol that ThinLTO must keep
++// external. The body is otherwise identical to the primary template in
++// node_http_common.h.
++template <>
++class NgRcBufPointer<http2::Http2RcBufferPointerTraits>::External
++    : public v8::String::ExternalOneByteStringResource {
++ public:
++  explicit External(
++      const NgRcBufPointer<http2::Http2RcBufferPointerTraits>& ptr)
++      : ptr_(ptr) {}
++
++  // Key function; defined in node_http2.cc to anchor the vtable.
++  ~External() override;
++
++  const char* data() const override {
++    return const_cast<const char*>(reinterpret_cast<char*>(ptr_.data()));
++  }
++
++  size_t length() const override {
++    return ptr_.len();
++  }
++
++  static inline
++  v8::MaybeLocal<v8::String> GetInternalizedString(
++      Environment* env,
++      const NgRcBufPointer<http2::Http2RcBufferPointerTraits>& ptr) {
++    return v8::String::NewFromOneByte(
++        env->isolate(),
++        ptr.data(),
++        v8::NewStringType::kInternalized,
++        ptr.len());
++  }
++
++  template <typename Allocator>
++  static v8::MaybeLocal<v8::String> New(
++      Allocator* allocator,
++      NgRcBufPointer<http2::Http2RcBufferPointerTraits> ptr) {
++    Environment* env = allocator->env();
++    if (ptr.IsStatic()) {
++      auto& static_str_map = env->isolate_data()->static_str_map;
++      const char* header_name = reinterpret_cast<const char*>(ptr.data());
++      v8::Eternal<v8::String>& eternal = static_str_map[header_name];
++      if (eternal.IsEmpty()) {
++        v8::Local<v8::String> str;
++        if (!GetInternalizedString(env, ptr).ToLocal(&str)) {
++          ptr.reset();
++          return {};
++        }
++        eternal.Set(env->isolate(), str);
++        return str;
++      }
++      return eternal.Get(env->isolate());
++    }
++
++    size_t len = ptr.len();
++
++    if (len == 0) {
++      ptr.reset();
++      return v8::String::Empty(env->isolate());
++    }
++
++    if (ptr.IsInternalizable() && len < 64) {
++      v8::MaybeLocal<v8::String> ret = GetInternalizedString(env, ptr);
++      ptr.reset();
++      return ret;
++    }
++
++    allocator->StopTrackingMemory(ptr.get());
++    External* h_str = new External(std::move(ptr));
++    v8::MaybeLocal<v8::String> str =
++        v8::String::NewExternalOneByte(env->isolate(), h_str);
++    if (str.IsEmpty())
++      delete h_str;
++
++    return str;
++  }
++
++ private:
++  NgRcBufPointer<http2::Http2RcBufferPointerTraits> ptr_;
++};
++
++namespace http2 {
++
+ struct NgHttp2StreamWrite : public MemoryRetainer {
+   BaseObjectPtr<AsyncWrap> req_wrap;
+   uv_buf_t buf;
 diff --git a/ui/gfx/font_util.cc b/ui/gfx/font_util.cc
 index 13dcfa03fe..8100ac3a24 100644
 --- a/ui/gfx/font_util.cc

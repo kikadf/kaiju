@@ -1,8 +1,8 @@
 diff --git a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc
-index 9a4ef69ffe..1d2b76f089 100644
+index 2382396af5..9e42dbdbdc 100644
 --- a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc
 +++ b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc
-@@ -335,216 +335,10 @@ bool MaybeIsLocalUNCPath(const base::FilePath& path) {
+@@ -360,215 +360,49 @@ bool MaybeIsLocalUNCPath(const base::FilePath& path) {
  }
  #endif
  
@@ -196,7 +196,21 @@ index 9a4ef69ffe..1d2b76f089 100644
 -                                    &path)) {
 -          continue;
 -        }
--
++// This patch moves the deleted content from this file over to
++// chrome/browser/file_system_access/chrome_file_system_access_permission_context.h.
++// NOTE IF THERE IS A CONFLICT ABOVE, you will need to copy the changes in the
++// removed block over to chrome_file_system_access_permission_context.h.
++
++// Returns true if `child_components` is the same as or a descendant of
++// `parent_components`, ignoring case differences.
++bool IsPathOrDescendantIgnoreCase(
++    const std::vector<base::FilePath::StringType>& parent_components,
++    const std::vector<base::FilePath::StringType>& child_components) {
++  if (parent_components.empty() ||
++      parent_components.size() > child_components.size()) {
++    return false;
++  }
+ 
 -        if (blocked_path.path) {
 -          path = path.Append(blocked_path.path);
 -        }
@@ -208,26 +222,46 @@ index 9a4ef69ffe..1d2b76f089 100644
 -        continue;
 -      }
 -    }
--
++  return std::equal(parent_components.begin(), parent_components.end(),
++                    child_components.begin(),
++                    base::FilePath::CompareEqualIgnoreCase);
++}
+ 
 -    block_path_rules->block_path_rules_.emplace_back(
 -        should_normalize_file_path ? NormalizeFilePath(path) : path,
 -        blocked_path.block_type);
--  }
--
++// Returns true if `child_path` is the same as or a descendant of
++// `parent_path`, ignoring case differences. Unlike
++// `base::FilePath::IsParent()`, this handles case-variant paths returned by
++// native pickers on case-insensitive filesystems.
++bool IsPathOrDescendantIgnoreCase(
++    const base::FilePath& parent_path,
++    const std::vector<base::FilePath::StringType>& parent_components,
++    const base::FilePath& child_path) {
++  // Fast path: Exact match or case-sensitive parent match.
++  if (child_path == parent_path || parent_path.IsParent(child_path)) {
++    return true;
+   }
++  return IsPathOrDescendantIgnoreCase(parent_components,
++                                      child_path.GetComponents());
++}
+ 
 -  return block_path_rules;
--}
-+// This patch moves the deleted content from this file over to
-+// chrome/browser/file_system_access/chrome_file_system_access_permission_context.h.
-+// NOTE IF THERE IS A CONFLICT ABOVE, you will need to copy the changes in the
-+// removed block over to chrome_file_system_access_permission_context.h.
++// Returns true if `parent_components` is a strict parent of
++// `child_components`, ignoring case differences.
++bool IsParentIgnoreCase(
++    const std::vector<base::FilePath::StringType>& parent_components,
++    const std::vector<base::FilePath::StringType>& child_components) {
++  return parent_components.size() < child_components.size() &&
++         IsPathOrDescendantIgnoreCase(parent_components, child_components);
+ }
  
  // Checks if `path` should be blocked by the `rules`.
- // The BlockType of the nearest ancestor of a path to check is what
 diff --git a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
-index 4e7212a00c..f2ec1a11bd 100644
+index fafd956302..4c9bb0c07f 100644
 --- a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
 +++ b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
-@@ -683,7 +683,7 @@ class ChromeFileSystemAccessPermissionContext
+@@ -692,7 +692,7 @@ class ChromeFileSystemAccessPermissionContext
              FILE_PATH_LITERAL("Library/Mobile Documents/com~apple~CloudDocs"),
              BlockType::kDontBlockChildren),
    #endif
@@ -604,7 +638,7 @@ index 443c9c2f00..0812396f87 100644
    }
  
 diff --git a/electron/filenames.gni b/electron/filenames.gni
-index 58117675a1..92dcdc6304 100644
+index 36fa7b0cc6..6747947fad 100644
 --- a/electron/filenames.gni
 +++ b/electron/filenames.gni
 @@ -270,8 +270,8 @@ filenames = {
@@ -1336,7 +1370,7 @@ index 52ac57acd0..c82f0be782 100644
    auto const color = ui_theme_->user_color();
    if (!color.has_value())
 diff --git a/electron/shell/browser/api/electron_api_system_preferences.h b/electron/shell/browser/api/electron_api_system_preferences.h
-index 459545e8db..9ee61804ff 100644
+index b36c362848..92471feb87 100644
 --- a/electron/shell/browser/api/electron_api_system_preferences.h
 +++ b/electron/shell/browser/api/electron_api_system_preferences.h
 @@ -19,7 +19,7 @@
@@ -1376,7 +1410,7 @@ index 459545e8db..9ee61804ff 100644
  
    raw_ptr<ui::NativeTheme> ui_theme_;
 diff --git a/electron/shell/browser/api/electron_api_web_contents.cc b/electron/shell/browser/api/electron_api_web_contents.cc
-index e3ba70734f..661b33a17a 100644
+index 8cd63023d5..35eb96d319 100644
 --- a/electron/shell/browser/api/electron_api_web_contents.cc
 +++ b/electron/shell/browser/api/electron_api_web_contents.cc
 @@ -195,11 +195,11 @@
@@ -1420,7 +1454,7 @@ index e3ba70734f..661b33a17a 100644
    // Update font settings.
    static const gfx::FontRenderParams params(
        gfx::GetFontRenderParams(gfx::FontRenderParamsQuery(), nullptr));
-@@ -3451,13 +3451,13 @@ void WebContents::ForcefullyCrashRenderer() {
+@@ -3462,13 +3462,13 @@ void WebContents::ForcefullyCrashRenderer() {
  
    content::RenderProcessHost* rph = rwh->GetProcess();
    if (rph) {
@@ -1436,7 +1470,7 @@ index e3ba70734f..661b33a17a 100644
      CrashDumpHungChildProcess(rph->GetProcess().Handle());
  #endif
      rph->Shutdown(content::RESULT_CODE_HUNG);
-@@ -4098,7 +4098,7 @@ void WebContents::CopyImageAt(int x, int y) {
+@@ -4109,7 +4109,7 @@ void WebContents::CopyImageAt(int x, int y) {
  void WebContents::Focus() {
    // Focusing on WebContents does not automatically focus the window on macOS
    // and Linux, do it manually to match the behavior on Windows.
@@ -1445,7 +1479,7 @@ index e3ba70734f..661b33a17a 100644
    if (owner_window())
      owner_window()->Focus(true);
  #endif
-@@ -5108,7 +5108,7 @@ ui::ImageModel WebContents::GetDevToolsWindowIcon() {
+@@ -5124,7 +5124,7 @@ ui::ImageModel WebContents::GetDevToolsWindowIcon() {
  }
  #endif
  
@@ -1455,10 +1489,10 @@ index e3ba70734f..661b33a17a 100644
                                             std::string* class_name) {
    *class_name = Browser::Get()->GetName();
 diff --git a/electron/shell/browser/api/electron_api_web_contents.h b/electron/shell/browser/api/electron_api_web_contents.h
-index 1ac3d43822..eb6a0d520b 100644
+index d01e8658b3..8d5d686184 100644
 --- a/electron/shell/browser/api/electron_api_web_contents.h
 +++ b/electron/shell/browser/api/electron_api_web_contents.h
-@@ -814,7 +814,7 @@ class WebContents final : public ExclusiveAccessContext,
+@@ -813,7 +813,7 @@ class WebContents final : public ExclusiveAccessContext,
  #if defined(TOOLKIT_VIEWS) && !BUILDFLAG(IS_MAC)
    ui::ImageModel GetDevToolsWindowIcon() override;
  #endif
@@ -1605,10 +1639,10 @@ index 0b7daef173..0921daf6df 100644
  #endif
    embedder_support::OriginTrialsSettingsStorage origin_trials_settings_storage_;
 diff --git a/electron/shell/browser/electron_browser_main_parts.cc b/electron/shell/browser/electron_browser_main_parts.cc
-index ebd311bdc7..ba8faf9482 100644
+index 937fd7fbeb..ab5de5ef8b 100644
 --- a/electron/shell/browser/electron_browser_main_parts.cc
 +++ b/electron/shell/browser/electron_browser_main_parts.cc
-@@ -78,7 +78,7 @@
+@@ -79,7 +79,7 @@
  #include "ui/wm/core/wm_state.h"
  #endif
  
@@ -1617,7 +1651,7 @@ index ebd311bdc7..ba8faf9482 100644
  #include <dlfcn.h>
  
  #include "base/environment.h"
-@@ -139,7 +139,7 @@ namespace electron {
+@@ -140,7 +140,7 @@ namespace electron {
  
  namespace {
  
@@ -1626,7 +1660,7 @@ index ebd311bdc7..ba8faf9482 100644
  // The display server connection or the session bus is gone: exit like
  // Chrome's SessionEnding(), with an off-thread watchdog that crashes us if
  // exiting hangs on the dead connection.
-@@ -211,13 +211,17 @@ ElectronBrowserMainParts::ElectronBrowserMainParts()
+@@ -212,13 +212,17 @@ ElectronBrowserMainParts::ElectronBrowserMainParts()
    self_ = this;
  }
  
@@ -1645,7 +1679,7 @@ index ebd311bdc7..ba8faf9482 100644
    return lib ? dlsym(lib, name) : nullptr;
  }
  
-@@ -248,10 +252,10 @@ std::vector<std::optional<std::string>> SnapshotFontConfigEnv() {
+@@ -249,10 +253,10 @@ std::vector<std::optional<std::string>> SnapshotFontConfigEnv() {
  }
  
  }  // namespace
@@ -1658,7 +1692,7 @@ index ebd311bdc7..ba8faf9482 100644
    JoinSystemFontConfigInit();
  #endif
  }
-@@ -318,7 +322,7 @@ void ElectronBrowserMainParts::PostEarlyInitialization() {
+@@ -324,7 +328,7 @@ void ElectronBrowserMainParts::PostEarlyInitialization() {
  
    node_bindings_->Initialize(isolate, context);
  
@@ -1667,7 +1701,7 @@ index ebd311bdc7..ba8faf9482 100644
    // Runs during Node.js environment creation and is joined before any app
    // code can run, so nothing else touches FontConfig or the environment.
    const auto fontconfig_env = SnapshotFontConfigEnv();
-@@ -354,7 +358,7 @@ void ElectronBrowserMainParts::PostEarlyInitialization() {
+@@ -360,7 +364,7 @@ void ElectronBrowserMainParts::PostEarlyInitialization() {
    // Wrap the uv loop with global env.
    node_bindings_->set_uv_env(node_env_.get());
  
@@ -1676,7 +1710,7 @@ index ebd311bdc7..ba8faf9482 100644
    JoinSystemFontConfigInit();
  #endif
  
-@@ -364,7 +368,7 @@ void ElectronBrowserMainParts::PostEarlyInitialization() {
+@@ -370,7 +374,7 @@ void ElectronBrowserMainParts::PostEarlyInitialization() {
    // Wait for app
    node_bindings_->JoinAppCode();
  
@@ -1685,7 +1719,7 @@ index ebd311bdc7..ba8faf9482 100644
    // Reload if the app's main script changed the FontConfig environment.
    if (fontconfig_env != SnapshotFontConfigEnv()) {
      if (auto fc_reinit = reinterpret_cast<int (*)()>(
-@@ -429,7 +433,7 @@ int ElectronBrowserMainParts::PreCreateThreads() {
+@@ -435,7 +439,7 @@ int ElectronBrowserMainParts::PreCreateThreads() {
    // happen before the ResourceBundle is loaded
    if (locale.empty())
      l10n_util::OverrideLocaleWithCocoaLocale();
@@ -1694,7 +1728,7 @@ index ebd311bdc7..ba8faf9482 100644
    // l10n_util::GetApplicationLocaleInternal uses g_get_language_names(),
    // which keys off of getenv("LC_ALL").
    // We must set this env first to make ui::ResourceBundle accept the custom
-@@ -458,7 +462,7 @@ int ElectronBrowserMainParts::PreCreateThreads() {
+@@ -464,7 +468,7 @@ int ElectronBrowserMainParts::PreCreateThreads() {
    ElectronBrowserClient::SetApplicationLocale(app_locale);
    fake_browser_process_->SetApplicationLocale(app_locale);
  
@@ -1703,7 +1737,7 @@ index ebd311bdc7..ba8faf9482 100644
    // Reset to the original LC_ALL since we should not be changing it.
    if (!locale.empty()) {
      if (lc_all)
-@@ -514,7 +518,7 @@ void ElectronBrowserMainParts::PostDestroyThreads() {
+@@ -520,7 +524,7 @@ void ElectronBrowserMainParts::PostDestroyThreads() {
  }
  
  void ElectronBrowserMainParts::ToolkitInitialized() {
@@ -1712,7 +1746,7 @@ index ebd311bdc7..ba8faf9482 100644
    // GTK3's gtk_init() probes the display for OpenGL and loads the GL driver
    // into this process; nothing here uses GdkGLContext. GDK_GL is read once at
    // init and only by GTK3 (GTK4 renders with GL itself and ignores it).
-@@ -564,14 +568,14 @@ void ElectronBrowserMainParts::ToolkitInitialized() {
+@@ -570,14 +574,14 @@ void ElectronBrowserMainParts::ToolkitInitialized() {
  #endif
  }
  
@@ -1729,7 +1763,7 @@ index ebd311bdc7..ba8faf9482 100644
  
  int ElectronBrowserMainParts::PreMainMessageLoopRun() {
    // Run user's main script before most things get initialized, so we can have
-@@ -644,19 +648,23 @@ void ElectronBrowserMainParts::WillRunMainMessageLoop(
+@@ -650,19 +654,23 @@ void ElectronBrowserMainParts::WillRunMainMessageLoop(
  }
  
  void ElectronBrowserMainParts::PostCreateMainMessageLoop() {
@@ -1755,7 +1789,7 @@ index ebd311bdc7..ba8faf9482 100644
    // Set up crypt config. This needs to be done before anything starts the
    // network service, as the raw encryption key needs to be shared with the
    // network service for encrypted cookie storage.
-@@ -736,7 +744,7 @@ void ElectronBrowserMainParts::PostMainMessageLoopRun() {
+@@ -742,7 +750,7 @@ void ElectronBrowserMainParts::PostMainMessageLoopRun() {
    fake_browser_process_->PostMainMessageLoopRun();
    content::DevToolsAgentHost::StopRemoteDebuggingPipeHandler();
  
@@ -1849,10 +1883,10 @@ index e58c8fe4c8..e770ccbc4c 100644
    return is;
  #else
 diff --git a/electron/shell/browser/native_window.cc b/electron/shell/browser/native_window.cc
-index 834f0c7786..8835341472 100644
+index 57f40d0052..85d9363d83 100644
 --- a/electron/shell/browser/native_window.cc
 +++ b/electron/shell/browser/native_window.cc
-@@ -42,7 +42,7 @@
+@@ -45,7 +45,7 @@
  
  #if BUILDFLAG(IS_WIN)
  #include "shell/browser/ui/views/frameless_view.h"
@@ -1861,7 +1895,7 @@ index 834f0c7786..8835341472 100644
  #include "shell/browser/ui/views/electron_frame_view_linux.h"
  #endif
  
-@@ -235,7 +235,7 @@ void NativeWindow::InitFromOptions(const gin_helper::Dictionary& options) {
+@@ -238,7 +238,7 @@ void NativeWindow::InitFromOptions(const gin_helper::Dictionary& options) {
    } else if (bool center; options.Get(options::kCenter, &center) && center) {
      Center();
    }
@@ -2118,7 +2152,7 @@ index 39b8dca2df..d30122f8ea 100644
      NotifyWindowExecuteAppCommand(kBrowserBackward);
    else if (event->changed_button_flags() == ui::EF_FORWARD_MOUSE_BUTTON)
 diff --git a/electron/shell/browser/native_window_views.h b/electron/shell/browser/native_window_views.h
-index be66a5cc8d..d90753df74 100644
+index 6def0d75a1..9653a736f0 100644
 --- a/electron/shell/browser/native_window_views.h
 +++ b/electron/shell/browser/native_window_views.h
 @@ -33,7 +33,7 @@ namespace gin {
@@ -2148,7 +2182,7 @@ index be66a5cc8d..d90753df74 100644
    void SetIcon(const gfx::ImageSkia& icon);
  #endif
  
-@@ -208,7 +208,7 @@ class NativeWindowViews : public NativeWindow,
+@@ -212,7 +212,7 @@ class NativeWindowViews : public NativeWindow,
      return overlay_symbol_color_;
    }
  
@@ -2157,7 +2191,7 @@ index be66a5cc8d..d90753df74 100644
    views::FrameViewLinux* GetFrameViewLinux() const;
    [[nodiscard]] bool ignore_mouse_events() const {
      return ignore_mouse_events_;
-@@ -306,7 +306,7 @@ class NativeWindowViews : public NativeWindow,
+@@ -298,7 +298,7 @@ class NativeWindowViews : public NativeWindow,
    // events from resizing the window.
    extensions::SizeConstraints old_size_constraints_;
  
@@ -2166,7 +2200,7 @@ index be66a5cc8d..d90753df74 100644
    std::unique_ptr<GlobalMenuBarX11> global_menu_bar_;
  
    // Set while the window is disabled; running it re-enables event dispatch.
-@@ -325,7 +325,7 @@ class NativeWindowViews : public NativeWindow,
+@@ -317,7 +317,7 @@ class NativeWindowViews : public NativeWindow,
    // This value is determined when the window is created.
    bool rounded_corner_ = true;
  
@@ -2284,7 +2318,7 @@ index ab9b6b62c8..67b13ad3a8 100644
  
  int LaunchProgram(const StringVector& relauncher_args,
 diff --git a/electron/shell/browser/ui/inspectable_web_contents.cc b/electron/shell/browser/ui/inspectable_web_contents.cc
-index a3d4d41d05..bfaf28ce03 100644
+index 4661300d87..d5fb0922e9 100644
 --- a/electron/shell/browser/ui/inspectable_web_contents.cc
 +++ b/electron/shell/browser/ui/inspectable_web_contents.cc
 @@ -621,7 +621,7 @@ void InspectableWebContents::LoadCompleted() {
@@ -2481,10 +2515,10 @@ index 76fe5ba360..e3176febe0 100644
    pixmap.modifier = shared_texture.modifier;
    pixmap.supports_zero_copy_webgpu_import =
 diff --git a/electron/shell/common/api/electron_api_testing.cc b/electron/shell/common/api/electron_api_testing.cc
-index 8836a9b902..51435374b5 100644
+index e2ac191440..6e5cd2ea83 100644
 --- a/electron/shell/common/api/electron_api_testing.cc
 +++ b/electron/shell/common/api/electron_api_testing.cc
-@@ -36,7 +36,7 @@
+@@ -41,7 +41,7 @@
  #include "ui/accessibility/platform/ax_platform.h"
  #include "v8/include/v8.h"
  
@@ -2493,7 +2527,7 @@ index 8836a9b902..51435374b5 100644
  #include <glib.h>
  #elif BUILDFLAG(IS_MAC)
  #include <CoreFoundation/CoreFoundation.h>
-@@ -280,7 +280,7 @@ struct SettleOutsideTask {
+@@ -296,7 +296,7 @@ struct SettleOutsideTask {
                                                   std::move(self->after_settle));
    }
  
@@ -2502,7 +2536,7 @@ index 8836a9b902..51435374b5 100644
    static gboolean OnIdle(gpointer data) {
      Run(base::WrapUnique(static_cast<SettleOutsideTask*>(data)));
      return G_SOURCE_REMOVE;
-@@ -310,7 +310,7 @@ v8::Local<v8::Promise> SettlePromiseOutsideTask(
+@@ -326,7 +326,7 @@ v8::Local<v8::Promise> SettlePromiseOutsideTask(
    auto state = std::make_unique<SettleOutsideTask>(SettleOutsideTask{
        gin_helper::Promise<void>(isolate), std::move(after_settle)});
    v8::Local<v8::Promise> handle = state->promise.GetHandle();
@@ -2617,7 +2651,7 @@ index c9d87d05e1..b31a039795 100644
    auto v8_planes = base::ToVector(val.planes, [isolate](const auto& plane) {
      gin::Dictionary v8_plane(isolate, v8::Object::New(isolate));
 diff --git a/electron/shell/common/gin_converters/std_converter.h b/electron/shell/common/gin_converters/std_converter.h
-index 6d9958c221..c8517a09ce 100644
+index 247650b1c5..2ee6252ea9 100644
 --- a/electron/shell/common/gin_converters/std_converter.h
 +++ b/electron/shell/common/gin_converters/std_converter.h
 @@ -57,7 +57,7 @@ struct Converter<std::array<T, N>> {
@@ -2836,7 +2870,7 @@ index 5bc7e1ccdf..e97efa7216 100644
    electron::crash_keys::SetCrashKey("electron.v8-fatal.location", location);
  #endif
 diff --git a/electron/spec/api-app.spec.ts b/electron/spec/api-app.spec.ts
-index 503f4b54a8..c940008e64 100644
+index ebad78e359..dee8233fc1 100644
 --- a/electron/spec/api-app.spec.ts
 +++ b/electron/spec/api-app.spec.ts
 @@ -130,7 +130,7 @@ describe('app module', () => {
@@ -3052,7 +3086,7 @@ index 503f4b54a8..c940008e64 100644
      let server: net.Server = null as any;
      const socketPath =
 diff --git a/electron/spec/api-browser-window-ignore-mouse-events.spec.ts b/electron/spec/api-browser-window-ignore-mouse-events.spec.ts
-index cab4db0a56..cc4347b2f3 100644
+index c4d4d95560..b71bb362e6 100644
 --- a/electron/spec/api-browser-window-ignore-mouse-events.spec.ts
 +++ b/electron/spec/api-browser-window-ignore-mouse-events.spec.ts
 @@ -45,11 +45,11 @@ type Page = { webContents: Electron.WebContents };
@@ -3070,7 +3104,7 @@ index cab4db0a56..cc4347b2f3 100644
  // #target turns orange while hovered. Element.matches(':hover') is not usable
  // here: it stays false while the (never focused) window is inactive even
 diff --git a/electron/spec/api-browser-window.spec.ts b/electron/spec/api-browser-window.spec.ts
-index e7d3b8ba3f..81915e5995 100755
+index a9ebfd833c..f678a8f773 100755
 --- a/electron/spec/api-browser-window.spec.ts
 +++ b/electron/spec/api-browser-window.spec.ts
 @@ -119,7 +119,7 @@ describe('BrowserWindow module', () => {
@@ -3235,7 +3269,7 @@ index e7d3b8ba3f..81915e5995 100755
      // Not implemented on Linux.
      afterEach(closeAllWindows);
  
-@@ -8496,7 +8496,7 @@ describe('BrowserWindow module', () => {
+@@ -8520,7 +8520,7 @@ describe('BrowserWindow module', () => {
    describe('"transparent" option', { tags: ['serial'] }, () => {
      afterEach(closeAllWindows);
  
@@ -3458,10 +3492,10 @@ index d2b1b4964e..d37a3853be 100644
      async (ctx) => {
        if ((await desktopCapturer.getSources({ types: ['screen'] })).length === 0) {
 diff --git a/electron/spec/api-menu.spec.ts b/electron/spec/api-menu.spec.ts
-index 7e5dc8d16e..d66e1d4357 100644
+index 15a09698d5..8bbd8024c4 100644
 --- a/electron/spec/api-menu.spec.ts
 +++ b/electron/spec/api-menu.spec.ts
-@@ -1007,7 +1007,7 @@ describe('Menu module', () => {
+@@ -1008,7 +1008,7 @@ describe('Menu module', () => {
      // https://github.com/electron/electron/issues/35724
      // Maximizing window is enough to trigger the bug
      // FIXME(dsanders11): Test always passes on CI, even pre-fix
@@ -3515,10 +3549,10 @@ index 196f755b66..9ffb340dc5 100644
      async () => {
        const appProcess = ChildProcess.spawn(process.execPath, [appPath], {
 diff --git a/electron/spec/api-net.spec.ts b/electron/spec/api-net.spec.ts
-index e23aa0f49e..19bb542190 100644
+index 19a9520170..f4dd84fa49 100644
 --- a/electron/spec/api-net.spec.ts
 +++ b/electron/spec/api-net.spec.ts
-@@ -2156,7 +2156,7 @@ describe('net module', () => {
+@@ -2193,7 +2193,7 @@ describe('net module', () => {
    // The select-client-certificate event only fires when the platform cert
    // store yields at least one matching identity, which the test suite cannot
    // guarantee on Linux (NSS) without app.importCertificate.
@@ -3668,15 +3702,15 @@ index faeec1552f..b0ee37ec03 100644
          // On the Mac CI machines, Safari tries to ask for a password to the
          // code signing keychain we set up to test code signing (see
 diff --git a/electron/spec/api-subframe.spec.ts b/electron/spec/api-subframe.spec.ts
-index fa45f4e789..4da08b64ab 100644
+index e6144d5257..8d0093a27c 100644
 --- a/electron/spec/api-subframe.spec.ts
 +++ b/electron/spec/api-subframe.spec.ts
-@@ -254,7 +254,7 @@ describe('subframe with non-standard schemes', () => {
+@@ -254,7 +254,7 @@ describe('subframe with non-standard schemes', { retry: 0 }, () => {
  });
  
  // app.getAppMetrics() does not return sandbox information on Linux.
--ifdescribe(process.platform !== 'linux')('cross-site frame sandboxing', () => {
-+ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('cross-site frame sandboxing', () => {
+-ifdescribe(process.platform !== 'linux')('cross-site frame sandboxing', { retry: 0 }, () => {
++ifdescribe(process.platform !== 'linux' && process.platform !== 'freebsd' && process.platform !== 'netbsd')('cross-site frame sandboxing', { retry: 0 }, () => {
    let server: http.Server;
    let crossSiteUrl: string;
    let serverUrl: string;
@@ -3725,10 +3759,10 @@ index ceef549785..1460a736f7 100644
        expect(bounds).toBeTypeOf('object');
        expect(Object.keys(bounds).sort()).toEqual(['height', 'width', 'x', 'y']);
 diff --git a/electron/spec/api-utility-process.spec.ts b/electron/spec/api-utility-process.spec.ts
-index 06a1a418ea..6d4779e76b 100644
+index 96f530bb92..5fd8eb2102 100644
 --- a/electron/spec/api-utility-process.spec.ts
 +++ b/electron/spec/api-utility-process.spec.ts
-@@ -669,7 +669,7 @@ describe('utilityProcess module', () => {
+@@ -683,7 +683,7 @@ describe('utilityProcess module', { retry: 0 }, () => {
        expect(output).toContain(result);
      });
  
@@ -3737,7 +3771,7 @@ index 06a1a418ea..6d4779e76b 100644
        const message = 'Message from utility process';
        const child = utilityProcess.fork(path.join(fixturesPath, 'expose-main-process-module.js'));
        await once(child, 'spawn');
-@@ -706,7 +706,7 @@ describe('utilityProcess module', () => {
+@@ -720,7 +720,7 @@ describe('utilityProcess module', { retry: 0 }, () => {
        await closeWindow(w);
      });
  
@@ -3747,10 +3781,10 @@ index 06a1a418ea..6d4779e76b 100644
        await once(child, 'spawn');
        const [data] = await once(child, 'message');
 diff --git a/electron/spec/api-web-contents.spec.ts b/electron/spec/api-web-contents.spec.ts
-index 76d2139e70..a0acb40e47 100644
+index 7ce3f46d50..bd33e3a1c7 100644
 --- a/electron/spec/api-web-contents.spec.ts
 +++ b/electron/spec/api-web-contents.spec.ts
-@@ -1647,7 +1647,7 @@ describe('webContents module', () => {
+@@ -1647,7 +1647,7 @@ describe('webContents module', { retry: 0 }, () => {
      // back to OpenFolder() which does a blocking DirectoryExists() on the UI
      // thread (pre-existing behavior). Workspace-gating is covered by the test
      // above.
@@ -3759,7 +3793,7 @@ index 76d2139e70..a0acb40e47 100644
        'reveals paths under a registered workspace folder without executing them',
        // Opens a real Finder/Explorer window, which takes focus and stays open.
        { tags: ['serial'] },
-@@ -1673,7 +1673,7 @@ describe('webContents module', () => {
+@@ -1673,7 +1673,7 @@ describe('webContents module', { retry: 0 }, () => {
    // xdg-desktop-portal FileChooser that script/dbus_mock.py hosts on the fake
    // session bus.
    ifdescribe(
@@ -3768,7 +3802,7 @@ index 76d2139e70..a0acb40e47 100644
        process.arch !== 'ia32' &&
        !process.arch.startsWith('arm') &&
        !!process.env.DBUS_SESSION_BUS_ADDRESS
-@@ -5411,7 +5411,7 @@ describe('webContents module', () => {
+@@ -5428,7 +5428,7 @@ describe('webContents module', { retry: 0 }, () => {
      });
  
      // TODO(codebytere): OOPIF printing is disabled on Linux at the moment due to crashes.
@@ -3791,10 +3825,10 @@ index 045e455249..aef78f603f 100644
          async () => {
            const app = j(tmp, unicodeDir, 'main-app.asar');
 diff --git a/electron/spec/chromium.spec.ts b/electron/spec/chromium.spec.ts
-index 0a68babbbe..731c381a13 100644
+index 964babc4c0..8551a1d0e1 100644
 --- a/electron/spec/chromium.spec.ts
 +++ b/electron/spec/chromium.spec.ts
-@@ -612,15 +612,15 @@ describe('command line switches', () => {
+@@ -614,15 +614,15 @@ describe('command line switches', () => {
        testLocale('asdfkl', `${currentLocale}|${currentSystemLocale}|${currentPreferredLanguages}`));
  
      const lcAll = String(process.env.LC_ALL);
@@ -3814,7 +3848,7 @@ index 0a68babbbe..731c381a13 100644
        testLocale('', lcAll, true)
      );
    });
-@@ -4425,12 +4425,12 @@ describe('font fallback', () => {
+@@ -4523,12 +4523,12 @@ describe('font fallback', () => {
        expect(fonts[0].familyName).toBe('Arial');
      } else if (process.platform === 'darwin') {
        expect(fonts[0].familyName).toBe('Helvetica');
@@ -3829,7 +3863,7 @@ index 0a68babbbe..731c381a13 100644
      const html = `
      <html lang="ja-JP">
        <head>
-@@ -5148,7 +5148,7 @@ describe('paste execCommand', { tags: ['serial'] }, () => {
+@@ -5246,7 +5246,7 @@ describe('paste execCommand', { tags: ['serial'] }, () => {
    });
  });
  
@@ -4015,8 +4049,30 @@ index dde2281861..7c00c1f638 100644
    not(debug_assertions)
  ))]
  #[global_allocator]
+diff --git a/third_party/blink/renderer/core/page/context_menu_controller.cc b/third_party/blink/renderer/core/page/context_menu_controller.cc
+index e1b4c1ff33..69eee03ce3 100644
+--- a/third_party/blink/renderer/core/page/context_menu_controller.cc
++++ b/third_party/blink/renderer/core/page/context_menu_controller.cc
+@@ -680,14 +680,13 @@ bool ContextMenuController::ShowContextMenu(
+     if (potential_image_node != nullptr &&
+         IsA<HTMLCanvasElement>(potential_image_node)) {
+       data.media_type = mojom::blink::ContextMenuDataMediaType::kCanvas;
++      const auto* canvas = To<HTMLCanvasElement>(potential_image_node);
++      data.has_image_contents = canvas->OriginClean();
+ #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+       // TODO(crbug.com/40902474): Support reading from the WebGPU front buffer
+       // on Linux and remove the below code, which results in "Copy Image" and
+       // "Save Image To" being grayed out in the context menu.
+-      data.has_image_contents =
+-          !To<HTMLCanvasElement>(potential_image_node)->IsWebGPU();
+-#else
+-      data.has_image_contents = true;
++      data.has_image_contents &= !canvas->IsWebGPU();
+ #endif
+     } else if (potential_image_node != nullptr &&
+                !HitTestResult::AbsoluteImageURL(potential_image_node)
 diff --git a/third_party/electron_node/common.gypi b/third_party/electron_node/common.gypi
-index 8a0cad346e..5fd64e325b 100644
+index 6cba256e01..7806c087d4 100644
 --- a/third_party/electron_node/common.gypi
 +++ b/third_party/electron_node/common.gypi
 @@ -605,11 +605,11 @@
@@ -4523,6 +4579,193 @@ index ee6fe95a60..6cb8c252f7 100644
    }
  
    V<Word32Pair> LowerPopCount(V<Word32Pair> input) {
+diff --git a/third_party/electron_node/deps/v8/src/regexp/gen-regexp-special-case.cc b/third_party/electron_node/deps/v8/src/regexp/gen-regexp-special-case.cc
+index 86f6b212c9..98f70975be 100644
+--- a/third_party/electron_node/deps/v8/src/regexp/gen-regexp-special-case.cc
++++ b/third_party/electron_node/deps/v8/src/regexp/gen-regexp-special-case.cc
+@@ -9,6 +9,7 @@
+ 
+ #include "src/base/strings.h"
+ #include "src/regexp/special-case.h"
++#include "unicode/uchar.h"
+ 
+ namespace v8 {
+ namespace internal {
+@@ -17,6 +18,19 @@ static const base::uc32 kSurrogateStart = 0xd800;
+ static const base::uc32 kSurrogateEnd = 0xdfff;
+ static const base::uc32 kNonBmpStart = 0x10000;
+ 
++// Removes supplementary code points from |set| and returns whether any were
++// present. Since Unicode 18, the case closure of a BMP character can contain
++// supplementary code points (U+1DF95 LATIN SMALL LIGATURE LONG S WITH
++// DESCENDER S case-folds to U+00DF LATIN SMALL LETTER SHARP S). Non-unicode
++// ignoreCase matching compares UTF-16 code units, so a supplementary code
++// point never matches a BMP character and does not take part in Canonicalize.
++bool RemoveSupplementary(icu::UnicodeSet& set) {
++  constexpr UChar32 kFirstSupplementary = static_cast<UChar32>(kNonBmpStart);
++  if (!set.containsSome(kFirstSupplementary, UCHAR_MAX_VALUE)) return false;
++  set.remove(kFirstSupplementary, UCHAR_MAX_VALUE);
++  return true;
++}
++
+ // The following code generates "src/regexp/special-case.cc".
+ void PrintSet(std::ofstream& out, const char* name,
+               const icu::UnicodeSet& set) {
+@@ -51,6 +65,7 @@ void PrintSpecial(std::ofstream& out) {
+   icu::UnicodeSet current;
+   icu::UnicodeSet special_add;
+   icu::UnicodeSet ignore;
++  icu::UnicodeSet supplementary_equivalents;
+   UErrorCode status = U_ZERO_ERROR;
+   icu::UnicodeSet upper("[\\p{Lu}]", status);
+   CHECK(U_SUCCESS(status));
+@@ -63,6 +78,7 @@ void PrintSpecial(std::ofstream& out) {
+     }
+     current.set(i, i);
+     current.closeOver(USET_CASE_INSENSITIVE);
++    if (RemoveSupplementary(current)) supplementary_equivalents.add(i);
+ 
+     // Check to see if all characters in the case-folding equivalence
+     // class as defined by UnicodeSet::closeOver all map to the same
+@@ -112,6 +128,7 @@ void PrintSpecial(std::ofstream& out) {
+       UChar32 canonical = RegExpCaseFolding::Canonicalize(c);
+       current.set(c, c);
+       current.closeOver(USET_CASE_INSENSITIVE);
++      RemoveSupplementary(current);
+       current.removeAll(ignore);
+       for (int32_t j = 0; j < current.getRangeCount(); j++) {
+         for (UChar32 c2 = current.getRangeStart(j);
+@@ -124,6 +141,7 @@ void PrintSpecial(std::ofstream& out) {
+ 
+   PrintSet(out, "IgnoreSet", ignore);
+   PrintSet(out, "SpecialAddSet", special_add);
++  PrintSet(out, "SupplementaryEquivalentsSet", supplementary_equivalents);
+ }
+ 
+ void WriteHeader(const char* header_filename) {
+diff --git a/third_party/electron_node/deps/v8/src/regexp/regexp-parser.cc b/third_party/electron_node/deps/v8/src/regexp/regexp-parser.cc
+index 5db28d189f..874a9d95df 100644
+--- a/third_party/electron_node/deps/v8/src/regexp/regexp-parser.cc
++++ b/third_party/electron_node/deps/v8/src/regexp/regexp-parser.cc
+@@ -9,6 +9,7 @@
+ #include "src/regexp/regexp-ast.h"
+ #include "src/regexp/regexp-macro-assembler.h"
+ #include "src/regexp/regexp.h"
++#include "src/regexp/special-case.h"
+ #include "src/strings/char-predicates-inl.h"
+ #include "src/utils/ostreams.h"
+ #include "src/utils/utils.h"
+@@ -155,6 +156,10 @@ void RegExpTextBuilder::FlushText() {
+ 
+ void RegExpTextBuilder::AddCharacter(base::uc16 c) {
+   FlushPendingSurrogate();
++  if (NeedsDesugaringForIgnoreCase(c)) {
++    AddClassRangesForDesugaring(c);
++    return;
++  }
+   if (characters_ == nullptr) {
+     characters_ = zone()->New<ZoneList<base::uc16>>(4, zone());
+   }
+@@ -237,15 +242,18 @@ bool RegExpTextBuilder::NeedsDesugaringForUnicode(RegExpClassRanges* cc) {
+   return false;
+ }
+ 
+-// We only use this for characters made of surrogate pairs.  All other
+-// characters outside of character classes are made case independent in the
+-// code generation.
++// Desugar supplementary characters with case equivalents and BMP characters
++// with supplementary equivalents. Other atoms are folded during code
++// generation.
+ bool RegExpTextBuilder::NeedsDesugaringForIgnoreCase(base::uc32 c) {
+ #ifdef V8_INTL_SUPPORT
+   if (IsUnicodeMode() && ignore_case()) {
++    if (c <= unibrow::Utf16::kMaxNonSurrogateCharCode) {
++      return RegExpCaseFolding::HasSupplementaryEquivalents(
++          static_cast<base::uc16>(c));
++    }
+     icu::UnicodeSet set(c, c);
+-    set.closeOver(USET_CASE_INSENSITIVE);
+-    set.removeAllStrings();
++    RegExpCaseFolding::CloseOver(set, RegExpCaseFolding::Mode::kUnicode);
+     return set.size() > 1;
+   }
+   // In the case where ICU is not included, we act as if the unicode flag is
+diff --git a/third_party/electron_node/deps/v8/src/regexp/special-case.h b/third_party/electron_node/deps/v8/src/regexp/special-case.h
+index 753c9231ed..80b88a308c 100644
+--- a/third_party/electron_node/deps/v8/src/regexp/special-case.h
++++ b/third_party/electron_node/deps/v8/src/regexp/special-case.h
+@@ -7,8 +7,8 @@
+ 
+ #ifdef V8_INTL_SUPPORT
+ #include "src/base/logging.h"
++#include "src/base/strings.h"
+ #include "src/common/globals.h"
+-
+ #include "unicode/uchar.h"
+ #include "unicode/uniset.h"
+ #include "unicode/unistr.h"
+@@ -71,9 +71,17 @@ namespace internal {
+ // another character. Characters that match no other characters in
+ // their equivalence class are added to IgnoreSet. Characters that
+ // match at least one other character are added to SpecialAddSet.
++// Supplementary code points are ignored throughout: non-unicode matching
++// compares UTF-16 code units, so they can never match a BMP character.
++//
++// The generator additionally emits SupplementaryEquivalentsSet, the BMP
++// characters whose Unicode case closure contains supplementary code points.
++// This set is used for unicode-mode matching, see HasSupplementaryEquivalents.
+ 
+ class RegExpCaseFolding final : public AllStatic {
+  public:
++  enum class Mode { kNonUnicode, kUnicode };
++
+   static const icu::UnicodeSet& IgnoreSet();
+   static const icu::UnicodeSet& SpecialAddSet();
+ 
+@@ -108,6 +116,43 @@ class RegExpCaseFolding final : public AllStatic {
+     // h. Return cu.
+     return cu;
+   }
++
++  // Close a set of characters under case equivalence, preserving its
++  // original members. Non-unicode inputs must be UTF-16 code units.
++  static void CloseOver(icu::UnicodeSet& set, Mode mode) {
++    if (mode == Mode::kUnicode) {
++      set.closeOver(USET_SIMPLE_CASE_INSENSITIVE);
++      return;
++    }
++    DCHECK(!set.containsSome(0x10000, 0x10ffff));
++    if (IgnoreSet().containsNone(set)) {
++      CloseOverNonUnicode(set);
++      return;
++    }
++    if (IgnoreSet().containsAll(set)) return;
++    // Ignored characters neither contribute nor acquire equivalents, but
++    // must remain in the result if they were explicitly present.
++    icu::UnicodeSet ignored(set);
++    ignored.retainAll(IgnoreSet());
++    set.removeAll(IgnoreSet());
++    CloseOverNonUnicode(set);
++    set.addAll(ignored);
++  }
++
++  // Whether c has supplementary Unicode case equivalents.
++  static bool HasSupplementaryEquivalents(base::uc16 c) {
++    return SupplementaryEquivalentsSet().contains(c);
++  }
++
++ private:
++  static const icu::UnicodeSet& SupplementaryEquivalentsSet();
++
++  // Requires a set containing no IgnoreSet characters.
++  static void CloseOverNonUnicode(icu::UnicodeSet& set) {
++    set.closeOver(USET_SIMPLE_CASE_INSENSITIVE);
++    set.removeAll(IgnoreSet());
++    set.remove(0x10000, 0x10ffff);
++  }
+ };
+ 
+ }  // namespace internal
 diff --git a/third_party/electron_node/deps/v8/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.cc b/third_party/electron_node/deps/v8/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.cc
 index 2c16830983..63e29041f2 100644
 --- a/third_party/electron_node/deps/v8/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.cc
@@ -4663,6 +4906,107 @@ index dec1d25272..9399e2f9b5 100644
    // PTHREAD_STACK_MIN is 2 KiB with musl libc, which is too small to safely
    // receive signals. PTHREAD_STACK_MIN + MINSIGSTKSZ is 8 KiB on arm64, which
    // is the musl architecture with the biggest MINSIGSTKSZ so let's use that
+diff --git a/third_party/electron_node/src/node_http2.h b/third_party/electron_node/src/node_http2.h
+index 94e77cbc6f..793bc3e27e 100644
+--- a/third_party/electron_node/src/node_http2.h
++++ b/third_party/electron_node/src/node_http2.h
+@@ -146,6 +146,96 @@ struct Http2RcBufferPointerTraits {
+ using Http2Headers = NgHeaders<Http2HeadersTraits>;
+ using Http2RcBufferPointer = NgRcBufPointer<Http2RcBufferPointerTraits>;
+ 
++}  // namespace http2
++
++// ThinLTO: class template instantiations always have weak (linkonce_odr)
++// vtables. On Mach-O, LTO localizes weak unnamed_addr vtables during code
++// generation even when other LTO partitions still reference them, which
++// fails the link with undefined vtable symbols. This explicit specialization
++// is an ordinary class that can have a key function (the out-of-line
++// destructor), so its vtable is a strong symbol that ThinLTO must keep
++// external. The body is otherwise identical to the primary template in
++// node_http_common.h.
++template <>
++class NgRcBufPointer<http2::Http2RcBufferPointerTraits>::External
++    : public v8::String::ExternalOneByteStringResource {
++ public:
++  explicit External(
++      const NgRcBufPointer<http2::Http2RcBufferPointerTraits>& ptr)
++      : ptr_(ptr) {}
++
++  // Key function; defined in node_http2.cc to anchor the vtable.
++  ~External() override;
++
++  const char* data() const override {
++    return const_cast<const char*>(reinterpret_cast<char*>(ptr_.data()));
++  }
++
++  size_t length() const override {
++    return ptr_.len();
++  }
++
++  static inline
++  v8::MaybeLocal<v8::String> GetInternalizedString(
++      Environment* env,
++      const NgRcBufPointer<http2::Http2RcBufferPointerTraits>& ptr) {
++    return v8::String::NewFromOneByte(
++        env->isolate(),
++        ptr.data(),
++        v8::NewStringType::kInternalized,
++        ptr.len());
++  }
++
++  template <typename Allocator>
++  static v8::MaybeLocal<v8::String> New(
++      Allocator* allocator,
++      NgRcBufPointer<http2::Http2RcBufferPointerTraits> ptr) {
++    Environment* env = allocator->env();
++    if (ptr.IsStatic()) {
++      auto& static_str_map = env->isolate_data()->static_str_map;
++      const char* header_name = reinterpret_cast<const char*>(ptr.data());
++      v8::Eternal<v8::String>& eternal = static_str_map[header_name];
++      if (eternal.IsEmpty()) {
++        v8::Local<v8::String> str;
++        if (!GetInternalizedString(env, ptr).ToLocal(&str)) {
++          ptr.reset();
++          return {};
++        }
++        eternal.Set(env->isolate(), str);
++        return str;
++      }
++      return eternal.Get(env->isolate());
++    }
++
++    size_t len = ptr.len();
++
++    if (len == 0) {
++      ptr.reset();
++      return v8::String::Empty(env->isolate());
++    }
++
++    if (ptr.IsInternalizable() && len < 64) {
++      v8::MaybeLocal<v8::String> ret = GetInternalizedString(env, ptr);
++      ptr.reset();
++      return ret;
++    }
++
++    allocator->StopTrackingMemory(ptr.get());
++    External* h_str = new External(std::move(ptr));
++    v8::MaybeLocal<v8::String> str =
++        v8::String::NewExternalOneByte(env->isolate(), h_str);
++    if (str.IsEmpty())
++      delete h_str;
++
++    return str;
++  }
++
++ private:
++  NgRcBufPointer<http2::Http2RcBufferPointerTraits> ptr_;
++};
++
++namespace http2 {
++
+ struct NgHttp2StreamWrite : public MemoryRetainer {
+   BaseObjectPtr<AsyncWrap> req_wrap;
+   uv_buf_t buf;
 diff --git a/third_party/electron_node/src/node_platform.cc b/third_party/electron_node/src/node_platform.cc
 index bf2dac8f5d..96824cf7a9 100644
 --- a/third_party/electron_node/src/node_platform.cc
@@ -4824,7 +5168,7 @@ index 60d630702b..ec1628bb7e 100644
          ['(OS=="linux" and clang==1) or (v8_current_cpu in ["mips64", "mips64el", "arm", "riscv64", "loong64"])', {
            'link_settings': {
 diff --git a/third_party/electron_node/unofficial.gni b/third_party/electron_node/unofficial.gni
-index 8dbd4cf3d6..dda81154e1 100644
+index bcfcefa94a..a39afd76f8 100644
 --- a/third_party/electron_node/unofficial.gni
 +++ b/third_party/electron_node/unofficial.gni
 @@ -385,6 +385,30 @@ template("node_gn_build") {
