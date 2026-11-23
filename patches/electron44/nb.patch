@@ -3825,7 +3825,7 @@ index 045e455249..aef78f603f 100644
          async () => {
            const app = j(tmp, unicodeDir, 'main-app.asar');
 diff --git a/electron/spec/chromium.spec.ts b/electron/spec/chromium.spec.ts
-index 964babc4c0..8551a1d0e1 100644
+index 964babc4c0..2300a04147 100644
 --- a/electron/spec/chromium.spec.ts
 +++ b/electron/spec/chromium.spec.ts
 @@ -614,15 +614,15 @@ describe('command line switches', () => {
@@ -3848,6 +3848,15 @@ index 964babc4c0..8551a1d0e1 100644
        testLocale('', lcAll, true)
      );
    });
+@@ -2175,7 +2175,7 @@ describe('chromium features', () => {
+   // fake session bus. A pick succeeds with the URIs queued through
+   // QueueResponse; with nothing queued the mock cancels it.
+   ifdescribe(
+-    process.platform === 'linux' &&
++    (process.platform === 'linux' || process.platform === 'freebsd' || process.platform === 'netbsd') &&
+       process.arch !== 'ia32' &&
+       !process.arch.startsWith('arm') &&
+       !!process.env.DBUS_SESSION_BUS_ADDRESS
 @@ -4523,12 +4523,12 @@ describe('font fallback', () => {
        expect(fonts[0].familyName).toBe('Arial');
      } else if (process.platform === 'darwin') {

@@ -1,8 +1,8 @@
 diff --git a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc
-index 06cb8621a9..3f89ba9b76 100644
+index dc7bc42bcb..06c5acfc21 100644
 --- a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc
 +++ b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc
-@@ -291,214 +291,10 @@ bool MaybeIsLocalUNCPath(const base::FilePath& path) {
+@@ -291,213 +291,33 @@ bool MaybeIsLocalUNCPath(const base::FilePath& path) {
  }
  #endif
  
@@ -210,22 +210,42 @@ index 06cb8621a9..3f89ba9b76 100644
 -    block_path_rules->block_path_rules_.emplace_back(
 -        should_normalize_file_path ? NormalizeFilePath(path) : path,
 -        blocked_path.block_type);
--  }
--
--  return block_path_rules;
--}
 +// This patch moves the deleted content from this file over to
 +// chrome/browser/file_system_access/chrome_file_system_access_permission_context.h.
 +// NOTE IF THERE IS A CONFLICT ABOVE, you will need to copy the changes in the
 +// removed block over to chrome_file_system_access_permission_context.h.
++
++// Returns true if `child_components` is the same as or a descendant of
++// `parent_components`, ignoring case differences.
++bool IsPathOrDescendantIgnoreCase(
++    const std::vector<base::FilePath::StringType>& parent_components,
++    const std::vector<base::FilePath::StringType>& child_components) {
++  if (parent_components.empty() ||
++      parent_components.size() > child_components.size()) {
++    return false;
+   }
+ 
+-  return block_path_rules;
++  return std::equal(parent_components.begin(), parent_components.end(),
++                    child_components.begin(),
++                    base::FilePath::CompareEqualIgnoreCase);
++}
++
++// Returns true if `parent_components` is a strict parent of
++// `child_components`, ignoring case differences.
++bool IsParentIgnoreCase(
++    const std::vector<base::FilePath::StringType>& parent_components,
++    const std::vector<base::FilePath::StringType>& child_components) {
++  return parent_components.size() < child_components.size() &&
++         IsPathOrDescendantIgnoreCase(parent_components, child_components);
+ }
  
  // Checks if `path` should be blocked by the `rules`.
- // The BlockType of the nearest ancestor of a path to check is what
 diff --git a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
-index 2b9f609951..cc30ed3f66 100644
+index bc606b3901..69e2160a77 100644
 --- a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
 +++ b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
-@@ -686,7 +686,7 @@ class ChromeFileSystemAccessPermissionContext
+@@ -695,7 +695,7 @@ class ChromeFileSystemAccessPermissionContext
              FILE_PATH_LITERAL("Library/Mobile Documents/com~apple~CloudDocs"),
              BlockType::kDontBlockChildren),
    #endif
@@ -2848,6 +2868,40 @@ index 21e60a1e63..728479aa06 100644
 +#endif  // !IS_MAS_BUILD() && !BUILDFLAG(IS_BSD)
  
  }  // namespace electron::v8_oom
+diff --git a/electron/shell/common/v8_util.cc b/electron/shell/common/v8_util.cc
+index 57bf10476c..5854ad746b 100644
+--- a/electron/shell/common/v8_util.cc
++++ b/electron/shell/common/v8_util.cc
+@@ -30,6 +30,12 @@
+ #include "components/crash/core/app/crashpad.h"  // nogncheck
+ #include "content/public/common/content_switches.h"
+ #include "v8/include/v8-wasm-trap-handler-posix.h"
++#elif BUILDFLAG(IS_BSD) && defined(ARCH_CPU_X86_64)
++#define ENABLE_WEB_ASSEMBLY_TRAP_HANDLER_LINUX
++#include "base/command_line.h"
++#include "base/debug/stack_trace.h"
++#include "content/public/common/content_switches.h"
++#include "v8/include/v8-wasm-trap-handler-posix.h"
+ #endif
+ 
+ namespace electron {
+@@ -340,6 +346,7 @@ void SetUpWebAssemblyTrapHandler() {
+   // WebAssembly traps.
+   v8::V8::EnableWebAssemblyTrapHandler(true);
+ #elif defined(ENABLE_WEB_ASSEMBLY_TRAP_HANDLER_LINUX)
++#if !BUILDFLAG(IS_BSD)
+   const bool crash_reporter_enabled =
+       crash_reporter::GetHandlerSocket(nullptr, nullptr);
+ 
+@@ -350,7 +357,7 @@ void SetUpWebAssemblyTrapHandler() {
+     v8::V8::EnableWebAssemblyTrapHandler(false);
+     return;
+   }
+-
++#endif
+   const bool use_v8_default_handler =
+       base::CommandLine::ForCurrentProcess()->HasSwitch(
+           ::switches::kDisableInProcessStackTraces);
 diff --git a/electron/shell/renderer/api/electron_api_crash_reporter_renderer.cc b/electron/shell/renderer/api/electron_api_crash_reporter_renderer.cc
 index fa91f31203..6dabe22cfb 100644
 --- a/electron/shell/renderer/api/electron_api_crash_reporter_renderer.cc
@@ -2909,7 +2963,7 @@ index e28ae6c8b7..6ae2563be6 100644
    electron::crash_keys::SetCrashKey("electron.v8-fatal.location", location);
  #endif
 diff --git a/electron/spec/api-app.spec.ts b/electron/spec/api-app.spec.ts
-index 8f2c12cc23..ec4fc6b23d 100644
+index 94885b84e5..485f44ee5d 100644
 --- a/electron/spec/api-app.spec.ts
 +++ b/electron/spec/api-app.spec.ts
 @@ -131,7 +131,7 @@ describe('app module', () => {
@@ -4071,6 +4125,28 @@ index dde2281861..7c00c1f638 100644
    not(debug_assertions)
  ))]
  #[global_allocator]
+diff --git a/third_party/blink/renderer/core/page/context_menu_controller.cc b/third_party/blink/renderer/core/page/context_menu_controller.cc
+index 8cb923b1ed..6a3524606e 100644
+--- a/third_party/blink/renderer/core/page/context_menu_controller.cc
++++ b/third_party/blink/renderer/core/page/context_menu_controller.cc
+@@ -660,14 +660,13 @@ bool ContextMenuController::ShowContextMenu(
+     if (potential_image_node != nullptr &&
+         IsA<HTMLCanvasElement>(potential_image_node)) {
+       data.media_type = mojom::blink::ContextMenuDataMediaType::kCanvas;
++      const auto* canvas = To<HTMLCanvasElement>(potential_image_node);
++      data.has_image_contents = canvas->OriginClean();
+ #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+       // TODO(crbug.com/40902474): Support reading from the WebGPU front buffer
+       // on Linux and remove the below code, which results in "Copy Image" and
+       // "Save Image To" being grayed out in the context menu.
+-      data.has_image_contents =
+-          !To<HTMLCanvasElement>(potential_image_node)->IsWebGPU();
+-#else
+-      data.has_image_contents = true;
++      data.has_image_contents &= !canvas->IsWebGPU();
+ #endif
+     } else if (potential_image_node != nullptr &&
+                !HitTestResult::AbsoluteImageURL(potential_image_node)
 diff --git a/third_party/electron_node/common.gypi b/third_party/electron_node/common.gypi
 index 082a00c167..784346a1ca 100644
 --- a/third_party/electron_node/common.gypi
@@ -4335,6 +4411,37 @@ index b482918855..4d7de7c827 100644
  /* Basic uint{8,16,32,64}_t read/write functions. */
  
  #define BASIC_TYPE(name, type)                                                \
+diff --git a/third_party/electron_node/deps/v8/src/api/api.cc b/third_party/electron_node/deps/v8/src/api/api.cc
+index 7dc060bc87..fc6b06e00d 100644
+--- a/third_party/electron_node/deps/v8/src/api/api.cc
++++ b/third_party/electron_node/deps/v8/src/api/api.cc
+@@ -154,7 +154,7 @@
+ #include "src/wasm/wasm-serialization.h"
+ #endif  // V8_ENABLE_WEBASSEMBLY
+ 
+-#if V8_OS_LINUX || V8_OS_DARWIN || V8_OS_FREEBSD
++#if V8_OS_LINUX || V8_OS_DARWIN || V8_OS_FREEBSD || V8_OS_OPENBSD || V8_OS_NETBSD
+ #include <signal.h>
+ #include <unistd.h>
+ 
+@@ -163,7 +163,7 @@
+ #include "src/trap-handler/handler-inside-posix.h"
+ #endif  // V8_ENABLE_WEBASSEMBLY
+ 
+-#endif  // V8_OS_LINUX || V8_OS_DARWIN || V8_OS_FREEBSD
++#endif  // V8_OS_LINUX || V8_OS_DARWIN || V8_OS_FREEBSD || V8_OS_OPENBSD || V8_OS_NETBSD
+ 
+ #if V8_OS_WIN
+ #include "include/v8-wasm-trap-handler-win.h"
+@@ -6484,7 +6484,7 @@ bool v8::V8::Initialize(const int build_config) {
+   return true;
+ }
+ 
+-#if V8_OS_LINUX || V8_OS_DARWIN
++#if V8_OS_LINUX || V8_OS_DARWIN || V8_OS_OPENBSD || V8_OS_NETBSD
+ bool TryHandleWebAssemblyTrapPosix(int sig_code, siginfo_t* info,
+                                    void* context) {
+ #if V8_ENABLE_WEBASSEMBLY && V8_TRAP_HANDLER_SUPPORTED
 diff --git a/third_party/electron_node/deps/v8/src/base/platform/memory.h b/third_party/electron_node/deps/v8/src/base/platform/memory.h
 index 32161ba819..606c1d3830 100644
 --- a/third_party/electron_node/deps/v8/src/base/platform/memory.h
@@ -4579,6 +4686,268 @@ index ee6fe95a60..6cb8c252f7 100644
    }
  
    V<Word32Pair> LowerPopCount(V<Word32Pair> input) {
+diff --git a/third_party/electron_node/deps/v8/src/regexp/gen-regexp-special-case.cc b/third_party/electron_node/deps/v8/src/regexp/gen-regexp-special-case.cc
+index 86f6b212c9..98f70975be 100644
+--- a/third_party/electron_node/deps/v8/src/regexp/gen-regexp-special-case.cc
++++ b/third_party/electron_node/deps/v8/src/regexp/gen-regexp-special-case.cc
+@@ -9,6 +9,7 @@
+ 
+ #include "src/base/strings.h"
+ #include "src/regexp/special-case.h"
++#include "unicode/uchar.h"
+ 
+ namespace v8 {
+ namespace internal {
+@@ -17,6 +18,19 @@ static const base::uc32 kSurrogateStart = 0xd800;
+ static const base::uc32 kSurrogateEnd = 0xdfff;
+ static const base::uc32 kNonBmpStart = 0x10000;
+ 
++// Removes supplementary code points from |set| and returns whether any were
++// present. Since Unicode 18, the case closure of a BMP character can contain
++// supplementary code points (U+1DF95 LATIN SMALL LIGATURE LONG S WITH
++// DESCENDER S case-folds to U+00DF LATIN SMALL LETTER SHARP S). Non-unicode
++// ignoreCase matching compares UTF-16 code units, so a supplementary code
++// point never matches a BMP character and does not take part in Canonicalize.
++bool RemoveSupplementary(icu::UnicodeSet& set) {
++  constexpr UChar32 kFirstSupplementary = static_cast<UChar32>(kNonBmpStart);
++  if (!set.containsSome(kFirstSupplementary, UCHAR_MAX_VALUE)) return false;
++  set.remove(kFirstSupplementary, UCHAR_MAX_VALUE);
++  return true;
++}
++
+ // The following code generates "src/regexp/special-case.cc".
+ void PrintSet(std::ofstream& out, const char* name,
+               const icu::UnicodeSet& set) {
+@@ -51,6 +65,7 @@ void PrintSpecial(std::ofstream& out) {
+   icu::UnicodeSet current;
+   icu::UnicodeSet special_add;
+   icu::UnicodeSet ignore;
++  icu::UnicodeSet supplementary_equivalents;
+   UErrorCode status = U_ZERO_ERROR;
+   icu::UnicodeSet upper("[\\p{Lu}]", status);
+   CHECK(U_SUCCESS(status));
+@@ -63,6 +78,7 @@ void PrintSpecial(std::ofstream& out) {
+     }
+     current.set(i, i);
+     current.closeOver(USET_CASE_INSENSITIVE);
++    if (RemoveSupplementary(current)) supplementary_equivalents.add(i);
+ 
+     // Check to see if all characters in the case-folding equivalence
+     // class as defined by UnicodeSet::closeOver all map to the same
+@@ -112,6 +128,7 @@ void PrintSpecial(std::ofstream& out) {
+       UChar32 canonical = RegExpCaseFolding::Canonicalize(c);
+       current.set(c, c);
+       current.closeOver(USET_CASE_INSENSITIVE);
++      RemoveSupplementary(current);
+       current.removeAll(ignore);
+       for (int32_t j = 0; j < current.getRangeCount(); j++) {
+         for (UChar32 c2 = current.getRangeStart(j);
+@@ -124,6 +141,7 @@ void PrintSpecial(std::ofstream& out) {
+ 
+   PrintSet(out, "IgnoreSet", ignore);
+   PrintSet(out, "SpecialAddSet", special_add);
++  PrintSet(out, "SupplementaryEquivalentsSet", supplementary_equivalents);
+ }
+ 
+ void WriteHeader(const char* header_filename) {
+diff --git a/third_party/electron_node/deps/v8/src/regexp/regexp-parser.cc b/third_party/electron_node/deps/v8/src/regexp/regexp-parser.cc
+index 5db28d189f..874a9d95df 100644
+--- a/third_party/electron_node/deps/v8/src/regexp/regexp-parser.cc
++++ b/third_party/electron_node/deps/v8/src/regexp/regexp-parser.cc
+@@ -9,6 +9,7 @@
+ #include "src/regexp/regexp-ast.h"
+ #include "src/regexp/regexp-macro-assembler.h"
+ #include "src/regexp/regexp.h"
++#include "src/regexp/special-case.h"
+ #include "src/strings/char-predicates-inl.h"
+ #include "src/utils/ostreams.h"
+ #include "src/utils/utils.h"
+@@ -155,6 +156,10 @@ void RegExpTextBuilder::FlushText() {
+ 
+ void RegExpTextBuilder::AddCharacter(base::uc16 c) {
+   FlushPendingSurrogate();
++  if (NeedsDesugaringForIgnoreCase(c)) {
++    AddClassRangesForDesugaring(c);
++    return;
++  }
+   if (characters_ == nullptr) {
+     characters_ = zone()->New<ZoneList<base::uc16>>(4, zone());
+   }
+@@ -237,15 +242,18 @@ bool RegExpTextBuilder::NeedsDesugaringForUnicode(RegExpClassRanges* cc) {
+   return false;
+ }
+ 
+-// We only use this for characters made of surrogate pairs.  All other
+-// characters outside of character classes are made case independent in the
+-// code generation.
++// Desugar supplementary characters with case equivalents and BMP characters
++// with supplementary equivalents. Other atoms are folded during code
++// generation.
+ bool RegExpTextBuilder::NeedsDesugaringForIgnoreCase(base::uc32 c) {
+ #ifdef V8_INTL_SUPPORT
+   if (IsUnicodeMode() && ignore_case()) {
++    if (c <= unibrow::Utf16::kMaxNonSurrogateCharCode) {
++      return RegExpCaseFolding::HasSupplementaryEquivalents(
++          static_cast<base::uc16>(c));
++    }
+     icu::UnicodeSet set(c, c);
+-    set.closeOver(USET_CASE_INSENSITIVE);
+-    set.removeAllStrings();
++    RegExpCaseFolding::CloseOver(set, RegExpCaseFolding::Mode::kUnicode);
+     return set.size() > 1;
+   }
+   // In the case where ICU is not included, we act as if the unicode flag is
+diff --git a/third_party/electron_node/deps/v8/src/regexp/special-case.h b/third_party/electron_node/deps/v8/src/regexp/special-case.h
+index 753c9231ed..80b88a308c 100644
+--- a/third_party/electron_node/deps/v8/src/regexp/special-case.h
++++ b/third_party/electron_node/deps/v8/src/regexp/special-case.h
+@@ -7,8 +7,8 @@
+ 
+ #ifdef V8_INTL_SUPPORT
+ #include "src/base/logging.h"
++#include "src/base/strings.h"
+ #include "src/common/globals.h"
+-
+ #include "unicode/uchar.h"
+ #include "unicode/uniset.h"
+ #include "unicode/unistr.h"
+@@ -71,9 +71,17 @@ namespace internal {
+ // another character. Characters that match no other characters in
+ // their equivalence class are added to IgnoreSet. Characters that
+ // match at least one other character are added to SpecialAddSet.
++// Supplementary code points are ignored throughout: non-unicode matching
++// compares UTF-16 code units, so they can never match a BMP character.
++//
++// The generator additionally emits SupplementaryEquivalentsSet, the BMP
++// characters whose Unicode case closure contains supplementary code points.
++// This set is used for unicode-mode matching, see HasSupplementaryEquivalents.
+ 
+ class RegExpCaseFolding final : public AllStatic {
+  public:
++  enum class Mode { kNonUnicode, kUnicode };
++
+   static const icu::UnicodeSet& IgnoreSet();
+   static const icu::UnicodeSet& SpecialAddSet();
+ 
+@@ -108,6 +116,43 @@ class RegExpCaseFolding final : public AllStatic {
+     // h. Return cu.
+     return cu;
+   }
++
++  // Close a set of characters under case equivalence, preserving its
++  // original members. Non-unicode inputs must be UTF-16 code units.
++  static void CloseOver(icu::UnicodeSet& set, Mode mode) {
++    if (mode == Mode::kUnicode) {
++      set.closeOver(USET_SIMPLE_CASE_INSENSITIVE);
++      return;
++    }
++    DCHECK(!set.containsSome(0x10000, 0x10ffff));
++    if (IgnoreSet().containsNone(set)) {
++      CloseOverNonUnicode(set);
++      return;
++    }
++    if (IgnoreSet().containsAll(set)) return;
++    // Ignored characters neither contribute nor acquire equivalents, but
++    // must remain in the result if they were explicitly present.
++    icu::UnicodeSet ignored(set);
++    ignored.retainAll(IgnoreSet());
++    set.removeAll(IgnoreSet());
++    CloseOverNonUnicode(set);
++    set.addAll(ignored);
++  }
++
++  // Whether c has supplementary Unicode case equivalents.
++  static bool HasSupplementaryEquivalents(base::uc16 c) {
++    return SupplementaryEquivalentsSet().contains(c);
++  }
++
++ private:
++  static const icu::UnicodeSet& SupplementaryEquivalentsSet();
++
++  // Requires a set containing no IgnoreSet characters.
++  static void CloseOverNonUnicode(icu::UnicodeSet& set) {
++    set.closeOver(USET_SIMPLE_CASE_INSENSITIVE);
++    set.removeAll(IgnoreSet());
++    set.remove(0x10000, 0x10ffff);
++  }
+ };
+ 
+ }  // namespace internal
+diff --git a/third_party/electron_node/deps/v8/src/trap-handler/handler-inside-posix.cc b/third_party/electron_node/deps/v8/src/trap-handler/handler-inside-posix.cc
+index 0ce8abc1bb..d0c48d1a09 100644
+--- a/third_party/electron_node/deps/v8/src/trap-handler/handler-inside-posix.cc
++++ b/third_party/electron_node/deps/v8/src/trap-handler/handler-inside-posix.cc
+@@ -27,7 +27,7 @@
+ 
+ #include <signal.h>
+ 
+-#if defined(V8_OS_LINUX) || defined(V8_OS_FREEBSD)
++#if defined(V8_OS_LINUX) || defined(V8_OS_FREEBSD) || defined(V8_OS_NETBSD)
+ #include <ucontext.h>
+ #elif V8_OS_DARWIN
+ #include <sys/ucontext.h>
+@@ -61,6 +61,10 @@ namespace trap_handler {
+ #define CONTEXT_REG(reg, REG) &uc->uc_mcontext->__ss.__##reg
+ #elif V8_OS_FREEBSD
+ #define CONTEXT_REG(reg, REG) &uc->uc_mcontext.mc_##reg
++#elif V8_OS_OPENBSD
++#define CONTEXT_REG(reg, REG) &uc->sc_##reg
++#elif V8_OS_NETBSD
++#define CONTEXT_REG(reg, REG) &uc->uc_mcontext.__gregs[_REG_##REG]
+ #else
+ #error "Unsupported platform."
+ #endif
+@@ -80,8 +84,12 @@ bool IsKernelGeneratedSignal(siginfo_t* info) {
+   // si_code at its default of 0 for signals that don’t originate in hardware.
+   // The other conditions are only relevant for Linux.
+   return info->si_code > 0 && info->si_code != SI_USER &&
+-         info->si_code != SI_QUEUE && info->si_code != SI_TIMER &&
+-         info->si_code != SI_ASYNCIO && info->si_code != SI_MESGQ;
++         info->si_code != SI_QUEUE && info->si_code != SI_TIMER
++#ifdef V8_OS_OPENBSD
++         ;
++#else
++         && info->si_code != SI_ASYNCIO && info->si_code != SI_MESGQ;
++#endif
+ }
+ 
+ class UnmaskOobSignalScope {
+diff --git a/third_party/electron_node/deps/v8/src/trap-handler/handler-inside-posix.h b/third_party/electron_node/deps/v8/src/trap-handler/handler-inside-posix.h
+index 745e92d501..0672ad1efe 100644
+--- a/third_party/electron_node/deps/v8/src/trap-handler/handler-inside-posix.h
++++ b/third_party/electron_node/deps/v8/src/trap-handler/handler-inside-posix.h
+@@ -13,12 +13,12 @@ namespace v8 {
+ namespace internal {
+ namespace trap_handler {
+ 
+-#if V8_OS_LINUX || V8_OS_FREEBSD
++#if V8_OS_LINUX || V8_OS_FREEBSD || V8_OS_OPENBSD || V8_OS_NETBSD
+ constexpr int kOobSignal = SIGSEGV;
+ #elif V8_OS_DARWIN
+ constexpr int kOobSignal = SIGBUS;
+ #else
+-#error Posix trap handlers are only supported on Linux, MacOSX and FreeBSD.
++#error Posix trap handlers are only supported on Linux, MacOSX, FreeBSD, OpenBSD and NetBSD.
+ #endif
+ 
+ void HandleSignal(int signum, siginfo_t* info, void* context);
+diff --git a/third_party/electron_node/deps/v8/src/trap-handler/trap-handler.h b/third_party/electron_node/deps/v8/src/trap-handler/trap-handler.h
+index bd6f19593d..4c6f3131ad 100644
+--- a/third_party/electron_node/deps/v8/src/trap-handler/trap-handler.h
++++ b/third_party/electron_node/deps/v8/src/trap-handler/trap-handler.h
+@@ -15,10 +15,10 @@
+ 
+ namespace v8::internal::trap_handler {
+ 
+-// X64 on Linux, Windows, MacOS, FreeBSD.
++// X64 on Linux, Windows, MacOS, FreeBSD, OpenBSD, NetBSD.
+ #if V8_HOST_ARCH_X64 && V8_TARGET_ARCH_X64 &&                        \
+     ((V8_OS_LINUX && !V8_OS_ANDROID) || V8_OS_WIN || V8_OS_DARWIN || \
+-     V8_OS_FREEBSD)
++     V8_OS_FREEBSD || V8_OS_OPENBSD || V8_OS_NETBSD)
+ #define V8_TRAP_HANDLER_SUPPORTED true
+ // Arm64 (non-simulator) on Linux, Windows, MacOS.
+ #elif V8_TARGET_ARCH_ARM64 && V8_HOST_ARCH_ARM64 && \
 diff --git a/third_party/electron_node/deps/v8/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.cc b/third_party/electron_node/deps/v8/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.cc
 index 2c16830983..63e29041f2 100644
 --- a/third_party/electron_node/deps/v8/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.cc
@@ -4719,6 +5088,19 @@ index dec1d25272..9399e2f9b5 100644
    // PTHREAD_STACK_MIN is 2 KiB with musl libc, which is too small to safely
    // receive signals. PTHREAD_STACK_MIN + MINSIGSTKSZ is 8 KiB on arm64, which
    // is the musl architecture with the biggest MINSIGSTKSZ so let's use that
+diff --git a/third_party/electron_node/src/node.cc b/third_party/electron_node/src/node.cc
+index 3274fafc29..950a827317 100644
+--- a/third_party/electron_node/src/node.cc
++++ b/third_party/electron_node/src/node.cc
+@@ -87,7 +87,7 @@
+ 
+ #include "large_pages/node_large_page.h"
+ 
+-#if defined(__APPLE__) || defined(__linux__) || defined(_WIN32)
++#if defined(__APPLE__) || defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(_WIN32)
+ #define NODE_USE_V8_WASM_TRAP_HANDLER 1
+ #else
+ #define NODE_USE_V8_WASM_TRAP_HANDLER 0
 diff --git a/third_party/electron_node/src/node_platform.cc b/third_party/electron_node/src/node_platform.cc
 index bf2dac8f5d..96824cf7a9 100644
 --- a/third_party/electron_node/src/node_platform.cc
@@ -4863,9 +5245,27 @@ index 573d7423c9..2ba8d4edcc 100755
    if 'true' == options.variables.get('node_install_npm'):
      npm_files(options, action)
 diff --git a/third_party/electron_node/tools/v8_gypfiles/v8.gyp b/third_party/electron_node/tools/v8_gypfiles/v8.gyp
-index 60d630702b..ec1628bb7e 100644
+index 60d630702b..9b6aea03cb 100644
 --- a/third_party/electron_node/tools/v8_gypfiles/v8.gyp
 +++ b/third_party/electron_node/tools/v8_gypfiles/v8.gyp
+@@ -762,7 +762,7 @@
+               }],
+               ['v8_enable_webassembly==1', {
+                 'conditions': [
+-                  ['OS in "linux mac ios freebsd openharmony"', {
++                  ['OS in "linux mac ios freebsd openbsd netbsd openharmony"', {
+                     'sources': [
+                       '<(V8_ROOT)/src/trap-handler/handler-inside-posix.h',
+                     ],
+@@ -1195,7 +1195,7 @@
+             }],
+             ['v8_enable_webassembly==1', {
+               'conditions': [
+-                ['OS in "linux mac ios freebsd openharmony"', {
++                ['OS in "linux mac ios freebsd openbsd netbsd openharmony"', {
+                   'sources': [
+                     '<(V8_ROOT)/src/trap-handler/handler-inside-posix.cc',
+                     '<(V8_ROOT)/src/trap-handler/handler-outside-posix.cc',
 @@ -1365,6 +1365,12 @@
          }],
          # Platforms that don't have Compare-And-Swap (CAS) support need to link atomic library
@@ -4880,7 +5280,7 @@ index 60d630702b..ec1628bb7e 100644
          ['(OS=="linux" and clang==1) or (v8_current_cpu in ["mips64", "mips64el", "arm", "riscv64", "loong64"])', {
            'link_settings': {
 diff --git a/third_party/electron_node/unofficial.gni b/third_party/electron_node/unofficial.gni
-index 615a3f891f..7f3d537d9f 100644
+index e700b255ac..988c7ee71e 100644
 --- a/third_party/electron_node/unofficial.gni
 +++ b/third_party/electron_node/unofficial.gni
 @@ -379,6 +379,30 @@ template("node_gn_build") {

@@ -1,8 +1,8 @@
 diff --git a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
-index 2b9f609951..cc30ed3f66 100644
+index bc606b3901..69e2160a77 100644
 --- a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
 +++ b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.h
-@@ -686,7 +686,7 @@ class ChromeFileSystemAccessPermissionContext
+@@ -695,7 +695,7 @@ class ChromeFileSystemAccessPermissionContext
              FILE_PATH_LITERAL("Library/Mobile Documents/com~apple~CloudDocs"),
              BlockType::kDontBlockChildren),
    #endif
@@ -345,8 +345,42 @@ index 53666992bc..67b13ad3a8 100644
    PLOG(ERROR) << "signalfd & prctl";
    fprintf(stderr, "Not Implemented signalfd & prctl in atom/browser/relauncher_linux.cc");
  #else
+diff --git a/electron/shell/common/v8_util.cc b/electron/shell/common/v8_util.cc
+index 57bf10476c..5854ad746b 100644
+--- a/electron/shell/common/v8_util.cc
++++ b/electron/shell/common/v8_util.cc
+@@ -30,6 +30,12 @@
+ #include "components/crash/core/app/crashpad.h"  // nogncheck
+ #include "content/public/common/content_switches.h"
+ #include "v8/include/v8-wasm-trap-handler-posix.h"
++#elif BUILDFLAG(IS_BSD) && defined(ARCH_CPU_X86_64)
++#define ENABLE_WEB_ASSEMBLY_TRAP_HANDLER_LINUX
++#include "base/command_line.h"
++#include "base/debug/stack_trace.h"
++#include "content/public/common/content_switches.h"
++#include "v8/include/v8-wasm-trap-handler-posix.h"
+ #endif
+ 
+ namespace electron {
+@@ -340,6 +346,7 @@ void SetUpWebAssemblyTrapHandler() {
+   // WebAssembly traps.
+   v8::V8::EnableWebAssemblyTrapHandler(true);
+ #elif defined(ENABLE_WEB_ASSEMBLY_TRAP_HANDLER_LINUX)
++#if !BUILDFLAG(IS_BSD)
+   const bool crash_reporter_enabled =
+       crash_reporter::GetHandlerSocket(nullptr, nullptr);
+ 
+@@ -350,7 +357,7 @@ void SetUpWebAssemblyTrapHandler() {
+     v8::V8::EnableWebAssemblyTrapHandler(false);
+     return;
+   }
+-
++#endif
+   const bool use_v8_default_handler =
+       base::CommandLine::ForCurrentProcess()->HasSwitch(
+           ::switches::kDisableInProcessStackTraces);
 diff --git a/electron/spec/api-app.spec.ts b/electron/spec/api-app.spec.ts
-index f94a4f3104..ec4fc6b23d 100644
+index ce9fcb4d22..485f44ee5d 100644
 --- a/electron/spec/api-app.spec.ts
 +++ b/electron/spec/api-app.spec.ts
 @@ -131,7 +131,7 @@ describe('app module', () => {
@@ -1595,53 +1629,6 @@ index 525828cec4..baf93b10ef 100644
      }
    }
  }
-diff --git a/third_party/electron_node/src/compile_cache.cc b/third_party/electron_node/src/compile_cache.cc
-index 63c216a7a2..de9d9b4c6c 100644
---- a/third_party/electron_node/src/compile_cache.cc
-+++ b/third_party/electron_node/src/compile_cache.cc
-@@ -45,16 +45,23 @@ uint32_t GetHash(const char* data, size_t size) {
-   return crc32(crc, reinterpret_cast<const Bytef*>(data), size);
- }
- 
--std::string GetCacheVersionTag() {
-+std::string GetCacheVersionTag(EnableOption option) {
-+  std::string tag = std::string(NODE_VERSION) + '-' + std::string(NODE_ARCH) +
-+                    '-' + Uint32ToHex(ScriptCompiler::CachedDataVersionTag());
-+#ifdef NODE_IMPLEMENTS_POSIX_CREDENTIALS
-   // On platforms where uids are available, use different folders for
-   // different users to avoid cache miss due to permission incompatibility.
-   // On platforms where uids are not available, bare with the cache miss.
-   // This should be fine on Windows, as there local directories tend to be
-   // user-specific.
--  std::string tag = std::string(NODE_VERSION) + '-' + std::string(NODE_ARCH) +
--                    '-' + Uint32ToHex(ScriptCompiler::CachedDataVersionTag());
--#ifdef NODE_IMPLEMENTS_POSIX_CREDENTIALS
--  tag += '-' + std::to_string(getuid());
-+  // A portable cache is meant to be reused wherever the same layout is
-+  // found, including by other users (e.g. a cache generated at build time
-+  // and shipped read-only with an application), so it is not split by uid:
-+  // a user who cannot write to it still reads it, and a failed write is
-+  // only a cache miss.
-+  if (option != EnableOption::PORTABLE) {
-+    tag += '-' + std::to_string(getuid());
-+  }
- #endif
-   return tag;
- }
-@@ -539,11 +546,12 @@ CompileCacheHandler::CompileCacheHandler(Environment* env)
- // Directory structure:
- // - Compile cache directory (from NODE_COMPILE_CACHE)
- //   - $NODE_VERSION-$ARCH-$CACHE_DATA_VERSION_TAG-$UID
-+//     ($UID is omitted for a portable cache)
- //     - $FILENAME_AND_MODULE_TYPE_HASH.cache: a hash of filename + module type
- CompileCacheEnableResult CompileCacheHandler::Enable(Environment* env,
-                                                      const std::string& dir,
-                                                      EnableOption option) {
--  std::string cache_tag = GetCacheVersionTag();
-+  std::string cache_tag = GetCacheVersionTag(option);
-   std::string absolute_cache_dir_base = PathResolve(env, {dir});
-   std::string cache_dir_with_tag =
-       absolute_cache_dir_base + kPathSeparator + cache_tag;
 diff --git a/third_party/electron_node/tools/generate_config_gypi.py b/third_party/electron_node/tools/generate_config_gypi.py
 index d464d4b585..96c7ede6d5 100755
 --- a/third_party/electron_node/tools/generate_config_gypi.py
@@ -1656,7 +1643,7 @@ index d464d4b585..96c7ede6d5 100755
  def bool_to_number(v):
    return 1 if v else 0
 diff --git a/third_party/electron_node/unofficial.gni b/third_party/electron_node/unofficial.gni
-index 615a3f891f..7f3d537d9f 100644
+index e700b255ac..988c7ee71e 100644
 --- a/third_party/electron_node/unofficial.gni
 +++ b/third_party/electron_node/unofficial.gni
 @@ -379,6 +379,30 @@ template("node_gn_build") {

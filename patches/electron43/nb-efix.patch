@@ -1,14 +1,14 @@
-commit 5ab98880f43258ffa8dfdab85677d9e592282329
+commit fb211d6372a1185058a6e09e2922aa94235a1c63
 Author: kikadf <kikadf.01@gmail.com>
-Date:   Fri Oct 9 11:13:27 2026 +0200
+Date:   Mon Nov 23 18:25:27 2026 +0100
 
     Fix electron patchset
 
 diff --git a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc
-index 1ba949fdc2..32a5ae7074 100644
+index dc7bc42bcb..06c5acfc21 100644
 --- a/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc
 +++ b/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc
-@@ -291,214 +291,10 @@ bool MaybeIsLocalUNCPath(const base::FilePath& path) {
+@@ -291,213 +291,33 @@ bool MaybeIsLocalUNCPath(const base::FilePath& path) {
  }
  #endif
  
@@ -216,17 +216,37 @@ index 1ba949fdc2..32a5ae7074 100644
 -    block_path_rules->block_path_rules_.emplace_back(
 -        should_normalize_file_path ? NormalizeFilePath(path) : path,
 -        blocked_path.block_type);
--  }
--
--  return block_path_rules;
--}
 +// This patch moves the deleted content from this file over to
 +// chrome/browser/file_system_access/chrome_file_system_access_permission_context.h.
 +// NOTE IF THERE IS A CONFLICT ABOVE, you will need to copy the changes in the
 +// removed block over to chrome_file_system_access_permission_context.h.
++
++// Returns true if `child_components` is the same as or a descendant of
++// `parent_components`, ignoring case differences.
++bool IsPathOrDescendantIgnoreCase(
++    const std::vector<base::FilePath::StringType>& parent_components,
++    const std::vector<base::FilePath::StringType>& child_components) {
++  if (parent_components.empty() ||
++      parent_components.size() > child_components.size()) {
++    return false;
+   }
+ 
+-  return block_path_rules;
++  return std::equal(parent_components.begin(), parent_components.end(),
++                    child_components.begin(),
++                    base::FilePath::CompareEqualIgnoreCase);
++}
++
++// Returns true if `parent_components` is a strict parent of
++// `child_components`, ignoring case differences.
++bool IsParentIgnoreCase(
++    const std::vector<base::FilePath::StringType>& parent_components,
++    const std::vector<base::FilePath::StringType>& child_components) {
++  return parent_components.size() < child_components.size() &&
++         IsPathOrDescendantIgnoreCase(parent_components, child_components);
+ }
  
  // Checks if `path` should be blocked by the `rules`.
- // The BlockType of the nearest ancestor of a path to check is what
 diff --git a/chrome/browser/process_singleton_posix.cc b/chrome/browser/process_singleton_posix.cc
 index f0694f2777..675f4f4f1d 100644
 --- a/chrome/browser/process_singleton_posix.cc
@@ -280,6 +300,28 @@ index 1c4f4bb4a8..69d948ff24 100644
      if (!config_watcher_.Watch(base::BindRepeating(&Watcher::OnConfigChanged,
                                                     base::Unretained(this)))) {
        LOG(ERROR) << "DNS config watch failed to start.";
+diff --git a/third_party/blink/renderer/core/page/context_menu_controller.cc b/third_party/blink/renderer/core/page/context_menu_controller.cc
+index 8cb923b1ed..6a3524606e 100644
+--- a/third_party/blink/renderer/core/page/context_menu_controller.cc
++++ b/third_party/blink/renderer/core/page/context_menu_controller.cc
+@@ -660,14 +660,13 @@ bool ContextMenuController::ShowContextMenu(
+     if (potential_image_node != nullptr &&
+         IsA<HTMLCanvasElement>(potential_image_node)) {
+       data.media_type = mojom::blink::ContextMenuDataMediaType::kCanvas;
++      const auto* canvas = To<HTMLCanvasElement>(potential_image_node);
++      data.has_image_contents = canvas->OriginClean();
+ #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_BSD)
+       // TODO(crbug.com/40902474): Support reading from the WebGPU front buffer
+       // on Linux and remove the below code, which results in "Copy Image" and
+       // "Save Image To" being grayed out in the context menu.
+-      data.has_image_contents =
+-          !To<HTMLCanvasElement>(potential_image_node)->IsWebGPU();
+-#else
+-      data.has_image_contents = true;
++      data.has_image_contents &= !canvas->IsWebGPU();
+ #endif
+     } else if (potential_image_node != nullptr &&
+                !HitTestResult::AbsoluteImageURL(potential_image_node)
 diff --git a/ui/gfx/font_util.cc b/ui/gfx/font_util.cc
 index 13dcfa03fe..8100ac3a24 100644
 --- a/ui/gfx/font_util.cc
